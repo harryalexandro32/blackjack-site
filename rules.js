@@ -36,6 +36,22 @@
   // Insurance is half a unit paying 2:1.
   const settleInsurance = dealerCards => isBlackjack(dealerCards) ? 1 : -0.5;
 
+  // Money for one hand, in cents. hand.bet is the original wager; a doubled hand has twice that on the table.
+  // returned = what goes back to the player's bankroll (stake plus winnings), profit = returned minus stake.
+  function settleBet(hand, dealerCards) {
+    const { units, outcome } = settleHand(hand, dealerCards);
+    const stake = hand.bet * (hand.doubled ? 2 : 1);
+    const profit = Math.round(units * hand.bet);
+    return { stake, profit, returned: stake + profit, outcome };
+  }
+
+  // Insurance costs half the original bet and pays 2:1.
+  function settleInsuranceBet(bet, dealerCards) {
+    const stake = Math.round(bet / 2);
+    const profit = Math.round(settleInsurance(dealerCards) * bet);
+    return { stake, profit, returned: stake + profit };
+  }
+
   // Multi-deck basic strategy with late surrender. allowed = { double, split, surrender, h17, das }.
   // Returns "H" | "S" | "D" | "P" | "R".
   function strategy(cards, up, allowed) {
@@ -82,7 +98,24 @@
 
   const ACTION_NAMES = { H: "Hit", S: "Stand", D: "Double", P: "Split", R: "Surrender" };
 
-  const api = { value, total, isBlackjack, dealerHits, settleHand, settleInsurance, strategy, ACTION_NAMES };
+  // Uniform random integer in [0, n) from the browser's cryptographic RNG.
+  // Draws that fall in the uneven tail of the 32-bit range are rejected, so there is no modulo bias.
+  function randomInt(n, getRandomValues) {
+    const limit = Math.floor(0x100000000 / n) * n, buf = new Uint32Array(1);
+    do getRandomValues(buf); while (buf[0] >= limit);
+    return buf[0] % n;
+  }
+
+  // Fisher-Yates shuffle in place.
+  function shuffle(cards, getRandomValues) {
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1, getRandomValues);
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    return cards;
+  }
+
+  const api = { value, total, isBlackjack, dealerHits, settleHand, settleInsurance, settleBet, settleInsuranceBet, strategy, randomInt, shuffle, ACTION_NAMES };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.BJRules = api;
 })(typeof window !== "undefined" ? window : globalThis);

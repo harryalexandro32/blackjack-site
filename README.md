@@ -1,6 +1,6 @@
 # Blackjack Practice Table
 
-A static blackjack website with real casino rules and no betting. Plain HTML, CSS and JavaScript, so there's no build step and no dependencies. Fonts load from Google Fonts.
+A static blackjack website with real casino rules and pretend dollars: buy in for any amount, bet each hand, and reset to start over. Plain HTML, CSS and JavaScript, so there's no build step and no dependencies. Fonts load from Google Fonts.
 
 ## Files
 

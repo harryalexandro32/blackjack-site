@@ -64,3 +64,39 @@ test("basic strategy spot checks (6 decks, H17, DAS, late surrender)", () => {
     assert.strictEqual(play(hand, up, over), want, `${hand.join(",")} vs ${up} ${JSON.stringify(over || {})}`);
   }
 });
+
+test("bets settle in cents: stake back plus winnings", () => {
+  const b = (hand, dealer) => R.settleBet({ cards: cards(...hand.c), bet: 2500, ...hand }, cards(...dealer));
+  assert.deepStrictEqual(b({ c: ["A", "K"] }, ["10", "8"]), { stake: 2500, profit: 3750, returned: 6250, outcome: "blackjack" });
+  assert.deepStrictEqual(b({ c: ["10", "9"] }, ["10", "8"]), { stake: 2500, profit: 2500, returned: 5000, outcome: "win" });
+  assert.deepStrictEqual(b({ c: ["6", "5", "10"], doubled: true }, ["10", "8"]), { stake: 5000, profit: 5000, returned: 10000, outcome: "win" });
+  assert.deepStrictEqual(b({ c: ["6", "5", "2"], doubled: true }, ["10", "8"]), { stake: 5000, profit: -5000, returned: 0, outcome: "lose" });
+  assert.deepStrictEqual(b({ c: ["10", "6"], surrendered: true }, ["10", "8"]), { stake: 2500, profit: -1250, returned: 1250, outcome: "surrender" });
+  assert.deepStrictEqual(b({ c: ["10", "8"] }, ["9", "9"]), { stake: 2500, profit: 0, returned: 2500, outcome: "push" });
+  // $1 blackjack pays $1.50
+  assert.strictEqual(R.settleBet({ cards: cards("A", "Q"), bet: 100 }, cards("9", "9")).profit, 150);
+  // insurance on a $25 bet costs $12.50, pays $25 when the dealer has blackjack
+  assert.deepStrictEqual(R.settleInsuranceBet(2500, cards("A", "K")), { stake: 1250, profit: 2500, returned: 3750 });
+  assert.deepStrictEqual(R.settleInsuranceBet(2500, cards("A", "6")), { stake: 1250, profit: -1250, returned: 0 });
+  // even money: blackjack + insurance always nets exactly 1x the bet
+  for (const d of [cards("A", "K"), cards("A", "6")]) {
+    const net = R.settleBet({ cards: cards("A", "J"), bet: 2500 }, d).profit + R.settleInsuranceBet(2500, d).profit;
+    assert.strictEqual(net, 2500);
+  }
+});
+
+test("shuffle keeps every card and spreads them evenly", () => {
+  const nodeRandom = require("node:crypto").getRandomValues;
+  const deck = Array.from({ length: 52 }, (_, i) => i);
+  assert.deepStrictEqual([...R.shuffle(deck.slice(), nodeRandom)].sort((a, b) => a - b), deck);
+  // where card 0 lands over many shuffles should be close to uniform across 52 positions
+  const N = 52000, counts = new Array(52).fill(0);
+  for (let i = 0; i < N; i++) counts[R.shuffle(deck.slice(), nodeRandom).indexOf(0)]++;
+  const exp = N / 52, chi2 = counts.reduce((s, c) => s + (c - exp) ** 2 / exp, 0);
+  assert.ok(chi2 < 90, `chi-square ${chi2.toFixed(1)} too high for 51 degrees of freedom`);
+  // randomInt rejects the uneven tail: a generator stuck at the top of the range must be retried
+  let calls = 0;
+  const fake = buf => { buf[0] = calls++ === 0 ? 0xFFFFFFFF : 7; };
+  assert.strictEqual(R.randomInt(6, fake), 1);
+  assert.strictEqual(calls, 2);
+});

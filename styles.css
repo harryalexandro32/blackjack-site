@@ -151,3 +151,52 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--gold); }
   kbd { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .card { animation: none; } * { transition: none !important; } }
+
+/* ---------- money: buy-in, bet spot, chips ---------- */
+:root {
+  --chip-1: #f4f1ea; --chip-1-ink: #2a2a2a;
+  --chip-5: #c0392b; --chip-25: #1e7d4f; --chip-100: #1d1d22;
+  --chip-500: #6a3d9a; --chip-1k: #d9a520; --chip-1k-ink: #2b1d05;
+  --chip-ink: #fbf9f3;
+}
+.setup { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 18px 8px 8px; max-width: 420px; }
+.setup h2 { font-family: var(--font-display); color: var(--gold); font-size: 1.8rem; letter-spacing: .08em; margin: 0; text-wrap: balance; }
+.setup p { margin: 0; color: var(--print); }
+.buyin-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.quick button { min-width: 0; padding: 6px 14px; font-size: .88rem; }
+.setup-err { color: var(--lose); min-height: 1.2em; font-size: .88rem; }
+
+.money-input { display: inline-flex; align-items: center; gap: 4px; background: var(--felt-deep); border: 1.5px solid rgba(230,214,168,.35); border-radius: 999px; padding: 4px 14px; }
+.money-input span { color: var(--gold); font-weight: 700; }
+.money-input input { width: 9ch; background: transparent; border: 0; color: var(--print); font: inherit; font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; padding: 6px 0; -moz-appearance: textfield; }
+.money-input input::-webkit-outer-spin-button, .money-input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.money-input input:focus { outline: none; }
+.money-input:focus-within { outline: 3px solid var(--gold); outline-offset: 2px; }
+.money-input.small { padding: 2px 12px; }
+.money-input.small input { width: 7ch; font-size: 1rem; padding: 6px 0; }
+
+.betting { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.bet-spot { width: 112px; height: 112px; border-radius: 50%; border: 2px solid var(--gold); display: grid; place-content: center; text-align: center; background: rgba(0,0,0,.18); font-variant-numeric: tabular-nums; }
+.bet-spot small { font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.bet-spot b { font-size: 1.2rem; color: var(--print); overflow-wrap: anywhere; padding: 0 8px; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chip {
+  --c: var(--chip-5); --ink: var(--chip-ink);
+  width: 54px; height: 54px; min-width: 0; padding: 0; border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0 52%, transparent 53%), repeating-conic-gradient(var(--c) 0 30deg, var(--chip-ink) 30deg 45deg);
+  color: var(--ink); font-weight: 700; font-size: .95rem; font-variant-numeric: tabular-nums;
+  box-shadow: 0 3px 0 rgba(0,0,0,.45), inset 0 0 0 3px rgba(0,0,0,.15);
+}
+.chip.c1 { --c: var(--chip-1); --ink: var(--chip-1-ink); background: radial-gradient(circle, var(--chip-1) 0 52%, transparent 53%), repeating-conic-gradient(var(--chip-1) 0 30deg, #3a6ea5 30deg 45deg); }
+.chip.c25 { --c: var(--chip-25); } .chip.c100 { --c: var(--chip-100); } .chip.c500 { --c: var(--chip-500); }
+.chip.c1k { --c: var(--chip-1k); --ink: var(--chip-1k-ink); background: radial-gradient(circle, var(--chip-1k) 0 52%, transparent 53%), repeating-conic-gradient(var(--chip-1k) 0 30deg, var(--chip-100) 30deg 45deg); }
+.chip:active:not(:disabled) { box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.bet-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.bet-tools button { min-width: 0; padding: 8px 16px; }
+.hand .stake { font-size: .78rem; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.reset.armed { box-shadow: inset 0 0 0 1.5px var(--lose); color: var(--lose); }
+@media (max-width: 520px) {
+  .chip { width: 46px; height: 46px; font-size: .85rem; }
+  .bet-spot { width: 96px; height: 96px; }
+}
