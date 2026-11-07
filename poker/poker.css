@@ -1,0 +1,124 @@
+/* Poker room: an oval felt table with seats around it, the board in the middle, and the action rail below. */
+.room { max-width: 1080px; margin: 0 auto; display: grid; gap: 14px; }
+.screen { display: grid; gap: 16px; }
+
+/* ---------- setup screens ---------- */
+.setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+.panel {
+  background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; min-width: 0;
+  display: grid; gap: 12px;
+}
+.panel h2 { font-family: var(--font-display); color: var(--gold); font-size: 1.5rem; letter-spacing: .06em; margin: 0; }
+.panel p { margin: 0; }
+.field { display: grid; gap: 6px; }
+.field > label, .field > .label { font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row2 > * { min-width: 0; }
+.note { color: var(--muted); font-size: .84rem; margin: 0; }
+.err { color: var(--lose); font-size: .88rem; min-height: 1.2em; margin: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { min-width: 0; padding: 7px 14px; font-size: .88rem; }
+.seg button[aria-pressed="true"] { background: var(--gold); color: var(--btn-ink); box-shadow: 0 3px 0 #8f7b4c; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs a { color: var(--print); text-decoration: none; padding: 8px 16px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 600; }
+.tabs a[aria-current="page"] { background: var(--gold); color: var(--btn-ink); box-shadow: none; }
+.code-box { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.code { font-family: var(--font-display); font-size: 2rem; letter-spacing: .25em; color: var(--gold); font-weight: 700; user-select: all; }
+
+/* ---------- the table ---------- */
+.felt {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 64vh; margin: 0 auto;
+  background: radial-gradient(ellipse at 50% 40%, var(--felt-hi) 0%, var(--felt) 50%, var(--felt-deep) 100%);
+  border: 12px solid var(--rail); border-radius: 50% / 50%;
+  box-shadow: inset 0 0 70px rgba(0,0,0,.5), 0 0 0 2px var(--rail-hi), 0 18px 40px rgba(0,0,0,.4);
+}
+.center { position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%); display: grid; gap: 8px; justify-items: center; width: min(78%, 420px); }
+.pot { font-variant-numeric: tabular-nums; font-weight: 700; background: rgba(0,0,0,.35); padding: 3px 12px; border-radius: 999px; font-size: .9rem; min-height: 1.6em; }
+.pot:empty { visibility: hidden; }
+.board { display: flex; gap: 6px; justify-content: center; }
+.board .card { --cw: clamp(34px, 6.2vw, 58px); }
+.felt-print { font-family: var(--font-display); color: var(--gold); letter-spacing: .2em; font-size: .78rem; opacity: .75; text-align: center; }
+
+.seat {
+  position: absolute; transform: translate(-50%, -50%); width: 118px; display: grid; justify-items: center; gap: 3px;
+  transition: opacity .2s;
+}
+.seat .holes { display: flex; height: 50px; align-items: flex-end; }
+.seat .holes .card { --cw: 36px; }
+.seat .holes .card + .card { margin-left: -12px; }
+.seat .plate {
+  width: 100%; background: rgba(10, 8, 6, .82); border: 1.5px solid rgba(230,214,168,.22); border-radius: 12px;
+  padding: 4px 8px 5px; text-align: center; position: relative; overflow: hidden;
+}
+.seat .name { font-weight: 600; font-size: .84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seat .stack { font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--gold); }
+.seat .tag { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-height: 1em; }
+.seat .tag.win { color: var(--win); } .seat .tag.allin { color: var(--lose); }
+.seat.acting .plate { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,173,85,.35), 0 0 18px rgba(212,173,85,.35); }
+.seat.folded { opacity: .5; }
+.seat.empty .plate { background: rgba(0,0,0,.18); border-style: dashed; }
+.seat.empty .name { color: var(--muted); font-weight: 500; }
+.seat.me .plate { border-color: rgba(127, 214, 156, .6); }
+.timer { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--gold); width: 0; }
+.seat .hand-name { font-size: .7rem; color: var(--print); background: rgba(0,0,0,.55); padding: 1px 8px; border-radius: 999px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.seat .hand-name:empty { display: none; }
+
+.bet { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; font-size: .8rem; font-weight: 700; pointer-events: none; }
+.bet::before { content: ""; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, var(--chip-5) 0 45%, transparent 46%), repeating-conic-gradient(var(--chip-5) 0 30deg, var(--chip-1) 30deg 45deg); box-shadow: 0 1px 0 rgba(0,0,0,.5); }
+.bet:empty { display: none; }
+.dealer-btn { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: var(--card); color: var(--card-ink); font-weight: 800; font-size: .72rem; display: grid; place-items: center; box-shadow: 0 2px 4px rgba(0,0,0,.5); transition: left .4s, top .4s; }
+
+/* ---------- my hand + actions ---------- */
+.rail {
+  display: grid; grid-template-columns: auto 1fr; gap: 14px 20px; align-items: center;
+  background: linear-gradient(var(--rail-hi), var(--rail)); border-radius: 18px; padding: 14px 16px; border: 1px solid #1a0f09;
+}
+.mine { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.mine .cards { display: flex; gap: 6px; }
+.mine .card { --cw: 58px; }
+.mine .info { display: grid; gap: 2px; min-width: 0; }
+.mine .info b { font-size: .95rem; }
+.mine .info span { font-size: .82rem; color: var(--muted); }
+.status { font-size: .95rem; min-height: 1.4em; text-wrap: balance; }
+.actions { display: grid; gap: 10px; min-width: 0; }
+.act-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.act-row button { min-width: 88px; }
+.raise-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.raise-box input[type=range] { flex: 1 1 160px; accent-color: var(--gold); min-width: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { min-width: 0; padding: 5px 11px; font-size: .8rem; }
+.table-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.table-tools button { min-width: 0; padding: 7px 14px; font-size: .85rem; }
+
+.lower { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+.lower > * { min-width: 0; }
+.log { max-height: 220px; overflow: auto; display: grid; gap: 2px; font-size: .86rem; align-content: start; }
+.log div { padding: 2px 0; border-bottom: 1px solid rgba(230,214,168,.06); }
+.log .hand-sep { color: var(--gold); font-weight: 600; padding-top: 6px; }
+.players-list { display: grid; gap: 4px; font-variant-numeric: tabular-nums; font-size: .88rem; }
+.players-list .pl { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(230,214,168,.06); }
+.players-list .pl span:nth-child(2) { color: var(--muted); }
+.pos { color: var(--win); } .neg { color: var(--lose); }
+
+/* ---------- summary ---------- */
+.summary-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.summary-table th, .summary-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+.summary-table th:first-child, .summary-table td:first-child { text-align: left; }
+.summary-table th { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.scroll-x { overflow-x: auto; }
+.payments { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.payments li { background: rgba(0,0,0,.2); border-radius: 10px; padding: 8px 12px; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 720px) {
+  .felt { aspect-ratio: 3 / 4; max-height: none; border-width: 8px; border-radius: 46% / 32%; }
+  .seat { width: 84px; }
+  .seat .holes { height: 38px; }
+  .seat .holes .card { --cw: 27px; }
+  .seat .name, .seat .stack { font-size: .74rem; }
+  .board .card { --cw: clamp(34px, 11vw, 50px); }
+  .board { gap: 4px; }
+  .rail { grid-template-columns: 1fr; }
+  .lower { grid-template-columns: 1fr; }
+  .mine .card { --cw: 50px; }
+}

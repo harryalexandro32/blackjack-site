@@ -1,0 +1,110 @@
+/* Shared look for the menu and the poker room: the same wooden rail and green felt as the blackjack table.
+   Single deliberate dark look. */
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+:root {
+  --felt: #0e4a37;
+  --felt-deep: #08301f;
+  --felt-hi: #156048;
+  --rail: #2b1910;
+  --rail-hi: #4a2d1c;
+  --print: #e6d6a8;
+  --gold: #d4ad55;
+  --card: #fbf9f3;
+  --card-ink: #1d1b22;
+  --card-red: #b3223a;
+  --card-back: #7a1626;
+  --win: #7fd69c;
+  --lose: #f08a7e;
+  --push: #c9c2ae;
+  --btn: #f1e6c6;
+  --btn-ink: #22160e;
+  --muted: #a9b9ae;
+  --line: rgba(230, 214, 168, .15);
+  --chip-1: #f4f1ea; --chip-5: #c0392b; --chip-25: #1e7d4f; --chip-100: #1d1d22; --chip-500: #6a3d9a; --chip-1k: #d9a520;
+  --font-display: "Cormorant SC", "Cormorant Garamond", Georgia, serif;
+  --font-rank: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body { background: var(--felt-deep); color: var(--print); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--rail); }
+
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: linear-gradient(var(--rail-hi), var(--rail));
+  border-bottom: 2px solid #1a0f09;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.bar-in { max-width: 1080px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.brand-wrap { display: grid; gap: 2px; min-width: 0; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; letter-spacing: .06em; color: var(--gold); margin: 0; }
+.back { color: var(--muted); font-size: .78rem; text-decoration: none; letter-spacing: .04em; }
+.back:hover, .back:focus-visible { color: var(--gold); }
+.meters { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-variant-numeric: tabular-nums; }
+.meter { display: grid; gap: 2px; }
+.meter small { font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.meter b { font-size: 1.05rem; font-weight: 600; }
+
+.wrap {
+  padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+button {
+  font: inherit; font-weight: 600; cursor: pointer;
+  border: 0; border-radius: 999px; padding: 10px 20px; min-width: 92px;
+  background: var(--btn); color: var(--btn-ink);
+  box-shadow: 0 3px 0 #8f7b4c, 0 4px 10px rgba(0,0,0,.35);
+  transition: transform .08s, box-shadow .08s, opacity .15s;
+}
+button:hover:not(:disabled) { filter: brightness(1.05); }
+button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #8f7b4c; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+button.primary { background: var(--gold); }
+button.ghost { background: transparent; color: var(--print); box-shadow: inset 0 0 0 1.5px rgba(230,214,168,.5); }
+button.danger { background: transparent; color: var(--lose); box-shadow: inset 0 0 0 1.5px var(--lose); }
+kbd { font-family: var(--font-body); font-size: .68em; opacity: .55; margin-left: 6px; }
+
+.money-input { display: inline-flex; align-items: center; gap: 4px; background: var(--felt-deep); border: 1.5px solid rgba(230,214,168,.35); border-radius: 999px; padding: 4px 14px; }
+.money-input span { color: var(--gold); font-weight: 700; }
+.money-input input { width: 8ch; background: transparent; border: 0; color: var(--print); font: inherit; font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; padding: 6px 0; -moz-appearance: textfield; }
+.money-input input::-webkit-outer-spin-button, .money-input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.money-input input:focus { outline: none; }
+.money-input:focus-within { outline: 3px solid var(--gold); outline-offset: 2px; }
+.text-input { background: var(--felt-deep); color: var(--print); border: 1.5px solid rgba(230,214,168,.35); border-radius: 10px; padding: 9px 12px; font: inherit; width: 100%; }
+select { font: inherit; background: var(--felt-deep); color: var(--print); border: 1px solid rgba(230,214,168,.3); border-radius: 8px; padding: 6px 8px; }
+
+.card {
+  --cw: 56px;
+  width: var(--cw); height: calc(var(--cw) * 1.4);
+  border-radius: calc(var(--cw) * .09);
+  background: var(--card); color: var(--card-ink);
+  box-shadow: 0 2px 6px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.15);
+  position: relative; flex: none;
+  font-family: var(--font-rank); font-weight: 700;
+}
+.card.red { color: var(--card-red); }
+.card .corner { position: absolute; top: 5%; left: 8%; display: grid; justify-items: center; line-height: .9; font-size: calc(var(--cw) * .3); }
+.card .corner span { font-size: .8em; }
+.card .pip { position: absolute; right: 9%; bottom: 6%; font-size: calc(var(--cw) * .42); line-height: 1; }
+.card.back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 3px, transparent 3px 8px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.14) 0 3px, transparent 3px 8px),
+    var(--card-back);
+  border: calc(var(--cw) * .06) solid var(--card);
+}
+.card.slot { background: rgba(0,0,0,.18); box-shadow: inset 0 0 0 1.5px rgba(230,214,168,.18); }
+.card.deal { animation: deal .28s ease-out both; }
+.card.win { box-shadow: 0 0 0 3px var(--gold), 0 2px 10px rgba(0,0,0,.4); }
+.card.dim { filter: brightness(.55); }
+@keyframes deal { from { transform: translateY(-24px) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card.deal { animation: none; } * { transition: none !important; } }

@@ -200,3 +200,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--gold); }
   .chip { width: 46px; height: 46px; font-size: .85rem; }
   .bet-spot { width: 96px; height: 96px; }
 }
+
+.brand-wrap { display: grid; gap: 2px; }
+.back { color: var(--muted); font-size: .78rem; text-decoration: none; letter-spacing: .04em; }
+.back:hover, .back:focus-visible { color: var(--gold); }

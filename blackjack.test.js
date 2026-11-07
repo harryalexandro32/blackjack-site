@@ -1,7 +1,7 @@
 // Run with: node --test
 const test = require("node:test");
 const assert = require("node:assert");
-const R = require("./rules.js");
+const R = require("./blackjack/rules.js");
 
 const C = r => ({ r, s: "♠" });
 const cards = (...rs) => rs.map(C);

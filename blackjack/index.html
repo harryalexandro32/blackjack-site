@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blackjack Practice Table</title>
+<meta name="description" content="Play blackjack with real casino rules and pretend dollars. Buy in for any amount, bet each hand, double, split, surrender, take insurance, and get basic-strategy hints.">
+<meta name="theme-color" content="#2b1910">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='3' width='20' height='26' rx='3' fill='%23fbf9f3' stroke='%231d1b22'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='%231d1b22'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand-wrap"><a class="back" href="../">← All games</a><h1 class="brand">Blackjack Practice Table</h1></div>
+    <div class="meters">
+      <div class="meter"><small>Bankroll</small><b id="bankroll">–</b></div>
+      <div class="meter"><small>Session</small><b id="sessionPL">–</b></div>
+      <div class="meter"><small>Record</small><b id="record">0–0–0</b></div>
+      <div class="meter">
+        <small>Shoe <span id="shoeLeft"></span></small>
+        <div class="shoe-track" title="Cards left in the shoe. The red line is the cut card."><div class="shoe-fill" id="shoeFill"></div><div class="shoe-cut" id="shoeCut"></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <main class="table" aria-live="polite">
+    <div class="zone-label">Dealer <span class="total" id="dealerTotal"></span></div>
+    <div class="cards" id="dealerCards"></div>
+
+    <svg class="felt-print" viewBox="0 0 560 120" aria-hidden="true">
+      <defs><path id="arc1" d="M30,40 Q280,130 530,40"/><path id="arc2" d="M70,66 Q280,146 490,66"/></defs>
+      <text font-size="22"><textPath href="#arc1" startOffset="50%" text-anchor="middle">BLACKJACK PAYS 3 TO 2</textPath></text>
+      <text class="sub" font-size="12"><textPath href="#arc2" startOffset="50%" text-anchor="middle" id="dealerRulePrint">DEALER MUST HIT SOFT 17 · INSURANCE PAYS 2 TO 1</textPath></text>
+    </svg>
+
+    <form class="setup" id="setup" hidden>
+      <h2>Buy in</h2>
+      <p>Pick how many pretend dollars to sit down with. Nothing here is real money.</p>
+      <div class="buyin-row">
+        <label class="money-input" for="buyIn"><span>$</span><input id="buyIn" type="number" inputmode="numeric" min="1" max="1000000000" step="1" value="1000" required></label>
+        <button class="primary" type="submit" id="btnSit">Sit down</button>
+      </div>
+      <div class="quick" id="quickBuy">
+        <button type="button" class="ghost" data-amt="100">$100</button>
+        <button type="button" class="ghost" data-amt="500">$500</button>
+        <button type="button" class="ghost" data-amt="1000">$1,000</button>
+        <button type="button" class="ghost" data-amt="10000">$10,000</button>
+      </div>
+      <p class="setup-err" id="buyErr"></p>
+    </form>
+
+    <div class="hands" id="hands"></div>
+    <div class="msg" id="msg"></div>
+    <div class="hint" id="hint"></div>
+
+    <div class="betting" id="betting" hidden>
+      <div class="bet-spot" aria-live="polite"><small>Your bet</small><b id="betAmt">$0</b></div>
+      <div class="chips" id="chips">
+        <button type="button" class="chip c1" data-chip="1" aria-label="Add $1">1</button>
+        <button type="button" class="chip c5" data-chip="5" aria-label="Add $5">5</button>
+        <button type="button" class="chip c25" data-chip="25" aria-label="Add $25">25</button>
+        <button type="button" class="chip c100" data-chip="100" aria-label="Add $100">100</button>
+        <button type="button" class="chip c500" data-chip="500" aria-label="Add $500">500</button>
+        <button type="button" class="chip c1k" data-chip="1000" aria-label="Add $1,000">1K</button>
+      </div>
+      <div class="bet-tools">
+        <label class="money-input small" for="betInput"><span>$</span><input id="betInput" type="number" inputmode="numeric" min="1" step="1" aria-label="Bet amount in dollars"></label>
+        <button type="button" class="ghost" id="btnClearBet">Clear</button>
+        <button type="button" class="ghost" id="btnAllIn">All in</button>
+      </div>
+    </div>
+
+    <div class="actions" id="actions">
+      <button class="primary" id="btnDeal">Deal<kbd>Space</kbd></button>
+      <button class="primary" id="btnRebuy" hidden>Buy in again</button>
+      <button id="btnInsYes" hidden>Take insurance<kbd>Y</kbd></button>
+      <button id="btnInsNo" class="ghost" hidden>No insurance<kbd>N</kbd></button>
+      <button id="btnHit" hidden>Hit<kbd>H</kbd></button>
+      <button id="btnStand" hidden>Stand<kbd>S</kbd></button>
+      <button id="btnDouble" hidden>Double<kbd>D</kbd></button>
+      <button id="btnSplit" hidden>Split<kbd>P</kbd></button>
+      <button id="btnSurrender" class="ghost" hidden>Surrender<kbd>R</kbd></button>
+    </div>
+  </main>
+
+  <section class="panel">
+    <div class="box">
+      <h2>House rules</h2>
+      <div class="row"><label for="optDecks">Decks in the shoe</label>
+        <select id="optDecks"><option value="1">1</option><option value="2">2</option><option value="6" selected>6</option><option value="8">8</option></select></div>
+      <div class="row"><label for="optH17">Dealer hits soft 17</label><input type="checkbox" id="optH17" checked></div>
+      <div class="row"><label for="optSurrender">Late surrender allowed</label><input type="checkbox" id="optSurrender" checked></div>
+      <div class="row"><label for="optDas">Double after split</label><input type="checkbox" id="optDas" checked></div>
+      <div class="row"><label for="optHint">Show basic-strategy hint</label><input type="checkbox" id="optHint"></div>
+      <p class="note">Rule changes take effect on the next deal. Changing the deck count reshuffles.</p>
+    </div>
+    <div class="box">
+      <h2>Session</h2>
+      <div class="stats">
+        <div class="stat"><small>Bought in</small><b id="stStart">–</b></div>
+        <div class="stat"><small>Peak</small><b id="stPeak">–</b></div>
+        <div class="stat"><small>Biggest win</small><b id="stBigWin">–</b></div>
+        <div class="stat"><small>Hands</small><b id="stHands">0</b></div>
+        <div class="stat"><small>Won</small><b id="stWon">0</b></div>
+        <div class="stat"><small>Lost</small><b id="stLost">0</b></div>
+        <div class="stat"><small>Pushed</small><b id="stPush">0</b></div>
+        <div class="stat"><small>Blackjacks</small><b id="stBJ">0</b></div>
+        <div class="stat"><small>By the book</small><b id="stBook">–</b></div>
+      </div>
+      <p class="note">Pretend dollars only. Your bankroll is saved in this browser. If you leave in the middle of a hand, that hand is called off and its bet comes back. "By the book" is how often your play matched basic strategy.</p>
+      <button class="ghost reset" id="btnReset">Reset session</button>
+    </div>
+    <div class="box">
+      <h2>How the table plays</h2>
+      <ul class="rules-list">
+        <li>Get closer to 21 than the dealer without going over. Aces count 1 or 11, face cards 10.</li>
+        <li>Wins pay 1 to 1, blackjack pays 3 to 2, insurance costs half your bet and pays 2 to 1.</li>
+        <li>Doubling and splitting each put up another bet the size of your first, so you need that much left in your bankroll.</li>
+        <li>With an ace or ten showing, the dealer peeks for blackjack before you act.</li>
+        <li>Double on any first two cards: one more card, then you stand.</li>
+        <li>Split any pair, including mixed tens, up to four hands. Split aces get one card each and can't be resplit; ace + ten after a split is 21, not blackjack.</li>
+        <li>Surrender gives up half a hand, only as your first decision.</li>
+        <li>The shoe reshuffles when the cut card comes out, about 75% of the way through.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script src="rules.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
