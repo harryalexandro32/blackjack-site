@@ -103,7 +103,7 @@
     const list = hands.length ? hands : [{ cards: [] }];
     list.forEach((h, i) => {
       let el = wrap.children[i];
-      if (!el) { el = document.createElement("div"); el.className = "hand"; el.innerHTML = `<div class="cards"></div><div class="zone-label"><span class="who"></span><span class="total"></span></div><span class="stake"></span><span class="badge" hidden></span>`; wrap.appendChild(el); }
+      if (!el) { el = document.createElement("div"); el.className = "hand"; el.innerHTML = `<div class="cards"></div><div class="zone-label"><span class="who"></span><span class="total"></span></div><div class="hand-foot"><span class="stake"></span><span class="badge" hidden></span></div>`; wrap.appendChild(el); }
       el.classList.toggle("active", phase === "player" && i === active && hands.length > 1);
       syncCards(el.querySelector(".cards"), h.cards, -1);
       el.querySelector(".who").textContent = hands.length > 1 ? `Hand ${i + 1}` : "You";
@@ -134,6 +134,7 @@
     $("btnSplit").disabled = !inPlay || !canSplit(h);
     $("btnSurrender").disabled = !inPlay || !canSurrender(h);
 
+    $("hint").classList.toggle("on", !!opts.hint); // only hold space for the hint when hints are switched on
     $("hint").innerHTML = (opts.hint && inPlay) ? `Basic strategy: <b>${NAMES[strategy(h, dealer[0])]}</b>` : "";
 
     // bet controls

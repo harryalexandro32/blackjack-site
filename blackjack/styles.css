@@ -23,7 +23,9 @@ body { margin: 0; }
   --font-display: "Cormorant SC", "Cormorant Garamond", Georgia, serif;
   --font-rank: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --cw: clamp(52px, 14vw, 86px);
+  /* cards grow with the screen but also shrink on short screens, so a whole round fits without scrolling */
+  --cw: clamp(44px, min(14vw, 8.5vh), 86px);
+  --cw: clamp(44px, min(14vw, 8.5dvh), 86px);
   color-scheme: dark;
 }
 html, body { min-height: 100%; }
@@ -65,8 +67,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   border: 10px solid var(--rail);
   border-radius: 28px 28px 200px 200px / 28px 28px 90px 90px;
   box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 2px var(--rail-hi);
-  padding: 18px 14px 34px;
-  display: grid; gap: 10px; justify-items: center;
+  padding: 14px 14px 24px;
+  display: grid; gap: 8px; justify-items: center;
 }
 .zone-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
 .zone-label .total { color: var(--print); font-weight: 600; font-size: .9rem; letter-spacing: .04em; text-transform: none; font-variant-numeric: tabular-nums; }
@@ -98,18 +100,20 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 @keyframes deal { from { transform: translateY(-30px) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
 
-.felt-print { width: min(560px, 100%); height: auto; margin: 4px 0; }
+.felt-print { width: min(560px, 100%, 36vh); width: min(560px, 100%, 36dvh); height: auto; margin: 0; }
 .felt-print text { fill: var(--gold); font-family: var(--font-display); font-weight: 700; letter-spacing: .14em; }
 .felt-print .sub { fill: var(--print); font-weight: 500; opacity: .8; letter-spacing: .2em; }
 
 .hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; width: 100%; }
-.hand { display: grid; justify-items: center; gap: 6px; padding: 10px 10px 8px; border-radius: 14px; border: 1.5px dashed transparent; transition: border-color .2s, background .2s; }
+.hand { display: grid; justify-items: center; gap: 4px; padding: 6px 10px 6px; border-radius: 14px; border: 1.5px dashed transparent; transition: border-color .2s, background .2s; }
 .hand.active { border-color: var(--gold); background: rgba(212,173,85,.08); }
 .badge { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; background: rgba(0,0,0,.35); }
 .badge.win { color: var(--win); } .badge.lose { color: var(--lose); } .badge.push { color: var(--push); } .badge.info { color: var(--gold); }
 
 .msg { min-height: 1.6em; font-size: 1rem; font-weight: 500; text-align: center; color: var(--print); text-wrap: balance; }
-.hint { font-size: .85rem; color: var(--muted); min-height: 1.3em; text-align: center; }
+.hint { font-size: .85rem; color: var(--muted); text-align: center; }
+.hint.on { min-height: 1.3em; }
+.hand-foot { display: flex; gap: 8px; align-items: center; justify-content: center; min-height: 1.5em; flex-wrap: wrap; }
 .hint b { color: var(--gold); }
 
 .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; }
@@ -176,7 +180,9 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--gold); }
 .money-input.small { padding: 2px 12px; }
 .money-input.small input { width: 7ch; font-size: 1rem; padding: 6px 0; }
 
-.betting { display: grid; gap: 12px; justify-items: center; width: 100%; }
+/* bet spot on the left, chips and bet tools on the right: one short row instead of a tall stack */
+.betting { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; gap: 10px 22px; align-items: center; justify-content: center; justify-items: center; width: 100%; }
+.betting .bet-spot { grid-row: 1 / span 2; }
 .bet-spot { width: 112px; height: 112px; border-radius: 50%; border: 2px solid var(--gold); display: grid; place-content: center; text-align: center; background: rgba(0,0,0,.18); font-variant-numeric: tabular-nums; }
 .bet-spot small { font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .bet-spot b { font-size: 1.2rem; color: var(--print); overflow-wrap: anywhere; padding: 0 8px; }
@@ -217,4 +223,26 @@ a.brand-link:hover .logo { transform: rotate(-6deg) scale(1.04); }
   .brand-link .logo { width: 36px; height: 36px; }
   .brand-text .brand { font-size: 1.15rem; }
   .brand-sub { font-size: .62rem; }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 520px) {
+  .wrap { padding-top: 8px; }
+  .bar { padding-block: 6px; }
+  .bar-in { flex-wrap: nowrap; gap: 10px; }
+  .brand-text { display: none; }                 /* the logo alone still leads home */
+  .meters { gap: 10px; flex: 1; justify-content: space-between; min-width: 0; }
+  .meter small { font-size: .56rem; letter-spacing: .08em; }
+  .meter b { font-size: .86rem; }
+  .shoe-track { width: 54px; }
+  .table { padding: 10px 6px 18px; gap: 6px; border-radius: 20px 20px 70px 70px / 20px 20px 40px 40px; }
+  .msg { font-size: .92rem; }
+  .betting { grid-template-columns: 1fr; gap: 8px; }
+  .betting .bet-spot { display: none; }          /* the amount box below shows the bet */
+  .chips { flex-wrap: nowrap; gap: 6px; }
+  .chip { width: 44px; height: 44px; font-size: .8rem; }
+  /* big tap targets: up to three a row (Hit Stand Double / Split Surrender) */
+  .actions { gap: 8px; width: 100%; justify-content: center; }
+  .actions button { flex: 1 1 28%; min-width: 0; max-width: 260px; padding: 12px 6px; font-size: .9rem; }
+  .actions button.primary { padding-inline: 10px; }
 }
