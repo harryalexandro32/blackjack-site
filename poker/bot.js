@@ -51,7 +51,7 @@ export function decide(table, seat, skill = "normal") {
   const fair = 1 / (opponents + 1);
   const strength = eq / fair; // 1 = average, 2 = twice the fair share
 
-  const unit = table.bb >= 100 ? 100 : 1; // bet in whole dollars at bigger stakes
+  const unit = legal.raise ? legal.raise.step : 1; // bets go up in the table's steps
   const raiseTo = frac => {
     if (!legal.raise) return null;
     const target = h.currentBet + frac * (pot + toCall);

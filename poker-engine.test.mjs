@@ -79,13 +79,13 @@ test("heads-up: button posts the small blind, acts first preflop and last after 
 test("minimum raise is the size of the last raise; a bet into an empty pot is at least the big blind", () => {
   const t = table([1000, 1000, 1000]);
   P.startHand(t, P.newDeck());
-  assert.deepStrictEqual(P.legalActions(t, 0).raise, { min: 20, max: 1000, isBet: false });
+  assert.deepStrictEqual(P.legalActions(t, 0).raise, { min: 20, max: 1000, isBet: false, step: 1 });
   P.act(t, 0, { type: "raise", to: 35 });                  // raise of 25
   assert.strictEqual(P.legalActions(t, 1).raise.min, 60);  // 35 + 25
   assert.throws(() => P.act(t, 1, { type: "raise", to: 59 }));
   P.act(t, 1, { type: "call" }); P.act(t, 2, { type: "call" });
   assert.strictEqual(t.hand.street, "flop");
-  assert.deepStrictEqual(P.legalActions(t, 1).raise, { min: 10, max: 965, isBet: true });
+  assert.deepStrictEqual(P.legalActions(t, 1).raise, { min: 10, max: 965, isBet: true, step: 1 });
 });
 
 test("an all-in for less than a full raise does not reopen betting", () => {
@@ -220,4 +220,18 @@ test("settling up nets everyone and lists the payments", () => {
   ]);
   assert.deepStrictEqual(rows.map(r => r.net), [15000, -10000, -5000]);
   assert.deepStrictEqual(payments, [{ from: "Bo", to: "Ana", amount: 10000 }, { from: "Cy", to: "Ana", amount: 5000 }]);
+});
+
+test("raise steps: only multiples of the step, plus the exact minimum and all-in", () => {
+  const t = P.createTable({ smallBlind: 100, bigBlind: 200, maxSeats: 3, step: 1000 });
+  [50000, 50000, 3333].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+  P.startHand(t, P.newDeck());                                   // seat 0 is under the gun
+  assert.strictEqual(P.legalActions(t, 0).raise.step, 1000);
+  assert.throws(() => P.act(t, 0, { type: "raise", to: 20100 }), /steps of 1000/);
+  P.act(t, 0, { type: "raise", to: 400 });                      // the minimum raise is always allowed
+  assert.throws(() => P.act(t, 1, { type: "raise", to: 1500 }), /steps/);
+  P.act(t, 1, { type: "raise", to: 2000 });                     // a multiple of the step
+  P.act(t, 2, { type: "raise", to: 3333 });                     // all in, even though it isn't round
+  assert.strictEqual(t.hand.currentBet, 3333);
+  assert.throws(() => P.createTable({ smallBlind: 1, bigBlind: 2, step: 0 }), /raise step/);
 });

@@ -16,7 +16,8 @@ export class LocalTable {
   // opts: { name, bots, skill, botShow: "show" | "muck" | "mix", sb, bb, buyIn (cents), avatar, show }
   static create(opts) {
     const seats = opts.bots + 1;
-    const t = E.createTable({ smallBlind: opts.sb, bigBlind: opts.bb, maxSeats: seats });
+    // bots mode: bets and raises go up in big-blind steps
+    const t = E.createTable({ smallBlind: opts.sb, bigBlind: opts.bb, maxSeats: seats, step: opts.bb });
     const names = botNames(opts.bots, opts.name);
     const players = {};
     const me = 0;
@@ -37,6 +38,7 @@ export class LocalTable {
 
   constructor(state) {
     this.s = state;
+    if (!state.table.step) state.table.step = state.table.bb; // tables saved before raise steps existed
     this.listeners = new Set();
     this.nextHandAt = null;
     this.timer = null;

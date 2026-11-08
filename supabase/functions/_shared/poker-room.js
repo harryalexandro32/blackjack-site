@@ -28,7 +28,10 @@ export function validateSettings(s) {
   // which parts of the odds helper players may switch on (both, unless the host turns them off)
   const off = k => !!(s.odds && s.odds[k] === false);
   const odds = { win: !off("win"), strong: !off("strong"), cats: !off("cats") };
-  return { sb, bb, minBuyIn, maxSeats, actSeconds, odds };
+  // raise step: bets go up in multiples of this; the host picks it, and it defaults to the big blind
+  const step = s.step === undefined || s.step === null ? bb : int(s.step);
+  if (!(step >= 1 && step <= LIMITS.maxCents / 10)) fail("Pick a raise step of at least $0.01.");
+  return { sb, bb, minBuyIn, maxSeats, actSeconds, odds, step };
 }
 
 function checkBuyIn(state, amount) {
@@ -43,7 +46,7 @@ export function newRoom({ code, settings, host, now }) {
   const s = validateSettings(settings);
   const state = {
     code, settings: s,
-    table: E.createTable({ smallBlind: s.sb, bigBlind: s.bb, maxSeats: s.maxSeats }),
+    table: E.createTable({ smallBlind: s.sb, bigBlind: s.bb, maxSeats: s.maxSeats, step: s.step }),
     players: {}, hostId: host.id, started: false,
     deadline: null, deadlineKey: null, nextHandAt: null, closing: false, closed: false, summary: null, createdAt: now
   };
@@ -152,7 +155,12 @@ export function applyAction(state, action, ctx) {
       needSeat();
       if (!E.handInProgress(t) || t.hand.toAct !== mySeat) fail("It's not your turn.");
       const a = { type: String(action.action) };
-      if (a.type === "raise") a.to = int(action.to);
+      if (a.type === "raise") {
+        a.to = int(action.to);
+        const legal = E.legalActions(t, mySeat);
+        if (legal && legal.raise && a.to >= legal.raise.min && a.to <= legal.raise.max && !E.onStep(t, legal.raise, a.to))
+          fail(`Raises at this table go up in steps of ${dollars(E.raiseStep(t))}.`);
+      }
       try { E.act(t, mySeat, a); } catch (e) { fail(e.message); }
       state.players[me].timeouts = 0;
       break;

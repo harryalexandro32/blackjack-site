@@ -82,6 +82,8 @@
           <div class="field"><label for="crMin">Minimum buy-in</label><span class="money-input"><span>$</span><input id="crMin" type="number" inputmode="decimal" min="1" step="1" value="100"></span></div>
           <div class="field"><label for="crBuy">Your buy-in</label><span class="money-input"><span>$</span><input id="crBuy" type="number" inputmode="decimal" min="1" step="1" value="200"></span></div>
         </div>
+        <div class="field"><label for="crStep">Raises go up in steps of</label><span class="money-input"><span>$</span><input id="crStep" type="number" inputmode="decimal" min="0.01" step="0.01" value="2"></span>
+          <p class="note">Every bet and raise is a multiple of this. The minimum raise and going all in are always allowed.</p></div>
         <div class="field"><span class="label">Seats</span><div class="seg" id="crSeats" role="group" aria-label="Number of seats"></div></div>
         <div class="field"><label for="crTime">Time to act</label>
           <select id="crTime"><option value="20">20 seconds</option><option value="30" selected>30 seconds</option><option value="60">60 seconds</option><option value="120">2 minutes</option></select></div>

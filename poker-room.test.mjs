@@ -146,3 +146,15 @@ test("the host decides which odds helpers the table allows", () => {
   const s = R.newRoom({ code: "ABC234", settings: { ...settings, odds: { win: true, cats: false } }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
   assert.deepStrictEqual(R.publicState(s).settings.odds, { win: true, strong: true, cats: false });
 });
+
+test("the host sets the raise step; it defaults to the big blind and the server enforces it", () => {
+  assert.strictEqual(R.validateSettings(settings).step, 200);
+  assert.throws(() => R.validateSettings({ ...settings, step: 0 }), /raise step/);
+  const s = R.newRoom({ code: "ABC234", settings: { ...settings, step: 1000 }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana", buyIn: 20000 }, ctx("a", { tokenHash: "ta" }));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  const id = toActId(s);
+  assert.throws(() => R.applyAction(s, { type: "act", action: "raise", to: 2100 }, ctx(id)), /steps of \$10/);
+  R.applyAction(s, { type: "act", action: "raise", to: 2000 }, ctx(id));
+  assert.strictEqual(s.table.hand.currentBet, 2000);
+});

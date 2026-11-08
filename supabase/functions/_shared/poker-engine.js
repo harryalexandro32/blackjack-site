@@ -100,12 +100,17 @@ export function evaluate(cards) {
 }
 
 // ---------- table ----------
-// table = { sb, bb, maxSeats, seats: [ {id, name, stack, sittingOut} | null ], button, handNo, hand }
-export function createTable({ smallBlind, bigBlind, maxSeats = 8 }) {
+// table = { sb, bb, maxSeats, step, seats: [ {id, name, stack, sittingOut} | null ], button, handNo, hand }
+// step: bets and raises go up in multiples of this many chips (the minimum raise and all-in are always allowed).
+export function createTable({ smallBlind, bigBlind, maxSeats = 8, step = 1 }) {
   if (!(bigBlind > 0) || !(smallBlind > 0) || smallBlind > bigBlind) throw new Error("Blinds must be positive and the small blind no bigger than the big blind.");
   if (!(maxSeats >= 2 && maxSeats <= 8)) throw new Error("A table has 2 to 8 seats.");
-  return { sb: smallBlind, bb: bigBlind, maxSeats, seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
+  if (!(Number.isSafeInteger(step) && step >= 1)) throw new Error("The raise step must be a whole number of chips.");
+  return { sb: smallBlind, bb: bigBlind, maxSeats, step, seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
 }
+export const raiseStep = t => t.step || 1;
+// Is `to` an allowed raise size? Multiples of the step, plus the exact minimum and all-in.
+export const onStep = (t, raise, to) => to === raise.min || to === raise.max || to % raiseStep(t) === 0;
 
 export const handInProgress = t => !!t.hand && t.hand.street !== "done";
 const isDealtIn = s => s && s.stack > 0 && !s.sittingOut;
@@ -169,7 +174,7 @@ export function legalActions(t, seat) {
   // chips beyond the call, and someone left who could respond.
   if (!p.acted && stack > toCall && othersCanAct) {
     const maxTo = p.bet + stack;
-    res.raise = { min: Math.min(h.currentBet + h.minRaise, maxTo), max: maxTo, isBet: h.currentBet === 0 };
+    res.raise = { min: Math.min(h.currentBet + h.minRaise, maxTo), max: maxTo, isBet: h.currentBet === 0, step: raiseStep(t) };
   }
   return res;
 }
@@ -194,6 +199,7 @@ export function act(t, seat, action) {
       if (!legal.raise) throw new Error("You can't raise right now.");
       const to = Math.floor(Number(action.to));
       if (!(to >= legal.raise.min && to <= legal.raise.max)) throw new Error(`Raise must be between ${legal.raise.min} and ${legal.raise.max}.`);
+      if (!onStep(t, legal.raise, to)) throw new Error(`Raises go up in steps of ${raiseStep(t)}.`);
       const raiseBy = to - h.currentBet;
       put(t, seat, to - p.bet);
       if (raiseBy >= h.minRaise) {
@@ -314,7 +320,7 @@ export const potTotal = h => h && h.street !== "done" ? h.players.reduce((s, p) 
 export function publicView(t, viewerSeat = -1) {
   const h = t.hand;
   return {
-    sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, button: t.button, handNo: t.handNo,
+    sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, step: raiseStep(t), button: t.button, handNo: t.handNo,
     seats: t.seats.map(s => s && { id: s.id, name: s.name, stack: s.stack, sittingOut: !!s.sittingOut, avatar: s.avatar || "", show: !!s.show }),
     hand: h && {
       no: h.no, board: h.board, street: h.street, toAct: h.toAct, currentBet: h.currentBet, minRaise: h.minRaise,

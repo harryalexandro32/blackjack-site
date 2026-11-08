@@ -186,15 +186,22 @@ $("formCreate").addEventListener("submit", async e => {
   const minBuyIn = toCents($("crMin").value), buyIn = toCents($("crBuy").value);
   if (!(minBuyIn >= bl.bb)) return $("crErr").textContent = "The minimum buy-in has to be at least one big blind.";
   if (!(buyIn >= minBuyIn)) return $("crErr").textContent = `Your buy-in has to be at least the minimum, ${fmt(minBuyIn)}.`;
+  const step = toCents($("crStep").value);
+  if (!(step >= 1)) return $("crErr").textContent = "Enter the raise step, for example the big blind.";
   $("crErr").textContent = ""; $("btnCreate").disabled = true;
   try {
     store.set("pk-name", name);
     const { OnlineTable } = await online();
-    attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
+    attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, step, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
       odds: { win: $("crOddsWin").checked, strong: $("crOddsStrong").checked, cats: $("crOddsCats").checked }, avatar: myAvatar(), show: myShow() }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
+
+// The raise step follows the big blind until the host types their own.
+let stepEdited = false;
+$("crStep").addEventListener("input", () => { stepEdited = true; });
+$("crBb").addEventListener("input", () => { if (!stepEdited) $("crStep").value = $("crBb").value; });
 
 $("formJoin").addEventListener("submit", async e => {
   e.preventDefault();
@@ -221,7 +228,8 @@ async function lookupRules() {
     const NAMES = { win: "win %", strong: "strong hand", cats: "hand odds" };
     const on = r && r.odds ? ODDS_PARTS.filter(k => r.odds[k] !== false) : null;
     const odds = !on ? "" : on.length === 3 ? " · odds helper on" : !on.length ? " · odds helper off" : " · odds helper: " + on.map(k => NAMES[k]).join(", ");
-    $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
+    const steps = r && r.step > 1 ? ` · raises in ${fmt(r.step)} steps` : "";
+    $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)}${steps} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }
 }
@@ -538,10 +546,9 @@ function renderActions() {
     if (legal.raise) {
       const key = `${h.no}:${h.street}:${h.currentBet}:${legal.raise.min}:${legal.raise.max}`;
       if (key !== lastLegalKey) { lastLegalKey = key; raiseTo = legal.raise.min; raiseOpen = false; }
-      raiseTo = Math.min(legal.raise.max, Math.max(legal.raise.min, raiseTo));
-      const unit = t.bb >= 100 ? 100 : 1;
+      raiseTo = snapRaise(legal.raise, raiseTo);
       const r = $("raiseRange");
-      r.min = legal.raise.min; r.max = legal.raise.max; r.step = unit;
+      r.min = legal.raise.min; r.max = legal.raise.max; r.step = 1; // snapped to the table's step on input
       r.value = raiseTo;
       if (document.activeElement !== $("raiseInput")) $("raiseInput").value = (raiseTo / 100).toFixed(raiseTo % 100 ? 2 : 0);
       const allIn = raiseTo === legal.raise.max;
@@ -629,11 +636,21 @@ $("btnRaise").onclick = guard(() => {
   return ctrl.act({ type: "raise", to: raiseTo });
 });
 compact.addEventListener("change", () => { raiseOpen = false; if (view && !view.ended) render(); });
+// Raises go up in the table's step (big blind vs bots, the host's choice online).
+// The exact minimum raise and all-in are always allowed even when they aren't round.
+function snapRaise(raise, v) {
+  const step = raise.step || 1;
+  if (v >= raise.max) return raise.max;
+  if (v <= raise.min) return raise.min;
+  // nearest of: the minimum, all-in, and the step multiples either side of v
+  const below = Math.floor(v / step) * step;
+  return [raise.min, raise.max, below, below + step]
+    .filter(c => c >= raise.min && c <= raise.max)
+    .reduce((best, c) => Math.abs(c - v) < Math.abs(best - v) ? c : best);
+}
 $("raiseRange").addEventListener("input", e => {
   const legal = view.table.hand.legal; if (!legal || !legal.raise) return;
-  raiseTo = +e.target.value;
-  if (+e.target.value >= +e.target.max - +e.target.step) raiseTo = Math.min(raiseTo, legal.raise.max);
-  if (+e.target.value === +e.target.max) raiseTo = legal.raise.max;
+  raiseTo = snapRaise(legal.raise, +e.target.value);
   renderActions();
 });
 $("raiseInput").addEventListener("input", e => { const v = toCents(e.target.value); if (v > 0) { raiseTo = v; renderActions(); } });
@@ -641,10 +658,10 @@ $("raiseInput").addEventListener("blur", renderActions);
 $("presets").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const h = view.table.hand, legal = h.legal; if (!legal || !legal.raise) return;
-  const p = b.dataset.p, unit = view.table.bb >= 100 ? 100 : 1;
+  const p = b.dataset.p;
   if (p === "min") raiseTo = legal.raise.min;
   else if (p === "all") raiseTo = legal.raise.max;
-  else raiseTo = Math.round((h.currentBet + Number(p) * (h.pot + legal.call)) / unit) * unit;
+  else raiseTo = snapRaise(legal.raise, h.currentBet + Number(p) * (h.pot + legal.call));
   renderActions();
 });
 $("btnDealNow").onclick = guard(() => ctrl.dealNow());
