@@ -173,9 +173,21 @@ $("formAi").addEventListener("submit", e => {
   if (buyIn > 1e11) return $("aiErr").textContent = "That's more than this table can hold. Try under $1 billion.";
   $("aiErr").textContent = "";
   store.set("pk-name", name);
-  attach(LocalTable.create({ name, bots: +segValue("aiBots"), skill: segValue("aiSkill"), botShow: segValue("aiShow"), sb: bl.sb, bb: bl.bb, buyIn, avatar: myAvatar(), show: myShow() }));
+  store.set("pk-coach", $("aiCoach").checked);
+  attach(LocalTable.create({ name, bots: +segValue("aiBots"), skill: segValue("aiSkill"), botStyle: segValue("aiStyle"), coach: $("aiCoach").checked, botShow: segValue("aiShow"), sb: bl.sb, bb: bl.bb, buyIn, avatar: myAvatar(), show: myShow() }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedAiTable(); if (s) attach(new LocalTable(s)); });
+// what each bot style means, under the picker
+const STYLE_NOTES = {
+  mixed: "One of each kind: a rock, a maniac, a calling station and a shark.",
+  rock: "Rocks play few hands and only bet with good ones. Steal their blinds; believe their raises.",
+  maniac: "Maniacs raise and bluff all the time. Wait for a good hand and let them bet into you.",
+  station: "Calling stations call almost anything. Don't bluff them; bet your good hands for value.",
+  shark: "Sharks play solid, balanced poker. The toughest table."
+};
+$("aiStyle").addEventListener("click", () => { $("aiStyleNote").textContent = STYLE_NOTES[segValue("aiStyle")]; });
+$("aiCoach").checked = store.get("pk-coach", true);
+$("tgCoach").onchange = e => ctrl && ctrl.setCoach && ctrl.setCoach(e.target.checked);
 
 // ---------- setup: online ----------
 const params = new URLSearchParams(location.search);
@@ -307,7 +319,7 @@ function buildSeats(n) {
 function geometry(d, n) {
   const narrow = matchMedia("(max-width: 720px)").matches;
   const a = (90 + d * 360 / n) * Math.PI / 180;
-  const rx = narrow ? 41 : 45, ry = narrow ? 44 : 43;
+  const rx = narrow ? 41 : 45, ry = narrow ? 40 : 43;
   const x = 50 + rx * Math.cos(a), y = 50 + ry * Math.sin(a);
   const toward = (k, spin = 0) => {
     const aa = a + spin;
@@ -384,6 +396,7 @@ function updateHistory() {
       run.results.forEach(r => history.push({ text: `Run ${i + 1}: ` + winLine(r), win: true }));
     });
     else h.results.forEach(r => history.push({ text: winLine(r), win: true }));
+    if (view.coach && view.coach.no === h.no) history.push({ text: "Coach: " + view.coach.text, coach: true });
   }
   if (history.length > 300) history = history.slice(-300);
 }
@@ -402,6 +415,7 @@ function renderHistory() {
       }
     }
     if (x.win) d.className = "pos";
+    if (x.coach) d.className = "coach-line";
     box.appendChild(d);
   });
   if (atBottom) box.scrollTop = box.scrollHeight;
@@ -462,7 +476,7 @@ function render() {
     const vote = h && h.ritPending && h.ritVotes && String(i) in h.ritVotes ? h.ritVotes[i] : undefined;
     tag.className = "tag" + (won ? " win" : mucked ? " mucked" : vote !== undefined ? " vote" : p && p.allIn && h.street !== "done" ? " allin" : "");
     tag.textContent = !s ? "" : won ? `Wins ${fmt(won.amount)}` : mucked ? "Mucked"
-      : vote === null ? "Deciding…" : vote === true ? "Twice ✓" : vote === false ? "Once" : p && p.folded ? "Folded" : p && p.allIn && h.street !== "done" ? "All in" : s.sittingOut ? "Sitting out" : s.stack === 0 && !p ? "Out of chips" : i === me ? "You" : "";
+      : vote === null ? "Deciding…" : vote === true ? "Twice ✓" : vote === false ? "Once" : p && p.folded ? "Folded" : p && p.allIn && h.street !== "done" ? "All in" : s.sittingOut ? "Sitting out" : s.stack === 0 && !p ? "Out of chips" : i === me ? "You" : view.players[i]?.styleLabel || "";
     const pic = el.querySelector(".pic"), av = s ? avatarOf(s) : "";
     if (pic.dataset.av !== av) { pic.dataset.av = av; pic.innerHTML = av ? avatarSvg(av, s.name) : ""; }
     const holes = el.querySelector(".holes");
@@ -503,6 +517,8 @@ function render() {
   renderOdds();
   tickClock();
   $("tgShow").checked = me >= 0 && t.seats[me] ? !!t.seats[me].show : myShow();
+  $("coachSwitch").hidden = view.mode !== "ai";
+  $("tgCoach").checked = !!view.coachOn;
 }
 
 // ---------- winner announcement ----------
@@ -540,6 +556,11 @@ function renderWinner() {
   }
   }
   box.classList.toggle("multi", rows > 1);
+  if (view.coach && view.coach.no === h.no) {
+    const c = document.createElement("div");
+    c.className = "wb-coach"; c.textContent = view.coach.text;
+    box.appendChild(c);
+  }
   box.hidden = false;
 }
 $("winBanner").addEventListener("click", () => { bannerHidden = bannerHand; $("winBanner").hidden = true; });
@@ -739,7 +760,7 @@ function renderPlayers() {
     const row = document.createElement("div");
     row.className = "pl";
     row.innerHTML = `<span>${miniAv(avatarOf(s))}<span></span></span><span></span><b class="${netClass(net)}"></b>`;
-    row.children[0].lastChild.textContent = s.name + (i === view.me ? " (you)" : "") + (view.hostSeat === i ? " · host" : "") + (p.isBot ? " · bot" : "");
+    row.children[0].lastChild.textContent = s.name + (i === view.me ? " (you)" : "") + (view.hostSeat === i ? " · host" : "") + (p.isBot ? ` · ${(p.styleLabel || "bot").toLowerCase()}` : "");
     row.children[1].textContent = `in ${fmt(p.buyIn)}`;
     row.children[2].textContent = fmt(net, true);
     box.appendChild(row);

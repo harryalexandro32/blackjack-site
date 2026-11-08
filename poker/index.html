@@ -49,6 +49,12 @@
           <div class="seg" id="aiSkill" role="group" aria-label="Bot skill">
             <button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button>
           </div></div>
+        <div class="field"><span class="label">Bot personalities</span>
+          <div class="seg" id="aiStyle" role="group" aria-label="Bot personalities">
+            <button type="button" data-v="mixed" aria-pressed="true">Mixed table</button><button type="button" data-v="rock">Rocks</button><button type="button" data-v="maniac">Maniacs</button><button type="button" data-v="station">Calling stations</button><button type="button" data-v="shark">Sharks</button>
+          </div>
+          <p class="note" id="aiStyleNote">One of each kind: a rock, a maniac, a calling station and a shark.</p></div>
+        <label class="switch"><input type="checkbox" id="aiCoach" checked><span class="track" aria-hidden="true"></span><span>Coach tips<small>After each hand, a short note on your biggest decision, like whether a fold or call was right for the price</small></span></label>
         <div class="field"><span class="label">Bots when they could muck</span>
           <div class="seg" id="aiShow" role="group" aria-label="Bots show or muck">
             <button type="button" data-v="show">Always show</button><button type="button" data-v="muck">Always muck</button><button type="button" data-v="mix" aria-pressed="true">Mix it up</button>
@@ -209,6 +215,8 @@
       <div class="panel">
         <h2>Players</h2>
         <div class="players-list" id="playersList"></div>
+        <label class="switch" id="coachSwitch" hidden><input type="checkbox" id="tgCoach"><span class="track" aria-hidden="true"></span>
+          <span>Coach tips<small>A short note after each hand on your biggest decision</small></span></label>
         <label class="switch"><input type="checkbox" id="tgShow"><span class="track" aria-hidden="true"></span>
           <span>Show my cards when I could muck<small>Off: a losing hand at showdown and a pot nobody called stay face down. Winning at showdown and all-in hands always show.</small></span></label>
         <div class="table-tools">

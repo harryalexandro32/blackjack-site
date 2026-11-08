@@ -1,7 +1,16 @@
 // AI mode: the whole table runs in this browser. The engine is the same one the online server uses.
 import * as E from "../supabase/functions/_shared/poker-engine.js";
-import { decide, botNames } from "./bot.js";
-import { randomAvatar } from "./avatars.js";
+import { decide, botNames, STYLES, STYLE_KEYS } from "./bot.js";
+import { randomAvatar, PRESETS } from "./avatars.js";
+import { snapshot, noteFor } from "./coach.js";
+
+// A bot's look matches its style: a picture from that style's list, one not already at the table if possible.
+function styleAvatar(style, used) {
+  const pool = STYLES[style].avatars.map(n => PRESETS.find(p => p.name === n)).filter(Boolean).map(p => p.code);
+  const free = pool.filter(c => !used.has(c));
+  const list = free.length ? free : pool;
+  return list[Math.floor(Math.random() * list.length)] || randomAvatar();
+}
 
 const KEY = "pk-ai";
 const BETWEEN_HANDS_MS = 4500;
@@ -13,7 +22,7 @@ export function savedAiTable() {
 }
 
 export class LocalTable {
-  // opts: { name, bots, skill, botShow: "show" | "muck" | "mix", sb, bb, buyIn (cents), avatar, show }
+  // opts: { name, bots, skill, botStyle: "mixed" | style, coach, botShow: "show" | "muck" | "mix", sb, bb, buyIn (cents), avatar, show }
   static create(opts) {
     const seats = opts.bots + 1;
     // bots mode: bets and raises go up in big-blind steps
@@ -24,16 +33,18 @@ export class LocalTable {
     t.seats[me] = { id: "me", name: opts.name, stack: opts.buyIn, avatar: opts.avatar || "", show: !!opts.show };
     players[me] = { name: opts.name, buyIn: opts.buyIn, isBot: false };
     const used = new Set([opts.avatar]);
+    // a mixed table cycles through the styles (in a random order) so every kind of player shows up
+    const order = STYLE_KEYS.slice().sort(() => Math.random() - 0.5);
     for (let i = 1; i < seats; i++) {
-      let av = randomAvatar();
-      for (let k = 0; k < 5 && used.has(av); k++) av = randomAvatar();
+      const style = !opts.botStyle || opts.botStyle === "mixed" ? order[(i - 1) % order.length] : opts.botStyle;
+      const av = styleAvatar(style, used);
       used.add(av);
       t.seats[i] = { id: "bot" + i, name: names[i - 1], stack: opts.buyIn, avatar: av, show: false };
-      players[i] = { name: names[i - 1], buyIn: opts.buyIn, isBot: true };
+      players[i] = { name: names[i - 1], buyIn: opts.buyIn, isBot: true, style, styleLabel: STYLES[style].label };
     }
     // random first button, like cutting for the deal
     t.button = Math.floor(Math.random() * seats) - 1;
-    return new LocalTable({ table: t, players, me, skill: opts.skill, botShow: opts.botShow || "mix", minBuyIn: opts.buyIn, ended: false, departed: [] });
+    return new LocalTable({ table: t, players, me, skill: opts.skill, botShow: opts.botShow || "mix", coach: opts.coach !== false, minBuyIn: opts.buyIn, ended: false, departed: [] });
   }
 
   constructor(state) {
@@ -60,7 +71,8 @@ export class LocalTable {
       table: E.publicView(t, me),
       nextHandAt: this.nextHandAt, deadline: null,
       started: true, ended: this.s.ended, summary: this.s.summary || null,
-      waitingForRebuy: !E.handInProgress(t) && t.seats[me].stack === 0
+      waitingForRebuy: !E.handInProgress(t) && t.seats[me].stack === 0,
+      coachOn: this.s.coach !== false, coach: this.s.coach !== false ? this.s.coachNote || null : null
     };
   }
 
@@ -74,7 +86,7 @@ export class LocalTable {
       if (seat !== this.s.me && seat >= 0) {
         this.botTimer = setTimeout(() => {
           if (!E.handInProgress(t) || t.hand.toAct !== seat) return;
-          E.act(t, seat, decide(t, seat, this.s.skill));
+          E.act(t, seat, decide(t, seat, this.s.skill, this.s.players[seat]?.style));
           this.afterAction();
         }, sleepMs());
       }
@@ -89,7 +101,16 @@ export class LocalTable {
   }
 
   afterAction() {
-    if (!E.handInProgress(this.s.table)) this.nextHandAt = null;
+    const t = this.s.table;
+    if (!E.handInProgress(t)) {
+      this.nextHandAt = null;
+      // the hand is over: the coach looks back at your decisions
+      const d = this.s.decisions;
+      if (this.s.coach !== false && d && d.no === t.hand.no && d.list.length) {
+        const text = noteFor(d.list);
+        if (text) this.s.coachNote = { no: t.hand.no, text };
+      }
+    }
     this.emit();
     this.tick();
   }
@@ -112,8 +133,12 @@ export class LocalTable {
   }
 
   async act(action) {
-    const t = this.s.table;
-    E.act(t, this.s.me, action);
+    const t = this.s.table, me = this.s.me;
+    if (this.s.coach !== false && E.legalActions(t, me)) {
+      if (!this.s.decisions || this.s.decisions.no !== t.hand.no) this.s.decisions = { no: t.hand.no, list: [] };
+      this.s.decisions.list.push(snapshot(t, me, action));
+    }
+    E.act(t, me, action);
     this.afterAction();
   }
 
@@ -136,6 +161,8 @@ export class LocalTable {
     if (show !== undefined) seat.show = !!show;
     this.emit();
   }
+
+  async setCoach(on) { this.s.coach = !!on; this.emit(); }
 
   async setSitOut(on) {
     this.s.table.seats[this.s.me].sittingOut = on;

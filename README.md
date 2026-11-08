@@ -1,10 +1,10 @@
 # The Card Room
 
-Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaScript, so there's no build step. A switch in the header changes between the classic green felt and dark mode. Fonts load from Google Fonts.
+Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaScript, so there's no build step. Two header buttons: 🎨 picks one of eight themes (Classic, Cards by the Ocean, Feeling Pretty, Wild West, Vegas, Into the Future, Northern Lights, Lantern Night) and ☾/☀ turns dark mode on or off for any theme. Fonts load from Google Fonts.
 
 - **Blackjack** (`blackjack/`): single player. Buy in for any amount, bet each hand, double, split, surrender, insurance. Resetting the session wipes the bankroll.
 - **Texas Hold'em** (`poker/`): no-limit cash game.
-  - **vs bots**: runs entirely in the browser with 1–7 bots (easy, normal, hard).
+  - **vs bots**: runs entirely in the browser with 1–7 bots (easy, normal, hard). Bots have personalities: rock, maniac, calling station and shark, each with a matching look. Coach tips after each hand point out your biggest decision, for example whether a fold was right for the price.
   - **with friends**: online tables for 2–8 players. The host sets the blinds, minimum buy-in and time to act, and shares a 6-character code. Players buy in, rebuy when busted, and cash out. When the host closes the table, everyone sees what they bought in for, what they left with, and who pays whom. No real money moves: friends settle up themselves.
   - **Rooms you keep**: the host ends a session to settle up, and the room stays open with the same code. Players buy in again for the next session. A room ledger keeps every session's result plus running totals, with one list of payments that squares everything and a 'mark as paid' reset. The host gets a private host link to run the room from any device; closing a room for good is a separate button.
   - **Playing with friends**: table chat and emoji reactions that pop up over seats, watchers who can chat and sit down later, a host pause button, and house rules the host picks: ante, straddle and run it twice (everyone all in agrees, the rest of the board is dealt twice and the pot split).

@@ -35,11 +35,30 @@ const SKILL = {
   hard:   { iters: 450, noise: 0.03, aggression: 0.85, bluff: 0.1,  callSlack: -0.01 }
 };
 
+// Personalities change how a bot plays; skill (above) changes how well it reads its own hand.
+//  entry:   how strong a hand must be (vs. a fair share) to play on facing a bet before the flop
+//  stubborn: extra price a bot will pay to see more cards (calling stations love this)
+//  barrel:  chance to keep betting or raising when it already has a decent hand
+export const STYLES = {
+  rock:    { label: "Rock",            note: "plays few hands and bets only with good ones", aggression: 0.45, bluff: 0.01, callSlack: -0.05, entry: 1.45, stubborn: 0,    barrel: 0.25,
+             avatars: ["Old Pete", "Bear", "Gran", "Owl"] },
+  maniac:  { label: "Maniac",          note: "raises and bluffs all the time",                 aggression: 1.0,  bluff: 0.3,  callSlack: 0.04,  entry: 0.55, stubborn: 0.05, barrel: 0.75,
+             avatars: ["Fox", "Cowboy", "Cool guy", "Cool girl", "Candy"] },
+  station: { label: "Calling station", note: "calls almost anything and rarely raises",       aggression: 0.12, bluff: 0.01, callSlack: 0.22,  entry: 0.45, stubborn: 0.25, barrel: 0.1,
+             avatars: ["Snowman", "Cat", "Kenji", "Mei"] },
+  shark:   { label: "Shark",           note: "solid and hard to read",                          aggression: 0.8,  bluff: 0.09, callSlack: -0.01, entry: 0.95, stubborn: 0,    barrel: 0.55,
+             avatars: ["The Dealer", "Trooper", "Grim Reaper", "Robot"] }
+};
+export const STYLE_KEYS = Object.keys(STYLES);
+
 function roundTo(amount, unit) { return Math.max(unit, Math.round(amount / unit) * unit); }
 
 // Returns an engine action for the bot in `seat`.
-export function decide(table, seat, skill = "normal") {
-  const cfg = SKILL[skill] || SKILL.normal;
+export function decide(table, seat, skill = "normal", style = null) {
+  const base = SKILL[skill] || SKILL.normal, st = STYLES[style];
+  // skill sets how carefully the bot reads its hand; a personality sets how it likes to play
+  const cfg = st ? { ...base, aggression: st.aggression, bluff: st.bluff, callSlack: st.callSlack + (base.callSlack - SKILL.normal.callSlack) } : base;
+  const entry = st ? st.entry : 0.8, stubborn = st ? st.stubborn : 0, barrel = st ? st.barrel : 0.4;
   const h = table.hand, me = h.players[seat], legal = legalActions(table, seat);
   const opponents = h.players.filter((p, i) => p && i !== seat && !p.folded).length;
   const pot = h.players.reduce((s, p) => s + (p ? p.committed : 0), 0);
@@ -66,12 +85,15 @@ export function decide(table, seat, skill = "normal") {
   }
   // Nothing to call: check, or bet with a decent hand / the occasional bluff.
   if (legal.check) {
-    if (legal.raise && (strength > 1.4 || rnd() < cfg.bluff)) return raiseTo(0.4 + rnd() * 0.4);
+    if (legal.raise && ((strength > 1.4 && rnd() < 0.45 + barrel * 0.6) || rnd() < cfg.bluff)) return raiseTo(0.4 + rnd() * (0.3 + cfg.aggression * 0.4));
     return { type: "check" };
   }
-  // Facing a bet: call when the price is right, bluff-raise rarely, otherwise fold.
-  if (eq + cfg.callSlack >= potOdds) {
+  // Before the flop, picky players fold hands below their standard.
+  if (h.street === "preflop" && strength < entry && toCall > table.bb && rnd() > stubborn) return { type: "fold" };
+  // Facing a bet: call when the price is right, raise sometimes, otherwise fold.
+  if (eq + cfg.callSlack + stubborn * (h.street === "river" ? 0.5 : 1) >= potOdds) {
     if (legal.raise && strength > 1.6 && rnd() < cfg.aggression * 0.5) return raiseTo(0.6 + rnd() * 0.5);
+    if (legal.raise && rnd() < cfg.bluff * 0.4) return raiseTo(0.8 + rnd() * 0.6); // maniacs re-raise light
     return { type: "call" };
   }
   if (legal.raise && rnd() < cfg.bluff * 0.5 && h.street !== "river") return raiseTo(0.7);
