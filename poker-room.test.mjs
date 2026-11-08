@@ -139,3 +139,10 @@ test("players set their own avatar and show/muck choice; junk avatars are droppe
   assert.strictEqual(R.publicState(s).view.seats[1].show, true);
   assert.throws(() => R.applyAction(s, { type: "prefs", show: true }, ctx("nobody")), /not seated/);
 });
+
+test("the host decides which odds helpers the table allows", () => {
+  assert.deepStrictEqual(R.validateSettings(settings).odds, { win: true, cats: true });   // on unless turned off
+  assert.deepStrictEqual(R.validateSettings({ ...settings, odds: { win: false, cats: true } }).odds, { win: false, cats: true });
+  const s = R.newRoom({ code: "ABC234", settings: { ...settings, odds: { win: true, cats: false } }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
+  assert.deepStrictEqual(R.publicState(s).settings.odds, { win: true, cats: false });
+});

@@ -32,24 +32,27 @@
   border: 12px solid var(--rail); border-radius: 50% / 50%;
   box-shadow: inset 0 0 70px rgba(0,0,0,.5), 0 0 0 2px var(--rail-hi), 0 18px 40px rgba(0,0,0,.4);
 }
-.center { position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%); display: grid; gap: 8px; justify-items: center; width: min(78%, 420px); }
+.center { position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%); display: grid; gap: 8px; justify-items: center; width: min(80%, 470px); }
 .pot { font-variant-numeric: tabular-nums; font-weight: 700; background: rgba(0,0,0,.35); padding: 3px 12px; border-radius: 999px; font-size: .9rem; min-height: 1.6em; }
 .pot:empty { visibility: hidden; }
 .board { display: flex; gap: 6px; justify-content: center; }
-.board .card { --cw: clamp(34px, 6.2vw, 58px); }
+.board .card { --cw: clamp(46px, 7vw, 78px); }
+/* bigger rank and suit on the table so cards read at a glance */
+.felt .card .corner, .mine .card .corner { font-size: calc(var(--cw) * .35); top: 4%; left: 7%; }
+.felt .card .pip, .mine .card .pip { font-size: calc(var(--cw) * .52); }
 .felt-print { font-family: var(--font-display); color: var(--gold); letter-spacing: .2em; font-size: .78rem; opacity: .75; text-align: center; }
 
 .seat {
-  position: absolute; transform: translate(-50%, -50%); width: 124px; display: grid; justify-items: center; gap: 3px;
+  position: absolute; transform: translate(-50%, -50%); width: 140px; display: grid; justify-items: center; gap: 3px;
   transition: opacity .2s;
 }
-.seat .top { display: flex; align-items: flex-end; justify-content: center; height: 54px; }
-.seat .pic { width: 50px; height: 50px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(10,8,6,.85), 0 3px 8px rgba(0,0,0,.45); position: relative; z-index: 0; }
+.seat .top { display: flex; align-items: flex-end; justify-content: center; height: 66px; }
+.seat .pic { width: 52px; height: 52px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(10,8,6,.85), 0 3px 8px rgba(0,0,0,.45); position: relative; z-index: 0; }
 .seat .pic:empty { display: none; }
 .seat .holes { display: flex; align-items: flex-end; position: relative; z-index: 1; }
-.seat .pic:not(:empty) + .holes:not(:empty) { margin-left: -12px; }
-.seat .holes .card { --cw: 34px; }
-.seat .holes .card + .card { margin-left: -14px; }
+.seat .pic:not(:empty) + .holes:not(:empty) { margin-left: -14px; }
+.seat .holes .card { --cw: 46px; }
+.seat .holes .card + .card { margin-left: -18px; }
 .seat.acting .pic { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(212,173,85,.6); }
 .seat.empty .top { height: 0; }
 .seat .tag.mucked { color: var(--muted); }
@@ -100,7 +103,7 @@
 }
 .mine { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .mine .cards { display: flex; gap: 6px; }
-.mine .card { --cw: 58px; }
+.mine .card { --cw: 74px; }
 .mine .info { display: grid; gap: 2px; min-width: 0; }
 .mine .info b { font-size: .95rem; }
 .mine .info span { font-size: .82rem; color: var(--muted); }
@@ -203,19 +206,68 @@
 /* ---------- small screens ---------- */
 @media (max-width: 720px) {
   .felt { aspect-ratio: 3 / 4; max-height: none; border-width: 8px; border-radius: 46% / 32%; }
-  .seat { width: 88px; }
-  .seat .top { height: 40px; }
-  .seat .pic { width: 36px; height: 36px; }
-  .seat .holes .card { --cw: 25px; }
-  .seat .holes .card + .card { margin-left: -10px; }
-  .seat .pic:not(:empty) + .holes:not(:empty) { margin-left: -9px; }
+  .seat { width: 92px; }
+  .seat .top { height: 50px; }
+  .seat .pic { width: 34px; height: 34px; }
+  .seat .holes .card { --cw: 34px; }
+  .seat .holes .card + .card { margin-left: -13px; }
+  .seat .pic:not(:empty) + .holes:not(:empty) { margin-left: -12px; }
+  .seat .plate { padding: 3px 6px 4px; }
   .odds { width: auto; }
   .look-opts .tile { width: 62px; }
   .look-opts .tile .av { width: 40px; height: 40px; }
   .seat .name, .seat .stack { font-size: .74rem; }
-  .board .card { --cw: clamp(34px, 11vw, 50px); }
+  .center { width: 94%; }
+  .board .card { --cw: min(58px, calc((100vw - 76px) / 5.3)); }
   .board { gap: 4px; }
   .rail { grid-template-columns: 1fr; }
   .lower { grid-template-columns: 1fr; }
-  .mine .card { --cw: 50px; }
+  .mine .card { --cw: 54px; }
+}
+
+/* ---------- phones: everything you need to act fits on one screen ----------
+   The rail (your cards, odds, buttons) is pinned to the bottom and the table takes the space above it.
+   --bar-h and --rail-h are measured in app.js. */
+@media (max-width: 720px) {
+  body.at-table { padding-bottom: calc(var(--rail-h, 220px) + 12px); }
+  body.at-table .wrap { padding-top: 10px; }
+  body.at-table .felt { aspect-ratio: auto; height: max(330px, calc(100dvh - var(--bar-h, 70px) - var(--rail-h, 220px) - 22px)); }
+  body.at-table .bar { padding-block: 6px; }
+  body.at-table .bar .meters { gap: 4px 12px; }
+  body.at-table .bar .meter small { font-size: .58rem; }
+  body.at-table .bar .meter b { font-size: .88rem; }
+  body.at-table .brand-sub { display: none; }
+  .rail {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; border-radius: 16px 16px 0 0;
+    padding: 8px max(12px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 20px rgba(0,0,0,.45);
+    grid-template-columns: auto 1fr; grid-template-areas: "mine tog" "mine win" "cats cats" "act act";
+    gap: 6px 12px; align-items: start;
+  }
+  .rail .mine { grid-area: mine; }
+  .rail .mine .info b { font-size: .84rem; }
+  .rail .mine .info span { font-size: .74rem; }
+  .rail .odds { display: contents; }
+  .rail .odds-toggles { grid-area: tog; justify-content: flex-end; }
+  .rail .odds-win { grid-area: win; justify-items: end; text-align: right; }
+  .rail .odds-win .big b { font-size: 1.3rem; }
+  .rail .odds-win small { font-size: .66rem; }
+  .rail .odds-win .meter-bar { width: 100%; }
+  .rail .odds-cats { grid-area: cats; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .rail .odds-cats::-webkit-scrollbar { display: none; }
+  .rail .odds-cats > small, .rail .odds-cats .meter-bar { display: none; }
+  .rail .odds-cats .oc { display: flex; gap: 4px; flex: none; background: rgba(0,0,0,.25); border-radius: 999px; padding: 2px 9px; font-size: .72rem; white-space: nowrap; }
+  .rail .actions { grid-area: act; gap: 6px; }
+  .rail .status { font-size: .84rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 0; }
+  .rail .act-row { flex-wrap: nowrap; gap: 6px; }
+  .rail .act-row button { flex: 1 1 0; min-width: 0; padding: 11px 6px; }
+  .rail .act-row .money-input { flex: 0 1 auto; }
+  .rail .act-row .money-input input { width: 6ch; }
+  /* the raise slider opens above the bar, over the table, only after tapping Raise */
+  .rail .raise-box {
+    position: absolute; left: 0; right: 0; bottom: 100%;
+    background: linear-gradient(var(--rail-hi), var(--rail)); border-radius: 16px 16px 0 0; padding: 10px 12px;
+    box-shadow: 0 -6px 16px rgba(0,0,0,.4);
+  }
+  .rail .raise-box .presets { width: 100%; justify-content: space-between; }
 }

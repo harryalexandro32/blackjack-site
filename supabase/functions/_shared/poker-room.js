@@ -25,7 +25,9 @@ export function validateSettings(s) {
   if (!(minBuyIn >= bb && minBuyIn <= LIMITS.maxCents)) fail("The minimum buy-in has to be at least one big blind.");
   if (!(maxSeats >= 2 && maxSeats <= 8)) fail("A table has 2 to 8 seats.");
   if (![20, 30, 60, 120].includes(actSeconds)) fail("Pick a time to act from the list.");
-  return { sb, bb, minBuyIn, maxSeats, actSeconds };
+  // which parts of the odds helper players may switch on (both, unless the host turns them off)
+  const odds = { win: !(s.odds && s.odds.win === false), cats: !(s.odds && s.odds.cats === false) };
+  return { sb, bb, minBuyIn, maxSeats, actSeconds, odds };
 }
 
 function checkBuyIn(state, amount) {

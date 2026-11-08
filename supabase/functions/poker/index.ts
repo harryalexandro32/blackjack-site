@@ -89,7 +89,7 @@ Deno.serve(async req => {
       const loaded = await load({ code: body.code });
       if (!loaded || loaded.state.closed) return json({ table: null, serverNow: now });
       const s = loaded.state;
-      return json({ table: { sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length }, serverNow: now });
+      return json({ table: { sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length, odds: s.settings.odds || { win: true, cats: true } }, serverNow: now });
     }
 
     if (type === "join") {

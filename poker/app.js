@@ -99,7 +99,16 @@ function animateDeal(fresh) {
 }
 
 // ---------- screens ----------
-function showScreen(id) { ["scrSetup", "scrTable", "scrSummary"].forEach(s => $(s).hidden = s !== id); $("meters").hidden = id !== "scrTable"; }
+function showScreen(id) {
+  ["scrSetup", "scrTable", "scrSummary"].forEach(s => $(s).hidden = s !== id);
+  $("meters").hidden = id !== "scrTable";
+  document.body.classList.toggle("at-table", id === "scrTable");
+}
+// On phones the action bar is pinned to the bottom; the table sizes itself to the space that's left.
+const compact = matchMedia("(max-width: 720px)");
+const sizeVar = (el, name) => new ResizeObserver(() => document.documentElement.style.setProperty(name, el.offsetHeight + "px")).observe(el);
+sizeVar(document.querySelector(".bar"), "--bar-h");
+sizeVar(document.querySelector(".rail"), "--rail-h");
 
 let ctrl = null, unsub = null, view = null;
 function attach(controller) {
@@ -181,7 +190,8 @@ $("formCreate").addEventListener("submit", async e => {
   try {
     store.set("pk-name", name);
     const { OnlineTable } = await online();
-    attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value, avatar: myAvatar(), show: myShow() }));
+    attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
+      odds: { win: $("crOddsWin").checked, cats: $("crOddsCats").checked }, avatar: myAvatar(), show: myShow() }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -208,7 +218,8 @@ async function lookupRules() {
   try {
     const { peekTable } = await online();
     const r = await peekTable(code);
-    $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)} · ${r.seated} of ${r.maxSeats} seats taken` : "No open table with that code.";
+    const odds = !r || !r.odds ? "" : r.odds.win && r.odds.cats ? " · odds helper on" : !r.odds.win && !r.odds.cats ? " · odds helper off" : r.odds.win ? " · win % only" : " · hand odds only";
+    $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }
 }
@@ -331,7 +342,7 @@ function renderHistory() {
 }
 
 // ---------- render ----------
-let raiseTo = 0, lastLegalKey = "", animOk = false, lastHandNo = null;
+let raiseTo = 0, lastLegalKey = "", animOk = false, lastHandNo = null, raiseOpen = false;
 function render() {
   if (!view) return;
   if (view.ended) return renderSummary();
@@ -416,12 +427,15 @@ let oddsKey = "", oddsResult = null, oddsTimer = 0;
 const oddsPrefs = () => store.get("pk-odds", { win: true, cats: true });
 const pct = x => x >= .995 && x < 1 ? ">99%" : x > 0 && x < .01 ? "<1%" : Math.round(x * 100) + "%";
 function renderOdds() {
-  const pref = oddsPrefs(), t = view.table, h = t.hand, me = view.me;
+  // the host decides what the table allows; each player then switches on what they want
+  const rules = view.oddsRules || { win: true, cats: true }, saved = oddsPrefs();
+  const pref = { win: rules.win && saved.win, cats: rules.cats && saved.cats }, t = view.table, h = t.hand, me = view.me;
+  $("tgWin").hidden = !rules.win; $("tgCats").hidden = !rules.cats;
   $("tgWin").setAttribute("aria-pressed", pref.win);
   $("tgCats").setAttribute("aria-pressed", pref.cats);
   const myP = h && me >= 0 ? h.players[me] : null;
   const live = !!(myP && myP.hole && !myP.folded && h.street !== "done");
-  $("odds").hidden = me < 0;
+  $("odds").hidden = me < 0 || (!rules.win && !rules.cats);
   $("oddsWin").hidden = !pref.win; $("oddsCats").hidden = !pref.cats;
   if (!pref.win && !pref.cats) return;
   if (!live) {
@@ -478,8 +492,11 @@ function positionName(seat) {
 function renderActions() {
   const t = view.table, h = t.hand, me = view.me, legal = h && h.legal;
   const myTurn = !!(legal && h.street !== "done");
+  if (!myTurn) raiseOpen = false;
   $("actRow").hidden = !myTurn;
-  $("raiseBox").hidden = !(myTurn && legal.raise);
+  // phones: the slider opens only after tapping Raise, so the buttons never move
+  const sliderUp = !compact.matches || raiseOpen;
+  $("raiseBox").hidden = !(myTurn && legal.raise && sliderUp);
   const between = !h || h.street === "done";
   const mine = me >= 0 ? t.seats[me] : null;
   const needRebuy = view.waitingForRebuy;
@@ -501,7 +518,7 @@ function renderActions() {
     $("btnFold").firstChild.textContent = legal.check ? "Fold" : "Fold";
     if (legal.raise) {
       const key = `${h.no}:${h.street}:${h.currentBet}:${legal.raise.min}:${legal.raise.max}`;
-      if (key !== lastLegalKey) { lastLegalKey = key; raiseTo = legal.raise.min; }
+      if (key !== lastLegalKey) { lastLegalKey = key; raiseTo = legal.raise.min; raiseOpen = false; }
       raiseTo = Math.min(legal.raise.max, Math.max(legal.raise.min, raiseTo));
       const unit = t.bb >= 100 ? 100 : 1;
       const r = $("raiseRange");
@@ -509,7 +526,8 @@ function renderActions() {
       r.value = raiseTo;
       if (document.activeElement !== $("raiseInput")) $("raiseInput").value = (raiseTo / 100).toFixed(raiseTo % 100 ? 2 : 0);
       const allIn = raiseTo === legal.raise.max;
-      $("btnRaise").firstChild.textContent = `${legal.raise.isBet ? "Bet" : "Raise to"} ${fmt(raiseTo)}${allIn ? " all in" : ""}`;
+      $("btnRaise").firstChild.textContent = !sliderUp ? (legal.raise.isBet ? "Bet…" : "Raise…")
+        : `${legal.raise.isBet ? "Bet" : "Raise to"} ${fmt(raiseTo)}${allIn ? " all in" : ""}`;
     }
     $("btnRaise").hidden = !legal.raise;
   }
@@ -586,7 +604,12 @@ function guard(fn) {
 }
 $("btnFold").onclick = guard(() => ctrl.act({ type: "fold" }));
 $("btnCall").onclick = guard(() => ctrl.act(view.table.hand.legal.check ? { type: "check" } : { type: "call" }));
-$("btnRaise").onclick = guard(() => ctrl.act({ type: "raise", to: raiseTo }));
+$("btnRaise").onclick = guard(() => {
+  if (compact.matches && !raiseOpen) { raiseOpen = true; renderActions(); return; }
+  raiseOpen = false;
+  return ctrl.act({ type: "raise", to: raiseTo });
+});
+compact.addEventListener("change", () => { raiseOpen = false; if (view && !view.ended) render(); });
 $("raiseRange").addEventListener("input", e => {
   const legal = view.table.hand.legal; if (!legal || !legal.raise) return;
   raiseTo = +e.target.value;

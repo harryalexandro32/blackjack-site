@@ -108,3 +108,17 @@ select { font: inherit; background: var(--felt-deep); color: var(--print); borde
 .card.dim { filter: brightness(.55); }
 @keyframes deal { from { transform: translateY(-24px) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .card.deal { animation: none; } * { transition: none !important; } }
+
+/* ---------- logo ---------- */
+.brand-link { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; min-width: 0; border-radius: 10px; }
+.brand-link .logo { width: 44px; height: 44px; flex: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); transition: transform .2s; }
+a.brand-link:hover .logo { transform: rotate(-6deg) scale(1.04); }
+.brand-text { display: grid; line-height: 1.05; min-width: 0; }
+.brand-text .brand { font-size: 1.4rem; white-space: nowrap; }
+.brand-sub { margin: 0; font-family: var(--font-body); font-size: .7rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--print); opacity: .75; white-space: nowrap; }
+.tagline { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 520px) {
+  .brand-link .logo { width: 36px; height: 36px; }
+  .brand-text .brand { font-size: 1.15rem; }
+  .brand-sub { font-size: .62rem; }
+}

@@ -40,7 +40,7 @@ export async function peekTable(code) {
 
 export class OnlineTable {
   static async create(opts) {
-    const r = await call({ type: "create", name: opts.name, buyIn: opts.buyIn, avatar: opts.avatar, show: opts.show, settings: { sb: opts.sb, bb: opts.bb, minBuyIn: opts.minBuyIn, maxSeats: opts.maxSeats, actSeconds: opts.actSeconds } });
+    const r = await call({ type: "create", name: opts.name, buyIn: opts.buyIn, avatar: opts.avatar, show: opts.show, settings: { sb: opts.sb, bb: opts.bb, minBuyIn: opts.minBuyIn, maxSeats: opts.maxSeats, actSeconds: opts.actSeconds, odds: opts.odds } });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
     return new OnlineTable(seat, r.state, r.serverNow);
@@ -127,7 +127,7 @@ export class OnlineTable {
     const inLiveHand = !!(myHand && !myHand.folded && s.view.hand.street !== "done");
     return {
       mode: "online", me, isHost: s.isHost, hostSeat: s.hostSeat, code: s.code,
-      players: s.players, departed: s.departed, minBuyIn: s.settings.minBuyIn,
+      players: s.players, departed: s.departed, minBuyIn: s.settings.minBuyIn, oddsRules: s.settings.odds || { win: true, cats: true },
       table: s.view, started: s.started, closing: s.closing, leaving: s.leaving,
       deadline: toLocal(s.deadline), nextHandAt: toLocal(s.nextHandAt), actMs: s.actMs,
       ended: s.closed || s.left, tableClosed: s.closed, summary: s.summary,
