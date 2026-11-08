@@ -119,7 +119,7 @@
     body { background: var(--page-bg, var(--felt-deep)) !important; background-size: var(--page-size, auto) !important; background-attachment: fixed !important; }
     .brand { text-shadow: var(--brand-glow, none); }
     .look-dlg { background: var(--dialog, #1b130d) !important; }
-    :root[data-theme-name="aurora"] body { animation: cr-aurora 40s ease-in-out infinite alternate; }
+    :root[data-theme-name="aurora"] body { animation: cr-aurora 70s ease-in-out infinite alternate; }
     @keyframes cr-aurora { from { background-position: 0% 0%, 100% 0%, 50% 0%, 0 0; } to { background-position: 100% 30%, 0% 40%, 30% 20%, 0 0; } }
     :root[data-theme-name="vegas"] .felt, :root[data-theme-name="vegas"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.5), 0 0 0 2px var(--rail-hi), 0 0 28px rgba(255,79,180,.35); }
     :root[data-theme-name="future"] .felt, :root[data-theme-name="future"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 2px #9aa8b4, 0 0 22px rgba(121,227,255,.25); }
@@ -146,38 +146,39 @@
     .theme-deco { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
     .theme-deco .d { position: absolute; display: block; height: auto; }
     .wrap { position: relative; z-index: 1; }
-    :root[data-mode="dark"] .theme-deco { opacity: .55; filter: brightness(.75) saturate(.85); }
+    .theme-deco { opacity: .78; }
+    :root[data-mode="dark"] .theme-deco { opacity: .45; filter: brightness(.75) saturate(.85); }
     :root[data-deco] .panel, :root[data-deco] .box { background: rgba(0,0,0,.45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-    .theme-deco .sway { transform-origin: 50% 100%; animation: cr-sway 7s ease-in-out infinite alternate; }
-    .theme-deco .sway-2 { transform-origin: 50% 100%; animation: cr-sway 9s ease-in-out -3s infinite alternate; }
-    .theme-deco .sway-1 { transform-origin: 50% 0; animation: cr-swing 5s ease-in-out infinite alternate; }
-    .theme-deco svg.sway-2[preserveAspectRatio^="xMidYMin"] { transform-origin: 50% 0; animation: cr-swing 6.5s ease-in-out -2s infinite alternate; }
-    .theme-deco .sway-slow { animation: cr-bob 12s ease-in-out infinite alternate; }
-    .theme-deco .float { animation: cr-bob 6s ease-in-out infinite alternate; }
-    .theme-deco .float-2 { animation: cr-bob 8s ease-in-out -2s infinite alternate; }
-    .theme-deco .drift { animation: cr-drift 26s linear infinite alternate; }
-    .theme-deco .roll { animation: cr-roll 14s linear infinite; }
-    .theme-deco .twinkle circle:nth-child(3n) { animation: cr-twinkle 3s ease-in-out infinite alternate; }
-    .theme-deco .twinkle circle:nth-child(3n+1) { animation: cr-twinkle 4.5s ease-in-out -1s infinite alternate; }
-    .theme-deco .glow { filter: drop-shadow(0 0 14px rgba(255,150,50,.65)); }
-    .theme-deco .neon { filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px #fff); color: #ff4fb4; }
-    .theme-deco .flicker { animation: cr-flicker 5s steps(1) infinite; }
-    .theme-deco .flicker-2 { animation: cr-flicker 7s steps(1) -2s infinite; }
-    .theme-deco .blink { animation: cr-twinkle 1.2s steps(2) infinite; }
-    .theme-deco .beam-a { transform-origin: 300px 600px; animation: cr-beam 9s ease-in-out infinite alternate; }
-    .theme-deco .beam-b { transform-origin: 1140px 600px; animation: cr-beam 11s ease-in-out -4s infinite alternate-reverse; }
-    .theme-deco .wave { animation: cr-wave 5s ease-in-out infinite alternate; }
-    @keyframes cr-sway { from { rotate: -1.5deg; } to { rotate: 1.8deg; } }
-    @keyframes cr-swing { from { rotate: -4deg; } to { rotate: 4deg; } }
-    @keyframes cr-bob { from { translate: 0 -6px; } to { translate: 0 6px; } }
-    @keyframes cr-drift { from { translate: -4vw 0; } to { translate: 6vw -2vh; } }
-    @keyframes cr-roll { from { rotate: 0deg; translate: -10vw 0; } to { rotate: 720deg; translate: 10vw 0; } }
-    @keyframes cr-twinkle { from { opacity: .15; } to { opacity: 1; } }
-    @keyframes cr-flicker { 0%, 100% { opacity: 1; } 42% { opacity: .35; } 44% { opacity: 1; } 47% { opacity: .5; } 49% { opacity: 1; } }
-    @keyframes cr-beam { from { rotate: -18deg; } to { rotate: 14deg; } }
-    @keyframes cr-wave { from { translate: -20px 0; } to { translate: 20px 4px; } }
+    .theme-deco .sway { transform-origin: 50% 100%; animation: cr-sway 13s ease-in-out infinite alternate; }
+    .theme-deco .sway-2 { transform-origin: 50% 100%; animation: cr-sway 16s ease-in-out -5s infinite alternate; }
+    .theme-deco .sway-1 { transform-origin: 50% 0; animation: cr-swing 10s ease-in-out infinite alternate; }
+    .theme-deco svg.sway-2[preserveAspectRatio^="xMidYMin"] { transform-origin: 50% 0; animation: cr-swing 12s ease-in-out -4s infinite alternate; }
+    .theme-deco .sway-slow { animation: cr-bob 20s ease-in-out infinite alternate; }
+    .theme-deco .float { animation: cr-bob 11s ease-in-out infinite alternate; }
+    .theme-deco .float-2 { animation: cr-bob 14s ease-in-out -4s infinite alternate; }
+    .theme-deco .drift { animation: cr-drift 45s ease-in-out infinite alternate; }
+    .theme-deco .roll { animation: cr-roll 30s linear infinite; }
+    .theme-deco .twinkle circle:nth-child(3n) { animation: cr-twinkle 6s ease-in-out infinite alternate; }
+    .theme-deco .twinkle circle:nth-child(3n+1) { animation: cr-twinkle 8s ease-in-out -3s infinite alternate; }
+    .theme-deco .glow { filter: drop-shadow(0 0 10px rgba(255,150,50,.45)); }
+    .theme-deco .neon { filter: drop-shadow(0 0 4px currentColor); color: #ff4fb4; }
+    .theme-deco .flicker { animation: cr-flicker 14s steps(1) infinite; }
+    .theme-deco .flicker-2 { animation: cr-flicker 19s steps(1) -6s infinite; }
+    .theme-deco .blink { animation: cr-twinkle 3s ease-in-out infinite alternate; }
+    .theme-deco .beam-a { transform-origin: 300px 600px; animation: cr-beam 22s ease-in-out infinite alternate; }
+    .theme-deco .beam-b { transform-origin: 1140px 600px; animation: cr-beam 27s ease-in-out -9s infinite alternate-reverse; }
+    .theme-deco .wave { animation: cr-wave 10s ease-in-out infinite alternate; }
+    @keyframes cr-sway { from { rotate: -.8deg; } to { rotate: 1deg; } }
+    @keyframes cr-swing { from { rotate: -2deg; } to { rotate: 2deg; } }
+    @keyframes cr-bob { from { translate: 0 -3px; } to { translate: 0 3px; } }
+    @keyframes cr-drift { from { translate: -2vw 0; } to { translate: 3vw -1vh; } }
+    @keyframes cr-roll { from { rotate: 0deg; translate: -6vw 0; } to { rotate: 360deg; translate: 6vw 0; } }
+    @keyframes cr-twinkle { from { opacity: .35; } to { opacity: .9; } }
+    @keyframes cr-flicker { 0%, 100% { opacity: .9; } 46% { opacity: .55; } 47% { opacity: .9; } }
+    @keyframes cr-beam { from { rotate: -10deg; } to { rotate: 8deg; } }
+    @keyframes cr-wave { from { translate: -10px 0; } to { translate: 10px 2px; } }
     @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } }
-    @media (max-width: 720px) { .theme-deco { opacity: .8; } }
+    @media (max-width: 720px) { .theme-deco { opacity: .65; } }
   `;
   const style = document.createElement("style");
   style.textContent = css;
