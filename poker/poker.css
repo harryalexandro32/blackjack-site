@@ -278,3 +278,33 @@
   }
   .rail .raise-box .presets { width: 100%; justify-content: space-between; }
 }
+
+/* ---------- winner announcement ---------- */
+.win-banner {
+  position: absolute; left: 50%; top: 47%; z-index: 4; transform: translate(-50%, -50%);
+  width: max-content; max-width: 94%; max-height: 92%; overflow: auto;
+  background: rgba(12, 9, 6, .92); border: 2px solid var(--gold); border-radius: 18px; padding: 14px 20px;
+  display: grid; gap: 14px; cursor: pointer;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 34px rgba(212,173,85,.3);
+  animation: win-in .45s cubic-bezier(.2,.8,.3,1.25) .6s both; /* after the river card lands */
+}
+@keyframes win-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.75); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.wb-row { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; }
+.wb-row .pic { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--gold); }
+.wb-title { font-family: var(--font-display); font-weight: 700; color: var(--gold); font-size: 2rem; line-height: 1; letter-spacing: .03em; }
+.wb-hand { font-size: 1.15rem; font-weight: 700; color: var(--print); margin-top: 4px; }
+.wb-cards { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: center; }
+.wb-cards .card { --cw: 58px; }
+.win-banner.multi { gap: 10px; }
+.win-banner.multi .wb-title { font-size: 1.5rem; }
+.win-banner.multi .wb-cards .card { --cw: 44px; }
+@media (max-width: 720px) {
+  .win-banner { padding: 12px 14px; }
+  .wb-row .pic { width: 42px; height: 42px; }
+  .wb-title { font-size: 1.45rem; }
+  .wb-hand { font-size: .98rem; }
+  .wb-cards .card { --cw: min(52px, calc((100vw - 90px) / 5.4)); }
+  .win-banner.multi .wb-title { font-size: 1.15rem; }
+  .win-banner.multi .wb-cards .card { --cw: 38px; }
+}
+@media (prefers-reduced-motion: reduce) { .win-banner { animation: none; } }

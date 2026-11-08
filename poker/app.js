@@ -416,6 +416,8 @@ function render() {
   $("myHandName").textContent = myP && myP.hole && h.board.length >= 3 ? bestName(myP.hole, h.board) : myP && myP.hole ? startingName(myP.hole) : "";
   $("myPos").textContent = me < 0 ? "Watching" : !h ? "" : positionName(me);
 
+  renderWinner();
+
   // card movement: hole cards round the table on a new hand, then each street's board cards
   let after = 0;
   if (animate && newHand) after = animateDeal(fresh);
@@ -431,6 +433,38 @@ function render() {
   tickClock();
   $("tgShow").checked = me >= 0 && t.seats[me] ? !!t.seats[me].show : myShow();
 }
+
+// ---------- winner announcement ----------
+// When a hand ends, a banner in the middle of the table says who won, how much, with what,
+// and shows the winning five cards large, so everyone at the table can see it.
+let bannerHand = null, bannerHidden = null;
+function renderWinner() {
+  const h = view.table.hand, box = $("winBanner");
+  const done = !!(h && h.street === "done" && h.results && h.results.length);
+  if (!done) { box.hidden = true; bannerHand = null; return; }
+  if (bannerHidden === h.no) { box.hidden = true; return; }
+  if (bannerHand === h.no) { box.hidden = false; return; }
+  bannerHand = h.no;
+  box.innerHTML = "";
+  for (const r of h.results) {
+    const seat = view.table.seats[r.seat];
+    const row = document.createElement("div");
+    row.className = "wb-row";
+    row.innerHTML = `<div class="pic">${avatarSvg(avatarOf(seat))}</div><div class="wb-text"><div class="wb-title"></div><div class="wb-hand"></div></div>`;
+    row.querySelector(".wb-title").textContent = `${who(r.seat)} ${verb(r.seat, "win")} ${fmt(r.amount)}`;
+    row.querySelector(".wb-hand").textContent = r.hand || (h.showdown ? "" : "Everyone else folded");
+    if (r.best && r.best.length) {
+      const cards = document.createElement("div");
+      cards.className = "wb-cards";
+      r.best.forEach(c => cards.appendChild(cardEl(c)));
+      row.appendChild(cards);
+    }
+    box.appendChild(row);
+  }
+  box.classList.toggle("multi", h.results.length > 1);
+  box.hidden = false;
+}
+$("winBanner").addEventListener("click", () => { bannerHidden = bannerHand; $("winBanner").hidden = true; });
 
 // ---------- odds helper ----------
 let oddsKey = "", oddsResult = null, oddsTimer = 0;

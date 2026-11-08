@@ -24,8 +24,8 @@ body { margin: 0; }
   --font-rank: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   /* cards grow with the screen but also shrink on short screens, so a whole round fits without scrolling */
-  --cw: clamp(44px, min(14vw, 8.5vh), 86px);
-  --cw: clamp(44px, min(14vw, 8.5dvh), 86px);
+  --cw: clamp(50px, min(19vw, 9.5vh), 92px);
+  --cw: clamp(50px, min(19vw, 9.5dvh), 92px);
   color-scheme: dark;
 }
 html, body { min-height: 100%; }
@@ -70,8 +70,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   padding: 14px 14px 24px;
   display: grid; gap: 8px; justify-items: center;
 }
-.zone-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
-.zone-label .total { color: var(--print); font-weight: 600; font-size: .9rem; letter-spacing: .04em; text-transform: none; font-variant-numeric: tabular-nums; }
+.zone-label { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; color: var(--print); display: flex; gap: 10px; align-items: center; }
+.zone-label .total { color: #1d1b22; background: var(--card); font-weight: 800; font-size: 1.3rem; line-height: 1; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; padding: 4px 11px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.zone-label .total:empty { display: none; }
 
 .cards { display: flex; min-height: calc(var(--cw) * 1.4); padding-right: calc(var(--cw) * .1); }
 .card {
@@ -83,14 +84,14 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   font-family: var(--font-rank); font-weight: 700;
   animation: deal .28s ease-out both;
 }
-.card + .card { margin-left: calc(var(--cw) * -.42); }
+.card + .card { margin-left: calc(var(--cw) * -.3); }
 .card.red { color: var(--card-red); }
-.card .corner { position: absolute; display: grid; justify-items: center; line-height: .9; font-size: calc(var(--cw) * .27); }
+.card .corner { position: absolute; display: grid; justify-items: center; line-height: .88; font-size: calc(var(--cw) * .38); font-weight: 700; }
 .card .corner span { font-size: .8em; }
 .card .tl { top: 5%; left: 7%; }
 .card .br { bottom: 5%; right: 7%; transform: rotate(180deg); }
-.card .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--cw) * .52); }
-.card.face .pip { font-family: var(--font-display); font-size: calc(var(--cw) * .5); }
+.card .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--cw) * .5); padding-top: 12%; }
+.card.face .pip { font-family: var(--font-display); font-size: calc(var(--cw) * .46); }
 .card.back {
   background:
     repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 3px, transparent 3px 8px),
@@ -245,4 +246,11 @@ a.brand-link:hover .logo { transform: rotate(-6deg) scale(1.04); }
   .actions { gap: 8px; width: 100%; justify-content: center; }
   .actions button { flex: 1 1 28%; min-width: 0; max-width: 260px; padding: 12px 6px; font-size: .9rem; }
   .actions button.primary { padding-inline: 10px; }
+}
+
+/* wider screens: a touch less height per card and arc so a full round still fits short laptop windows */
+@media (min-width: 521px) {
+  :root { --cw: clamp(50px, min(19vw, 8.6vh), 92px); --cw: clamp(50px, min(19vw, 8.6dvh), 92px); }
+  .felt-print { width: min(560px, 100%, 30vh); width: min(560px, 100%, 30dvh); }
+  .zone-label .total { font-size: 1.15rem; padding: 3px 10px; }
 }
