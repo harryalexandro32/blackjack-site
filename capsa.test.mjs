@@ -146,3 +146,84 @@ test("bots only make legal moves and games end; bots bomb a single 2 when they c
   const m = capsaMove(g, 1);
   assert.ok(C.isBomb(C.classify(m.cards)), "should bomb the 2");
 });
+
+// ---------- rooms ----------
+const R = await import("./supabase/functions/_shared/capsa-room.js");
+const awaitBot = await import("./supabase/functions/_shared/capsa-bot.js");
+let clock = 1_000_000;
+const ctx = (playerId, extra = {}) => ({ now: clock, playerId, shuffledDeck: shuffled, ...extra });
+const settingsC = { pointValue: 100, actSeconds: 30, skill: "normal" };
+// keep ticking (moving the clock) until it's a person's turn or the game ends
+function runBots(s) {
+  for (let i = 0; i < 200 && s.g && !s.g.finished && s.seats[s.g.turn].bot; i++) { clock += 2000; R.applyAction(s, { type: "tick" }, ctx("h")); }
+}
+
+test("capsa rooms: bots fill empty seats, play their turns, and the clock covers people", () => {
+  const s = R.newRoom({ code: "CAP234", settings: settingsC, host: { id: "h", name: "Host", tokenHash: "th", hostKeyHash: "key" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana" }, ctx("a", { tokenHash: "ta" }));
+  assert.throws(() => R.applyAction(s, { type: "start" }, ctx("a")), /host/);
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.strictEqual(s.seats.filter(x => x.bot).length, 2);
+  assert.ok(s.g && s.g.hands.every(h => h.length === 13));
+  const pub = R.publicState(s);
+  assert.strictEqual(pub.view.hand, null);                       // nobody's cards in the public copy
+  assert.strictEqual(R.personalState(s, "a").view.hand.length, 13);
+  runBots(s);
+  const who = s.g.turn === s.players.h.seat ? "h" : "a";
+  const before = s.g.log.length;
+  clock += 31000; R.applyAction(s, { type: "tick" }, ctx("h"));  // out of time: auto move
+  assert.ok(s.g.log.length > before);
+  assert.ok(R.personalState(s, who).view);
+});
+
+test("capsa rooms: whole games run, money only moves between people, sessions end and the room stays", () => {
+  const s = R.newRoom({ code: "CAP234", settings: settingsC, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana" }, ctx("a", { tokenHash: "ta" }));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  for (let games = 0; games < 3; games++) {
+    for (let i = 0; i < 400 && !s.g.finished; i++) {
+      runBots(s);
+      if (s.g.finished) break;
+      const id = s.g.turn === s.players.h.seat ? "h" : "a";
+      const m = awaitBot.capsaMove(s.g, s.g.turn, "normal");
+      R.applyAction(s, m.type === "pass" ? { type: "pass" } : { type: "play", cards: m.cards }, ctx(id));
+    }
+    assert.ok(s.g.finished);
+    clock += 10000; R.applyAction(s, { type: "tick" }, ctx("h"));  // next game is dealt
+  }
+  assert.strictEqual(s.points.reduce((a, b) => a + b, 0), 0);
+  const people = [s.players.h.seat, s.players.a.seat];
+  assert.strictEqual(people.reduce((a, i) => a + s.money[i], 0), 0);       // people's money balances by itself
+  s.seats.forEach((x, i) => { if (x.bot) assert.strictEqual(s.money[i], 0); });
+  R.applyAction(s, { type: "endSession" }, ctx("h"));
+  for (let i = 0; i < 400 && s.started; i++) { runBots(s); if (!s.started) break; const id = s.g.turn === s.players.h.seat ? "h" : "a"; const m = awaitBot.capsaMove(s.g, s.g.turn); R.applyAction(s, m.type === "pass" ? { type: "pass" } : { type: "play", cards: m.cards }, ctx(id)); }
+  assert.ok(!s.started && !s.closed);
+  assert.strictEqual(s.sessions.length, 1);
+  assert.deepStrictEqual(s.sessions[0].rows.map(r => r.name).sort(), ["Ana", "Host"]);
+  assert.strictEqual(R.publicState(s).ledger.reduce((a, r) => a + r.net, 0), 0);
+  assert.strictEqual(s.seats.filter(Boolean).length, 2);           // the bots go; the people stay
+  R.applyAction(s, { type: "start" }, ctx("h"));                     // next session in the same room
+  assert.ok(s.g.lead3d);                                            // a new session starts from the 3♦
+});
+
+test("capsa rooms: leaving hands your seat to a bot; the host link reconnects the host", () => {
+  const s = R.newRoom({ code: "CAP234", settings: settingsC, host: { id: "h", name: "Host", tokenHash: "th", hostKeyHash: "key" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana" }, ctx("a", { tokenHash: "ta" }));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  const seatA = s.players.a.seat;
+  R.applyAction(s, { type: "leave" }, ctx("a"));
+  assert.ok(s.seats[seatA].bot);
+  assert.strictEqual(s.departed[0].name, "Ana");
+  assert.throws(() => R.claimHost(s, { hostKeyHash: "nope", id: "x", tokenHash: "tx" }), /host link/);
+  assert.strictEqual(R.claimHost(s, { hostKeyHash: "key", id: "x", tokenHash: "t2" }), "h");
+  assert.strictEqual(R.findPlayerByTokenHash(s, "t2"), "h");
+  R.applyAction(s, { type: "chat", text: "gg" }, ctx("h"));
+  assert.strictEqual(R.publicState(s).chat[0].text, "gg");
+});
+
+test("capsa rooms: every bot gets its own name", () => {
+  const s = R.newRoom({ code: "CAP234", settings: settingsC, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  const names = s.seats.map(x => x.name);
+  assert.strictEqual(new Set(names).size, 4);
+});

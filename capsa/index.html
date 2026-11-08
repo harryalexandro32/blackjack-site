@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capsa Banting</title>
+<meta name="description" content="Capsa Banting (Big Two) with house rules and pretend money: play against bots or open a room for friends, then settle up.">
+<meta name="theme-color" content="#2b1910">
+<script src="../theme.js"></script>
+<link rel="icon" type="image/svg+xml" href="../logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../shared.css">
+<link rel="stylesheet" href="../poker/poker.css">
+<link rel="stylesheet" href="capsa.css">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand-link" href="../" title="All games"><img class="logo" src="../logo.svg" alt="The Card Room, all games" width="44" height="44"><span class="brand-text"><span class="brand">The Card Room</span><h1 class="brand-sub">Capsa Banting</h1></span></a>
+    <div class="meters" id="meters" hidden>
+      <div class="meter"><small>Game</small><b id="mGame">–</b></div>
+      <div class="meter"><small>Your points</small><b id="mPoints">–</b></div>
+      <div class="meter"><small>Up / down</small><b id="mMoney">–</b></div>
+      <div class="meter" id="mCodeWrap" hidden><small>Room code</small><b id="mCode">–</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main class="room">
+
+  <section class="screen" id="scrSetup">
+    <nav class="tabs" aria-label="Game mode">
+      <a href="#ai" id="tabAi">Play vs bots</a>
+      <a href="#online" id="tabOnline">Play with friends</a>
+    </nav>
+    <div class="setup-grid" id="setupAi">
+      <form class="panel" id="formAi" novalidate>
+        <h2>Deal a game vs 3 bots</h2>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
+        <div class="field"><span class="label">Bot skill</span>
+          <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
+        <div class="field"><label for="aiValue">Pretend dollars per point</label><span class="money-input"><span>$</span><input id="aiValue" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
+        <p class="err" id="aiErr"></p>
+        <button class="primary" type="submit">Deal</button>
+        <button class="ghost" type="button" id="aiResume" hidden>Resume your last game</button>
+      </form>
+      <div class="panel rules-panel">
+        <h2>House rules</h2>
+        <ul class="rules-list">
+          <li>4 players, 13 cards each. Get rid of all your cards first to win.</li>
+          <li>Card order: 3 lowest … K, A, <b>2 highest</b>. Suits: ♠ &gt; ♥ &gt; ♣ &gt; ♦.</li>
+          <li>The first game starts with whoever holds the 3♦, and the first play must include it. After that, the last winner starts.</li>
+          <li>Play the same kind as the table: single on single, pair on pair, three on three, 5-card package on package. Once you pass, you're out until the round ends.</li>
+          <li>Packages, low to high: straight, flush, full house, <b>bomb</b> four of a kind (4 cards), <b>bomb</b> straight flush.</li>
+          <li>Straights: 2-3-4-5-6 is the lowest, J-Q-K-A-2 the highest. A-2-3-4-5 doesn't count.</li>
+          <li>A bomb beats any package or a single 2. Bombing a single 2 ends the game: the bombed player loses.</li>
+          <li>You can't finish on a single 2.</li>
+          <li>Points: losers pay 1 per card left (each 2 counts 2), ×2 with 10+ cards, ×3 with all 13. Bombed on a 2: that player pays the bomber double.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="setup-grid" id="setupOnline" hidden>
+      <form class="panel" id="formCreate" novalidate>
+        <h2>Open a room</h2>
+        <p class="note">Share the code with up to 3 friends. Empty seats are filled with bots. The room stays open after each session, so the same code works next time.</p>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
+        <div class="row2">
+          <div class="field"><label for="crValue">Dollars per point</label><span class="money-input"><span>$</span><input id="crValue" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
+          <div class="field"><label for="crTime">Time to play</label>
+            <select id="crTime"><option value="20">20 seconds</option><option value="30" selected>30 seconds</option><option value="60">60 seconds</option></select></div>
+        </div>
+        <div class="field"><span class="label">Bots for empty seats</span>
+          <div class="seg" id="crSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
+        <p class="err" id="crErr"></p>
+        <button class="primary" type="submit" id="btnCreate">Open room</button>
+      </form>
+      <form class="panel" id="formJoin" novalidate>
+        <h2>Join a room</h2>
+        <div class="field"><label for="jnCode">Room code</label><input class="text-input" id="jnCode" maxlength="6" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="jnName">Your name</label><input class="text-input" id="jnName" maxlength="16" autocomplete="nickname"></div></div>
+        <p class="note" id="jnRules"></p>
+        <p class="err" id="jnErr"></p>
+        <button class="primary" type="submit" id="btnJoin">Join room</button>
+        <button class="ghost" type="button" id="btnRejoin" hidden>Back to your room</button>
+      </form>
+      <div class="panel" id="onlineOff" hidden>
+        <h2>Online play isn't switched on yet</h2>
+        <p>This copy of the site has no game server configured. Play against bots in the meantime.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrTable" hidden>
+    <div class="ctable" id="ctable">
+      <div class="trick" id="trick"><div class="trick-cards" id="trickCards"></div><div class="trick-label" id="trickLabel"></div></div>
+      <button type="button" class="felt-btn sound-btn" id="btnSound" aria-label="Sound" title="Sound">🔊</button>
+      <div class="react-wrap" id="reactWrap" hidden>
+        <button type="button" class="felt-btn" id="btnReact" aria-label="Send a reaction" aria-expanded="false">😀</button>
+        <div class="react-pop" id="reactPop" hidden role="group" aria-label="Reactions"></div>
+      </div>
+      <div class="win-banner" id="winBanner" hidden aria-live="polite" title="Tap to hide"></div>
+    </div>
+
+    <div class="crail" id="crail">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="myhand" id="myHand" role="group" aria-label="Your cards"></div>
+      <div class="act-row" id="actRow">
+        <button id="btnPass" class="ghost">Pass</button>
+        <button id="btnHint" class="ghost">Hint</button>
+        <button id="btnSort" class="ghost">Sort: rank</button>
+        <button id="btnPlay" class="primary">Play</button>
+      </div>
+      <div class="act-row" id="betweenRow" hidden>
+        <button class="primary" id="btnNext">Next game</button>
+        <button class="primary" id="btnStart" hidden>Start the game</button>
+      </div>
+    </div>
+
+    <div class="lower">
+      <div class="panel">
+        <h2>Score</h2>
+        <div class="players-list" id="scoreList"></div>
+        <div class="table-tools">
+          <button class="ghost" id="btnLook">Change look</button>
+          <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
+          <button class="ghost" id="btnLedger" hidden>Room ledger</button>
+          <button class="ghost" id="btnHostLink" hidden>Copy host link</button>
+          <button class="primary" id="btnEndSession" hidden>End session &amp; settle up</button>
+          <button class="danger" id="btnClose" hidden>Close room for good</button>
+          <button class="danger" id="btnLeave">Leave</button>
+        </div>
+        <p class="note" id="toolsNote"></p>
+      </div>
+      <div class="panel">
+        <h2>This game</h2>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="panel" id="chatPanel" hidden>
+        <h2>Room chat</h2>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="chat-reacts" id="chatReacts" role="group" aria-label="Reactions"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <input class="text-input" id="chatInput" maxlength="160" placeholder="Say something…" aria-label="Chat message">
+          <button class="primary" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrSummary" hidden>
+    <div class="panel">
+      <h2 id="sumTitle">Session over</h2>
+      <p id="sumIntro" class="note"></p>
+      <div class="scroll-x">
+        <table class="summary-table">
+          <thead><tr><th>Player</th><th>Points</th><th>Up / down</th></tr></thead>
+          <tbody id="sumRows"></tbody>
+        </table>
+      </div>
+      <h2>Settling up</h2>
+      <ul class="payments" id="sumPay"></ul>
+      <div class="act-row"><button class="primary" id="btnSumDone">Back to the lobby</button><button class="ghost" id="btnSumCopy">Copy results</button></div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<dialog id="ledgerDlg" class="look-dlg ledger-dlg" aria-labelledby="ldTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head"><div class="look-head-text"><h2 id="ldTitle">Room ledger</h2><p class="note" id="ldIntro"></p></div></div>
+    <div class="look-body" id="ldBody"></div>
+    <div class="look-foot">
+      <button type="button" class="danger" id="ldMarkPaid" hidden>Everyone's paid: start totals again</button>
+      <button type="button" class="ghost" id="ldCopy">Copy results</button>
+      <button value="close" class="primary">Back to the table</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="lookDlg" class="look-dlg" aria-labelledby="lookTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head">
+      <div class="look-preview" id="lookPreview"></div>
+      <div class="look-head-text">
+        <h2 id="lookTitle">Your look</h2>
+        <p class="note">Start from a character, then change anything you like.</p>
+        <button type="button" class="ghost" id="lookRandom">Surprise me</button>
+      </div>
+    </div>
+    <div class="look-body">
+      <h3>Characters</h3>
+      <div class="look-opts tiles" id="lookPresets"></div>
+      <h3>Make it yours</h3>
+      <div class="look-fields" id="lookFields"></div>
+    </div>
+    <div class="look-foot"><button value="cancel" class="ghost">Cancel</button><button value="save" class="primary">Save look</button></div>
+  </form>
+</dialog>
+
+<script src="../poker/config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

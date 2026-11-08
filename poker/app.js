@@ -280,6 +280,7 @@ async function lookupRules() {
     const odds = !on ? "" : on.length === 3 ? " · odds helper on" : !on.length ? " · odds helper off" : " · odds helper: " + on.map(k => NAMES[k]).join(", ");
     const steps = (r && r.step > 1 ? ` · raises in ${fmt(r.step)} steps` : "")
       + (r && r.ante ? ` · ${fmt(r.ante)} ante` : "") + (r && r.straddle ? " · straddle" : "") + (r && r.runTwice ? " · run it twice allowed" : "");
+    if (r && r.game === "capsa") { $("jnRules").textContent = "That code is a Capsa Banting room. Join it from the Capsa page."; return; }
     $("jnRules").textContent = r ? `${GAMES[r.game || "holdem"].name} · blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)}${steps} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }

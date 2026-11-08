@@ -60,14 +60,14 @@ export class OnlineTable {
     return new OnlineTable(seat, r.state, r.serverNow);
   }
   static async join({ code, name, buyIn, avatar, show }) {
-    const r = await call({ type: "join", code, name, buyIn, avatar, show });
+    const r = await call({ type: "join", code, name, buyIn, avatar, show, game: "poker" });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
     return new OnlineTable(seat, r.state, r.serverNow);
   }
   // a seat-less spot: see the table, chat, and sit down later
   static async watch({ code, name }) {
-    const r = await call({ type: "watch", code, name });
+    const r = await call({ type: "watch", code, name, game: "poker" });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
     return new OnlineTable(seat, r.state, r.serverNow);
