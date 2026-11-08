@@ -274,7 +274,7 @@ function finishHand(t) {
   const live = h.players.map((p, i) => p && !p.folded ? i : -1).filter(i => i >= 0);
   const showdown = live.length > 1;
   const evals = {};
-  if (showdown) for (const i of live) { evals[i] = evaluate([...h.players[i].hole, ...h.board]); h.reveal[i] = h.players[i].hole; }
+  if (showdown) for (const i of live) evals[i] = evaluate([...h.players[i].hole, ...h.board]);
   const won = {};
   const pots = buildPots(h);
   h.pots = pots.map(pot => {
@@ -291,8 +291,18 @@ function finishHand(t) {
     for (const i of order) { const amt = share + (odd > 0 ? 1 : 0); if (odd > 0) odd--; won[i] = (won[i] || 0) + amt; t.seats[i].stack += amt; }
     return { amount: pot.amount, eligible: pot.eligible, winners };
   });
+  // Who turns their cards over. A pot winner at showdown must show to claim it, and all-in hands are
+  // tabled. Everyone else follows their own setting (seat.show): show, or muck when the rules allow it.
+  const wants = i => !!t.seats[i].show;
+  if (showdown) {
+    for (const i of live) if (won[i] || h.runout || wants(i)) h.reveal[i] = h.players[i].hole;
+    h.mucked = live.filter(i => !h.reveal[i]);
+  } else {
+    if (live.length && wants(live[0])) h.reveal[live[0]] = h.players[live[0]].hole;
+    h.mucked = [];
+  }
   h.results = Object.entries(won).map(([i, amount]) => ({ seat: +i, amount, hand: showdown ? evals[i].name : null, best: showdown ? evals[i].best : null }));
-  h.handNames = showdown ? Object.fromEntries(live.map(i => [i, evals[i].name])) : {};
+  h.handNames = showdown ? Object.fromEntries(live.filter(i => h.reveal[i]).map(i => [i, evals[i].name])) : {};
   h.street = "done"; h.toAct = -1; h.showdown = showdown;
   h.players.forEach(p => { if (p) p.bet = 0; });
 }
@@ -305,7 +315,7 @@ export function publicView(t, viewerSeat = -1) {
   const h = t.hand;
   return {
     sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, button: t.button, handNo: t.handNo,
-    seats: t.seats.map(s => s && { id: s.id, name: s.name, stack: s.stack, sittingOut: !!s.sittingOut }),
+    seats: t.seats.map(s => s && { id: s.id, name: s.name, stack: s.stack, sittingOut: !!s.sittingOut, avatar: s.avatar || "", show: !!s.show }),
     hand: h && {
       no: h.no, board: h.board, street: h.street, toAct: h.toAct, currentBet: h.currentBet, minRaise: h.minRaise,
       sbSeat: h.sbSeat, bbSeat: h.bbSeat, pot: potTotal(h), runout: h.runout, showdown: !!h.showdown,
@@ -313,7 +323,7 @@ export function publicView(t, viewerSeat = -1) {
         bet: p.bet, committed: p.committed, folded: p.folded, allIn: p.allIn,
         hole: i === viewerSeat || h.reveal[i] ? p.hole : null, hasCards: !p.folded
       }),
-      log: h.log, results: h.results, pots: h.pots || null, handNames: h.handNames || {}, uncalled: h.uncalled || null,
+      log: h.log, results: h.results, pots: h.pots || null, handNames: h.handNames || {}, uncalled: h.uncalled || null, mucked: h.mucked || [],
       legal: viewerSeat >= 0 ? legalActions(t, viewerSeat) : null
     }
   };

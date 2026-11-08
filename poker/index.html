@@ -40,12 +40,17 @@
     <div class="setup-grid" id="setupAi">
       <form class="panel" id="formAi" novalidate>
         <h2>Deal a table vs bots</h2>
-        <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
         <div class="field"><span class="label">Bots at the table</span>
           <div class="seg" id="aiBots" role="group" aria-label="Number of bots"></div></div>
         <div class="field"><span class="label">Bot skill</span>
           <div class="seg" id="aiSkill" role="group" aria-label="Bot skill">
             <button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button>
+          </div></div>
+        <div class="field"><span class="label">Bots when they could muck</span>
+          <div class="seg" id="aiShow" role="group" aria-label="Bots show or muck">
+            <button type="button" data-v="show">Always show</button><button type="button" data-v="muck">Always muck</button><button type="button" data-v="mix" aria-pressed="true">Mix it up</button>
           </div></div>
         <div class="row2">
           <div class="field"><label for="aiSb">Small blind</label><span class="money-input"><span>$</span><input id="aiSb" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
@@ -67,7 +72,8 @@
       <form class="panel" id="formCreate" novalidate>
         <h2>Open a table</h2>
         <p class="note">You set the rules. Share the code so friends can join from their own phones.</p>
-        <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
         <div class="row2">
           <div class="field"><label for="crSb">Small blind</label><span class="money-input"><span>$</span><input id="crSb" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
           <div class="field"><label for="crBb">Big blind</label><span class="money-input"><span>$</span><input id="crBb" type="number" inputmode="decimal" min="0.01" step="0.01" value="2"></span></div>
@@ -85,7 +91,8 @@
       <form class="panel" id="formJoin" novalidate>
         <h2>Join a table</h2>
         <div class="field"><label for="jnCode">Table code</label><input class="text-input" id="jnCode" maxlength="6" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em"></div>
-        <div class="field"><label for="jnName">Your name</label><input class="text-input" id="jnName" maxlength="16" autocomplete="nickname"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="jnName">Your name</label><input class="text-input" id="jnName" maxlength="16" autocomplete="nickname"></div></div>
         <div class="field"><label for="jnBuy">Your buy-in</label><span class="money-input"><span>$</span><input id="jnBuy" type="number" inputmode="decimal" min="1" step="1" value="200"></span></div>
         <p class="note" id="jnRules"></p>
         <p class="err" id="jnErr"></p>
@@ -114,6 +121,14 @@
       <div class="mine">
         <div class="cards" id="myCards"></div>
         <div class="info"><b id="myHandName"></b><span id="myPos"></span></div>
+      </div>
+      <div class="odds" id="odds">
+        <div class="odds-toggles" role="group" aria-label="Odds helper">
+          <button type="button" class="chip" id="tgWin">Win %</button>
+          <button type="button" class="chip" id="tgCats">Hand odds</button>
+        </div>
+        <div class="odds-win" id="oddsWin" hidden></div>
+        <div class="odds-cats" id="oddsCats" hidden></div>
       </div>
       <div class="actions">
         <div class="status" id="status" aria-live="polite"></div>
@@ -152,7 +167,10 @@
       <div class="panel">
         <h2>Players</h2>
         <div class="players-list" id="playersList"></div>
+        <label class="switch"><input type="checkbox" id="tgShow"><span class="track" aria-hidden="true"></span>
+          <span>Show my cards when I could muck<small>Off: a losing hand at showdown and a pot nobody called stay face down. Winning at showdown and all-in hands always show.</small></span></label>
         <div class="table-tools">
+          <button class="ghost" id="btnLook">Change look</button>
           <button class="ghost" id="btnSitOut">Sit out next hand</button>
           <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
           <button class="danger" id="btnClose" hidden>Close table for everyone</button>
@@ -182,6 +200,26 @@
 
 </main>
 </div>
+
+<dialog id="lookDlg" class="look-dlg" aria-labelledby="lookTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head">
+      <div class="look-preview" id="lookPreview"></div>
+      <div class="look-head-text">
+        <h2 id="lookTitle">Your look</h2>
+        <p class="note">Start from a character, then change anything you like.</p>
+        <button type="button" class="ghost" id="lookRandom">Surprise me</button>
+      </div>
+    </div>
+    <div class="look-body">
+      <h3>Characters</h3>
+      <div class="look-opts tiles" id="lookPresets"></div>
+      <h3>Make it yours</h3>
+      <div class="look-fields" id="lookFields"></div>
+    </div>
+    <div class="look-foot"><button value="cancel" class="ghost">Cancel</button><button value="save" class="primary">Save look</button></div>
+  </form>
+</dialog>
 
 <script src="config.js"></script>
 <script type="module" src="app.js"></script>

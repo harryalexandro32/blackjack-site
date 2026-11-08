@@ -1,6 +1,7 @@
 // AI mode: the whole table runs in this browser. The engine is the same one the online server uses.
 import * as E from "../supabase/functions/_shared/poker-engine.js";
 import { decide, botNames } from "./bot.js";
+import { randomAvatar } from "./avatars.js";
 
 const KEY = "pk-ai";
 const BETWEEN_HANDS_MS = 4500;
@@ -12,22 +13,26 @@ export function savedAiTable() {
 }
 
 export class LocalTable {
-  // opts: { name, bots, skill, sb, bb, buyIn } in cents
+  // opts: { name, bots, skill, botShow: "show" | "muck" | "mix", sb, bb, buyIn (cents), avatar, show }
   static create(opts) {
     const seats = opts.bots + 1;
     const t = E.createTable({ smallBlind: opts.sb, bigBlind: opts.bb, maxSeats: seats });
     const names = botNames(opts.bots, opts.name);
     const players = {};
     const me = 0;
-    t.seats[me] = { id: "me", name: opts.name, stack: opts.buyIn };
+    t.seats[me] = { id: "me", name: opts.name, stack: opts.buyIn, avatar: opts.avatar || "", show: !!opts.show };
     players[me] = { name: opts.name, buyIn: opts.buyIn, isBot: false };
+    const used = new Set([opts.avatar]);
     for (let i = 1; i < seats; i++) {
-      t.seats[i] = { id: "bot" + i, name: names[i - 1], stack: opts.buyIn };
+      let av = randomAvatar();
+      for (let k = 0; k < 5 && used.has(av); k++) av = randomAvatar();
+      used.add(av);
+      t.seats[i] = { id: "bot" + i, name: names[i - 1], stack: opts.buyIn, avatar: av, show: false };
       players[i] = { name: names[i - 1], buyIn: opts.buyIn, isBot: true };
     }
     // random first button, like cutting for the deal
     t.button = Math.floor(Math.random() * seats) - 1;
-    return new LocalTable({ table: t, players, me, skill: opts.skill, minBuyIn: opts.buyIn, ended: false, departed: [] });
+    return new LocalTable({ table: t, players, me, skill: opts.skill, botShow: opts.botShow || "mix", minBuyIn: opts.buyIn, ended: false, departed: [] });
   }
 
   constructor(state) {
@@ -95,6 +100,9 @@ export class LocalTable {
       if (s && i !== this.s.me && s.stack === 0) { s.stack = this.s.minBuyIn; this.s.players[i].buyIn += this.s.minBuyIn; }
     });
     if (!E.canStartHand(t)) { this.nextHandAt = null; this.emit(); return; }
+    // bots follow the table setting; "mix" decides afresh for each bot every hand
+    const mode = this.s.botShow || "mix";
+    t.seats.forEach((s, i) => { if (s && i !== this.s.me) s.show = mode === "show" || (mode === "mix" && Math.random() < 0.5); });
     E.startHand(t, E.shuffle(E.newDeck(), rng));
     this.nextHandAt = null;
     this.emit();
@@ -120,6 +128,13 @@ export class LocalTable {
     this.tick();
   }
 
+  async setPrefs({ avatar, show }) {
+    const seat = this.s.table.seats[this.s.me];
+    if (avatar !== undefined) seat.avatar = avatar;
+    if (show !== undefined) seat.show = !!show;
+    this.emit();
+  }
+
   async setSitOut(on) {
     this.s.table.seats[this.s.me].sittingOut = on;
     this.emit();
@@ -134,7 +149,7 @@ export class LocalTable {
     // Chips still in the middle go back to whoever put them in, so the summary adds up.
     if (E.handInProgress(t)) t.hand.players.forEach((p, i) => { if (p) { t.seats[i].stack += p.committed; p.committed = 0; } });
     clearTimeout(this.botTimer); clearTimeout(this.timer);
-    const rows = Object.entries(this.s.players).map(([i, p]) => ({ name: p.name, buyIn: p.buyIn, cashOut: t.seats[i].stack, isBot: p.isBot, me: +i === me }));
+    const rows = Object.entries(this.s.players).map(([i, p]) => ({ name: p.name, buyIn: p.buyIn, cashOut: t.seats[i].stack, isBot: p.isBot, me: +i === me, avatar: t.seats[i].avatar || "" }));
     this.s.ended = true;
     this.s.summary = { ...E.settle(rows), hands: t.handNo, closedAt: Date.now() };
     this.emit();

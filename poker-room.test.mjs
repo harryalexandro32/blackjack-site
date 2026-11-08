@@ -127,3 +127,15 @@ test("next hand deals after the pause; closing waits for the hand to finish, the
   for (const r of sum.rows) assert.strictEqual(paid[r.name] || 0, r.net);
   assert.throws(() => R.applyAction(s, { type: "act", action: "fold" }, ctx("a")), /closed/);
 });
+
+test("players set their own avatar and show/muck choice; junk avatars are dropped", () => {
+  const s = R.newRoom({ code: "ABC234", settings, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th", avatar: "1.0.3", show: true }, now: clock });
+  assert.strictEqual(s.table.seats[0].avatar, "1.0.3");
+  assert.strictEqual(s.table.seats[0].show, true);
+  R.applyAction(s, { type: "join", name: "Ana", buyIn: 10000, avatar: "<script>" }, ctx("a", { tokenHash: "ta" }));
+  assert.strictEqual(s.table.seats[1].avatar, "");
+  R.applyAction(s, { type: "prefs", avatar: "4.1", show: true }, ctx("a"));
+  assert.strictEqual(R.publicState(s).view.seats[1].avatar, "4.1");
+  assert.strictEqual(R.publicState(s).view.seats[1].show, true);
+  assert.throws(() => R.applyAction(s, { type: "prefs", show: true }, ctx("nobody")), /not seated/);
+});

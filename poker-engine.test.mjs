@@ -144,6 +144,39 @@ test("everyone folds to a bet: winner takes the pot without showing", () => {
   assert.deepStrictEqual(P.publicView(t).hand.players[0].hole, null); // winner's cards stay hidden
 });
 
+test("show or muck: winners show at showdown, losers follow their setting, all-in hands are tabled", () => {
+  // heads-up, seat 0 has aces, seat 1 has seven-deuce; board Kh 9s 4c 3d Jh
+  const deck = () => stacked(["7c", "As", "2d", "Ad", "5s", "Kh", "9s", "4c", "6s", "3d", "8s", "Jh"]);
+  const checkDown = t => {
+    P.startHand(t, deck());
+    P.act(t, 0, { type: "call" }); P.act(t, 1, { type: "check" });
+    for (let s = 0; s < 3; s++) { P.act(t, 1, { type: "check" }); P.act(t, 0, { type: "check" }); }
+    return P.publicView(t, -1).hand;
+  };
+  let t = table([1000, 1000]);
+  let h = checkDown(t);
+  assert.deepStrictEqual(h.players[0].hole, ["As", "Ad"]);          // the winner must show
+  assert.strictEqual(h.players[1].hole, null);                       // the loser mucks by default
+  assert.deepStrictEqual(h.mucked, [1]);
+  assert.strictEqual(h.handNames[1], undefined);                     // a mucked hand isn't named either
+
+  t = table([1000, 1000]); t.seats[1].show = true;
+  h = checkDown(t);
+  assert.deepStrictEqual(h.players[1].hole, ["7c", "2d"]);           // shows because they chose to
+  assert.deepStrictEqual(h.mucked, []);
+
+  t = table([1000, 1000]);                                           // all in before the flop: both hands tabled
+  P.startHand(t, deck());
+  P.act(t, 0, { type: "raise", to: 1000 }); P.act(t, 1, { type: "call" });
+  h = P.publicView(t, -1).hand;
+  assert.ok(h.players[0].hole && h.players[1].hole);
+
+  t = table([1000, 1000, 1000]); t.seats[0].show = true;             // uncontested: show only if you want to
+  P.startHand(t, P.newDeck());
+  P.act(t, 0, { type: "raise", to: 100 }); P.act(t, 1, { type: "fold" }); P.act(t, 2, { type: "fold" });
+  assert.ok(P.publicView(t).hand.players[0].hole);
+});
+
 test("hidden information: public view shows only your own cards until showdown", () => {
   const t = table([1000, 1000, 1000]);
   P.startHand(t, P.newDeck());

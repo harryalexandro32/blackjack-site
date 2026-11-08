@@ -50,7 +50,7 @@ async function createRoom(body: any) {
   const settings = R.validateSettings(body.settings || {});
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = newCode();
-    const state = R.newRoom({ code, settings, host: { id, name: body.name, buyIn: body.buyIn, tokenHash: await sha256(token) }, now });
+    const state = R.newRoom({ code, settings, host: { id, name: body.name, buyIn: body.buyIn, tokenHash: await sha256(token), avatar: body.avatar, show: body.show }, now });
     const { data: room, error } = await db.from("poker_rooms")
       .insert({ code, settings, public_state: R.publicState(state), status: R.roomStatus(state) }).select("id").single();
     if (error) { if (error.code === "23505") continue; throw error; } // code taken: try another
@@ -95,7 +95,7 @@ Deno.serve(async req => {
     if (type === "join") {
       const token = newToken(), id = crypto.randomUUID(), tokenHash = await sha256(token);
       const result = await mutate({ code: body.code }, state => {
-        R.applyAction(state, { type: "join", name: body.name, buyIn: body.buyIn }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
+        R.applyAction(state, { type: "join", name: body.name, buyIn: body.buyIn, avatar: body.avatar, show: body.show }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
         return { result: { roomId: null, playerId: id, token, state: R.personalState(state, id) } };
       });
       const loaded = await load({ code: body.code });

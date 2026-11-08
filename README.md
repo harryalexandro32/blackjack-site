@@ -6,6 +6,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 - **Texas Hold'em** (`poker/`): no-limit cash game.
   - **vs bots**: runs entirely in the browser with 1–7 bots (easy, normal, hard).
   - **with friends**: online tables for 2–8 players. The host sets the blinds, minimum buy-in and time to act, and shares a 6-character code. Players buy in, rebuy when busted, and cash out. When the host closes the table, everyone sees what they bought in for, what they left with, and who pays whom. No real money moves: friends settle up themselves.
+  - **At every table**: cards are dealt round the table from the dealer. You pick an avatar: 21 ready-made characters, or build your own from skin, eyes, hair, facial hair, hat, glasses, shirt and background. An odds helper shows your chance to win and your chance of each hand by the river, and each part can be switched off. A switch decides whether you show or muck when the rules let you choose. Winning at showdown and all-in hands always show. In bots mode you also set how the bots behave.
 
 ## Files
 
@@ -16,6 +17,8 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `blackjack/` | Blackjack page, styles, rules (`rules.js`) and game (`game.js`) |
 | `poker/app.js` | Poker screens and table rendering |
 | `poker/local.js`, `poker/bot.js` | Bots mode: local table and bot decisions |
+| `poker/avatars.js`, `poker/look.js` | Avatar drawings (SVG from a short code) and the picker |
+| `poker/odds.js` | Odds helper: simulates the rest of the hand from what you can see |
 | `poker/online.js` | Online mode client (talks to the edge function, listens for table updates) |
 | `poker/config.js` | Supabase URL and anon key for online mode (empty = online mode switched off) |
 | `supabase/functions/_shared/poker-engine.js` | Hold'em rules: dealing, betting, side pots, hand evaluation. Used by both modes. |

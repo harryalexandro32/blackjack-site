@@ -15,6 +15,9 @@ export function cleanName(name) {
   return n;
 }
 
+// Avatars are short codes of numbers and dots (see poker/avatars.js); anything else becomes the default.
+export const cleanAvatar = a => typeof a === "string" && /^[0-9.]{1,40}$/.test(a) ? a : "";
+
 export function validateSettings(s) {
   const sb = int(s.sb), bb = int(s.bb), minBuyIn = int(s.minBuyIn), maxSeats = int(s.maxSeats), actSeconds = int(s.actSeconds);
   if (!(sb > 0 && bb > 0 && sb <= bb)) fail("Blinds must be positive and the small blind no bigger than the big blind.");
@@ -51,12 +54,12 @@ function uniqueName(state, name) {
   for (let k = 2; ; k++) { const n = `${name.slice(0, LIMITS.nameLen - 2)} ${k}`; if (!taken.has(n.toLowerCase())) return n; }
 }
 
-function seatPlayer(state, { id, name, buyIn, tokenHash }, now) {
+function seatPlayer(state, { id, name, buyIn, tokenHash, avatar, show }, now) {
   const amount = checkBuyIn(state, buyIn);
   const seat = state.table.seats.findIndex(s => !s);
   if (seat < 0) fail("This table is full.");
   const clean = uniqueName(state, cleanName(name));
-  state.table.seats[seat] = { id, name: clean, stack: amount, sittingOut: false };
+  state.table.seats[seat] = { id, name: clean, stack: amount, sittingOut: false, avatar: cleanAvatar(avatar), show: !!show };
   state.players[id] = { name: clean, seat, buyIn: amount, tokenHash, left: false, leaving: false, cashOut: null, timeouts: 0, joinedAt: now };
   wakeTable(state, now);
   return seat;
@@ -73,13 +76,15 @@ function wakeTable(state, now) {
 function removeFromSeat(state, id) {
   const p = state.players[id], seat = p.seat;
   p.cashOut = state.table.seats[seat] ? state.table.seats[seat].stack : 0;
+  p.avatar = state.table.seats[seat]?.avatar || "";
   p.left = true; p.leaving = false;
   state.table.seats[seat] = null;
 }
 
 function finalize(state, now) {
   const rows = Object.entries(state.players).map(([id, p]) => ({
-    id, name: p.name, buyIn: p.buyIn, cashOut: p.left ? p.cashOut : state.table.seats[p.seat].stack
+    id, name: p.name, buyIn: p.buyIn, cashOut: p.left ? p.cashOut : state.table.seats[p.seat].stack,
+    avatar: p.left ? p.avatar || "" : state.table.seats[p.seat].avatar || ""
   }));
   state.summary = { ...E.settle(rows), hands: state.table.handNo, closedAt: now };
   state.closed = true; state.closing = false; state.nextHandAt = null; state.deadline = null;
@@ -126,7 +131,13 @@ export function applyAction(state, action, ctx) {
   switch (action.type) {
     case "state": break;
     case "join":
-      seatPlayer(state, { id: me, name: action.name, buyIn: action.buyIn, tokenHash: ctx.tokenHash }, now);
+      seatPlayer(state, { id: me, name: action.name, buyIn: action.buyIn, tokenHash: ctx.tokenHash, avatar: action.avatar, show: action.show }, now);
+      break;
+    case "prefs":
+      // your own avatar, and whether you show or muck your cards when the rules let you choose
+      needSeat();
+      if (action.avatar !== undefined) t.seats[mySeat].avatar = cleanAvatar(action.avatar);
+      if (action.show !== undefined) t.seats[mySeat].show = !!action.show;
       break;
     case "start":
       needHost();
@@ -188,10 +199,10 @@ export function roomStatus(state) { return state.closed ? "closed" : state.start
 
 function shared(state) {
   const bySeat = {};
-  for (const [id, p] of Object.entries(state.players)) if (!p.left) bySeat[p.seat] = { name: p.name, buyIn: p.buyIn, isHost: id === state.hostId };
+  for (const [id, p] of Object.entries(state.players)) if (!p.left) bySeat[p.seat] = { name: p.name, buyIn: p.buyIn, isHost: id === state.hostId, avatar: state.table.seats[p.seat]?.avatar || "" };
   return {
     code: state.code, status: roomStatus(state), settings: state.settings, players: bySeat,
-    departed: Object.values(state.players).filter(p => p.left).map(p => ({ name: p.name, buyIn: p.buyIn, cashOut: p.cashOut })),
+    departed: Object.values(state.players).filter(p => p.left).map(p => ({ name: p.name, buyIn: p.buyIn, cashOut: p.cashOut, avatar: p.avatar || "" })),
     hostSeat: seatOf(state, state.hostId), started: state.started, closing: state.closing, closed: state.closed,
     deadline: state.deadline, nextHandAt: state.nextHandAt, actMs: state.settings.actSeconds * 1000,
     summary: state.summary
@@ -207,7 +218,7 @@ export function personalState(state, playerId) {
   const out = { ...shared(state), view: E.publicView(state.table, seat), me: seat, playerId, isHost: playerId === state.hostId, left: !!(p && p.left), leaving: !!(p && p.leaving) };
   if (p && p.left && !state.closed) {
     // A player who cashed out sees their result, with the others still playing.
-    const rows = Object.values(state.players).map(q => ({ name: q.name, buyIn: q.buyIn, cashOut: q.left ? q.cashOut : null, me: q === p }));
+    const rows = Object.values(state.players).map(q => ({ name: q.name, buyIn: q.buyIn, cashOut: q.left ? q.cashOut : null, me: q === p, avatar: q.left ? q.avatar || "" : state.table.seats[q.seat]?.avatar || "" }));
     out.summary = { rows: rows.map(r => ({ ...r, net: r.cashOut == null ? 0 : r.cashOut - r.buyIn })), payments: [], hands: state.table.handNo, partial: true };
   }
   if (out.summary && !out.summary.partial) out.summary = { ...out.summary, rows: out.summary.rows.map(r => ({ ...r, me: r.id === playerId, id: undefined })) };
