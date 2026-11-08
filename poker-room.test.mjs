@@ -97,6 +97,12 @@ test("next hand deals after the pause; closing waits for the hand to finish, the
   R.applyAction(s, { type: "start" }, ctx("h"));
   for (let hands = 0; hands < 25; hands++) {
     while (E.handInProgress(s.table)) {
+      if (s.table.hand.ritPending) {                                   // everyone's all in: vote on running it twice
+        const voter = Object.keys(s.table.hand.ritVotes).find(i => s.table.hand.ritVotes[i] === null);
+        R.applyAction(s, { type: "rit", yes: Math.random() < 0.5 }, ctx(idAt(s, +voter)));
+        assert.strictEqual(chipsTotal(s), boughtTotal(s));
+        continue;
+      }
       const id = toActId(s), legal = E.legalActions(s.table, seat(s, id));
       const r = Math.random();
       const a = legal.raise && r < 0.3 ? { action: "raise", to: legal.raise.min } : r < 0.45 && !legal.check ? { action: "fold" } : { action: legal.check ? "check" : "call" };
@@ -116,6 +122,7 @@ test("next hand deals after the pause; closing waits for the hand to finish, the
   R.applyAction(s, { type: "close" }, ctx("h"));
   assert.ok(!s.closed && s.closing);                                  // hand still running
   while (E.handInProgress(s.table)) {
+    if (s.table.hand.ritPending) { clock = s.deadline; R.applyAction(s, { type: "tick" }, ctx("a")); continue; }
     const id = toActId(s), legal = E.legalActions(s.table, seat(s, id));
     R.applyAction(s, { type: "act", action: legal.check ? "check" : "fold" }, ctx(id));
   }
