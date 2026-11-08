@@ -6,7 +6,7 @@ import * as E from "./poker-engine.js";
 
 export const LIMITS = {
   maxCents: 1e11, nameLen: 16, betweenHandsMs: 5000, resumeMs: 2000, timeoutsBeforeSitOut: 2,
-  ritMs: 15000, chatLen: 160, chatKeep: 40, chatBurst: 6, chatWindowMs: 10000, maxWatchers: 20
+  ritMs: 15000, chatLen: 160, chatKeep: 40, chatBurst: 6, chatWindowMs: 10000, maxWatchers: 20, sessionsKeep: 50
 };
 export const REACTIONS = ["👍", "😂", "😮", "😤", "🔥", "👏", "🙏", "😭"];
 
@@ -56,7 +56,8 @@ export function newRoom({ code, settings, host, now }) {
   const state = {
     code, settings: s,
     table: E.createTable({ smallBlind: s.sb, bigBlind: s.bb, maxSeats: s.maxSeats, step: s.step, ante: s.ante, straddle: s.straddle, runTwice: s.runTwice }),
-    players: {}, hostId: host.id, started: false, paused: false, chat: [], chatSeq: 0,
+    players: {}, hostId: host.id, hostKeyHash: host.hostKeyHash || null, started: false, paused: false, chat: [], chatSeq: 0,
+    sessionNo: 1, sessionStartHand: 0, sessions: [], ledger: {}, ending: false,
     deadline: null, deadlineKey: null, nextHandAt: null, closing: false, closed: false, summary: null, createdAt: now
   };
   seatPlayer(state, host, now);
@@ -105,14 +106,54 @@ function removeFromSeat(state, id) {
   state.table.seats[seat] = null;
 }
 
-function finalize(state, now) {
-  const rows = Object.entries(state.players).filter(([, p]) => isPlayer(p)).map(([id, p]) => ({
+// Everyone who put money in this session: what they bought in for and what they have now.
+function sessionRows(state) {
+  return Object.entries(state.players).filter(([, p]) => isPlayer(p) && p.buyIn > 0).map(([id, p]) => ({
     id, name: p.name, buyIn: p.buyIn, cashOut: p.left ? p.cashOut : state.table.seats[p.seat].stack,
     avatar: p.left ? p.avatar || "" : state.table.seats[p.seat].avatar || ""
   }));
-  state.summary = { ...E.settle(rows), hands: state.table.handNo, closedAt: now };
+}
+const ledgerKey = name => name.toLowerCase();
+
+// Ends a session: settles it, adds it to the room's ledger, and resets the table for the next one.
+// The room, its code and everyone still seated stay; each player buys in again to play on.
+function endSession(state, now) {
+  const rows = sessionRows(state), result = E.settle(rows);
+  const hands = state.table.handNo - (state.sessionStartHand || 0);
+  if (rows.length) {
+    state.sessions = [...(state.sessions || []), {
+      no: state.sessionNo || 1, endedAt: now, hands,
+      rows: result.rows.map(r => ({ name: r.name, buyIn: r.buyIn, cashOut: r.cashOut, net: r.net, avatar: r.avatar })),
+      payments: result.payments
+    }].slice(-LIMITS.sessionsKeep);
+    state.ledger = state.ledger || {};
+    for (const r of result.rows) {
+      const k = ledgerKey(r.name), cur = state.ledger[k] || { name: r.name, net: 0, sessions: 0 };
+      state.ledger[k] = { name: r.name, net: cur.net + r.net, sessions: cur.sessions + 1 };
+    }
+  }
+  // clear out who left; everyone still seated starts the next session with nothing in front of them
+  for (const [id, p] of Object.entries(state.players)) if (p.left) delete state.players[id];
+  for (const p of Object.values(state.players)) if (isPlayer(p)) {
+    const seat = state.table.seats[p.seat];
+    if (seat) { seat.stack = 0; seat.sittingOut = false; }
+    p.buyIn = 0; p.timeouts = 0; p.leaving = false;
+  }
+  state.sessionNo = (state.sessionNo || 1) + 1;
+  state.sessionStartHand = state.table.handNo;
+  state.started = false; state.ending = false; state.nextHandAt = null; state.deadline = null;
+  return { rows: result.rows, payments: result.payments, hands };
+}
+
+// Close the room for good: the last session is settled and the room can't be used again.
+function finalize(state, now) {
+  const rows = sessionRows(state);
+  state.summary = { ...E.settle(rows), hands: state.table.handNo - (state.sessionStartHand || 0), closedAt: now };
+  if (rows.length) endSession(state, now);
+  state.summary.ledger = ledgerList(state);
   state.closed = true; state.closing = false; state.nextHandAt = null; state.deadline = null;
 }
+const ledgerList = state => Object.values(state.ledger || {}).sort((a, b) => b.net - a.net);
 
 const holdsUpTable = p => p && (p.leaving || p.timeouts >= LIMITS.timeoutsBeforeSitOut);
 
@@ -139,6 +180,7 @@ function settleDown(state, ctx) {
     // between hands
     for (const [id, p] of Object.entries(state.players)) if (p.leaving && !p.left) removeFromSeat(state, id);
     if (state.closing) { finalize(state, now); break; }
+    if (state.ending) { endSession(state, now); break; }
     if (!state.started || state.paused) { state.nextHandAt = null; break; }
     if (!E.canStartHand(t)) { state.nextHandAt = null; break; } // wait for a join, rebuy or sit-in (wakeTable restarts)
     if (state.nextHandAt === null) state.nextHandAt = now + (t.hand ? LIMITS.betweenHandsMs : 0);
@@ -260,6 +302,17 @@ export function applyAction(state, action, ctx) {
       needHost();
       state.closing = true;
       break;
+    case "endSession":
+      needHost();
+      if (!state.started) fail("There's no session going right now.");
+      state.ending = true; // happens as soon as the hand in progress is over
+      break;
+    case "markPaid":
+      // everyone has settled up in real life: the running totals start again from zero
+      needHost();
+      state.ledger = {};
+      state.ledgerResetAt = now;
+      break;
     case "tick": {
       // Anyone can nudge the clock; the server decides whether time is really up.
       if (E.handInProgress(t) && state.deadline !== null && now >= state.deadline) {
@@ -289,7 +342,9 @@ function shared(state) {
     watchers: Object.values(state.players).filter(p => p.spectator && !p.left).map(p => p.name),
     hostSeat: seatOf(state, state.hostId), started: state.started, paused: !!state.paused, closing: state.closing, closed: state.closed,
     deadline: state.deadline, nextHandAt: state.nextHandAt, actMs: state.settings.actSeconds * 1000,
-    chat: state.chat || [], summary: state.summary
+    chat: state.chat || [], summary: state.summary,
+    sessionNo: state.sessionNo || 1, ending: !!state.ending, ledgerResetAt: state.ledgerResetAt || null,
+    sessions: (state.sessions || []).slice(-20), ledger: ledgerList(state)
   };
 }
 
@@ -311,6 +366,18 @@ export function personalState(state, playerId) {
   }
   if (out.summary && !out.summary.partial) out.summary = { ...out.summary, rows: out.summary.rows.map(r => ({ ...r, me: r.id === playerId, id: undefined })) };
   return out;
+}
+
+// Opening the room with the host's private link: the host gets a fresh token on this device.
+// If the host is still at the table they keep their seat; otherwise they come back as a watcher.
+export function claimHost(state, { hostKeyHash, id, tokenHash, now }) {
+  if (!state.hostKeyHash || state.hostKeyHash !== hostKeyHash) fail("That host link doesn't match this room.");
+  if (state.closed) fail("This room was closed for good.");
+  const current = state.players[state.hostId];
+  if (current && !current.left) { current.tokenHash = tokenHash; return state.hostId; }
+  state.players[id] = { name: uniqueName(state, current ? current.name : "Host", id), seat: -1, spectator: true, buyIn: 0, tokenHash, left: false, joinedAt: now, chatTimes: [] };
+  state.hostId = id;
+  return id;
 }
 
 export function findPlayerByTokenHash(state, hash) {

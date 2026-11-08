@@ -3,7 +3,7 @@ import { LocalTable, savedAiTable } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "./avatars.js";
 import { openLook } from "./look.js";
 import { handOdds, STRONG_FROM } from "./odds.js";
-import { CATEGORY, evaluate } from "../supabase/functions/_shared/poker-engine.js";
+import { CATEGORY, evaluate, settle } from "../supabase/functions/_shared/poker-engine.js";
 import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { play, soundOn, setSound } from "./sound.js";
 import { useTable, saveHand, hasReplay, openReplay, setupReplay } from "./replay.js";
@@ -118,7 +118,7 @@ function attach(controller) {
   if (unsub) unsub();
   if (ctrl && ctrl !== controller && ctrl.destroy) ctrl.destroy();
   ctrl = controller; history = []; seen = { hand: 0, log: 0, board: 0, results: false };
-  animOk = false; lastHandNo = null; oddsKey = ""; lastChatN = null; lastTurnKey = "";
+  animOk = false; lastHandNo = null; oddsKey = ""; lastChatN = null; lastTurnKey = ""; lastSessionNo = undefined;
   useTable(controller.seat ? "online:" + controller.seat.code : "ai");
   buildSeats(0);
   showScreen("scrTable");
@@ -274,10 +274,20 @@ function initSetup() {
   if (name) { $("aiName").value = name; $("crName").value = name; $("jnName").value = name; }
   $("aiResume").hidden = !savedAiTable();
   drawLookButtons();
+  if (params.get("code") && params.get("host") && onlineEnabled) return openAsHost(params.get("code").toUpperCase().slice(0, 6), params.get("host"));
   if (params.get("code")) { location.hash = "#online"; $("jnCode").value = params.get("code").toUpperCase().slice(0, 6); lookupRules(); }
   route();
   if (onlineEnabled) online().then(m => { $("btnRejoin").hidden = !m.hasSavedSeat(); }).catch(() => {});
   showScreen("scrSetup");
+}
+
+// The host's private link opens the room as host on any device. The key is taken out of the address
+// bar straight away so it isn't shared by accident.
+async function openAsHost(code, hostKey) {
+  window.history.replaceState(null, "", location.pathname + "#online"); // (plain `history` here is the hand history list)
+  route(); showScreen("scrSetup");
+  try { const { OnlineTable } = await online(); attach(await OnlineTable.claim({ code, hostKey })); }
+  catch (err) { $("jnCode").value = code; $("jnErr").textContent = err.message; }
 }
 
 // ---------- table layout ----------
@@ -482,6 +492,9 @@ function render() {
     boardCards.forEach((el, k) => { fly(el, after + k * 150, from, true); play("flip", (after + k * 150 + FLY_MS) / 1000); });
   }
   if (h && h.street === "done") saveHand(view);
+  const lastNo = view.sessions && view.sessions.length ? view.sessions[view.sessions.length - 1].no : 0;
+  if (lastSessionNo !== undefined && lastNo > lastSessionNo) openLedger(true);
+  lastSessionNo = lastNo;
   renderChat(animate);
   animOk = true;
 
@@ -633,6 +646,14 @@ function renderActions() {
   $("sitRow").hidden = !(view.watching && freeSeat);
   if (view.watching && !$("sitInput").value) $("sitInput").value = (view.minBuyIn / 100).toString();
   $("btnPause").hidden = !(view.mode === "online" && view.isHost && view.started);
+  const online = view.mode === "online";
+  $("btnEndSession").hidden = !(online && view.isHost && view.started && !view.ending);
+  if (!endArmed) $("btnEndSession").textContent = "End session & settle up";
+  $("btnLedger").hidden = !(online && (view.sessions.length || view.ledger.length));
+  $("btnHostLink").hidden = !(online && view.isHost && view.hostKey);
+  if (!closeArmed) $("btnClose").textContent = "Close room for good";
+  $("btnStart").textContent = online && view.sessions && view.sessions.length ? `Start session ${view.sessionNo}` : "Start the game";
+  $("btnRebuy").textContent = online && !view.started ? "Buy in" : "Buy back in";
   $("btnPause").textContent = view.paused ? "Resume table" : "Pause table";
   const needRebuy = view.waitingForRebuy;
   $("rebuyRow").hidden = !needRebuy;
@@ -645,7 +666,9 @@ function renderActions() {
   $("btnCopyLink").hidden = view.mode !== "online";
   $("btnClose").hidden = !(view.mode === "online" && view.isHost);
   $("btnLeave").textContent = leaveArmed ? "Tap again to leave" : view.watching ? "Stop watching" : view.mode === "ai" ? "Leave and see results" : "Cash out and leave";
-  $("toolsNote").textContent = view.mode === "online" ? (view.isHost ? "You're the host. Closing the table cashes everyone out and shows the final results." : "Cashing out records what you leave with. The host closes the table when the game is over.") : "";
+  $("toolsNote").textContent = view.mode === "online" ? (view.isHost
+    ? "You're the host. Ending the session settles up and keeps the room, so the same code works next time. Keep your host link to run the room from another device."
+    : "Cashing out records what you leave with. When the host ends the session, everyone settles up and the room stays open for next time.") : "";
 
   if (myTurn) {
     const turnKey = `${h.no}:${h.log.length}`;
@@ -672,11 +695,17 @@ function renderActions() {
 
 function statusText() {
   const t = view.table, h = t.hand, me = view.me;
+  if (view.mode === "online" && !view.started && view.sessions && view.sessions.length) {
+    const ready = t.seats.filter(x => x && x.stack > 0).length, n = view.sessionNo;
+    const mine = me >= 0 && t.seats[me] && t.seats[me].stack === 0 ? `Buy in for session ${n} (at least ${fmt(view.minBuyIn)}). ` : "";
+    return `Session ${n - 1} is settled.${" "}${mine}${view.isHost ? `Start session ${n} when at least two players have bought in (${ready} so far).` : `Waiting for the host to start session ${n}. ${ready} bought in.`}`;
+  }
   if (view.mode === "online" && !view.started) {
     const seated = t.seats.filter(Boolean).length;
     return view.isHost ? `${seated} of ${t.maxSeats} seats taken. Start the game when everyone's in (at least 2 players).` : `Waiting for the host to start the game. ${seated} players seated.`;
   }
-  if (view.closing) return "The host is closing the table. Final results come up when this hand ends.";
+  if (view.closing) return "The host is closing the room. Final results come up when this hand ends.";
+  if (view.ending) return "The host is ending the session. Everyone settles up when this hand ends.";
   if (view.paused) return h && h.street !== "done" ? "The host paused the table. Finish this hand at your own pace; the clock is stopped." : "The host paused the table. No new hands until it's resumed.";
   if (h && h.ritPending) {
     const left = Object.entries(h.ritVotes).filter(([, v]) => v === null).map(([i]) => who(+i));
@@ -823,7 +852,19 @@ $("btnCopyLink").onclick = async () => {
   catch { $("btnCopyLink").textContent = url; }
   setTimeout(() => $("btnCopyLink").textContent = "Copy invite link", 2500);
 };
-let leaveArmed = 0, closeArmed = 0;
+let leaveArmed = 0, closeArmed = 0, endArmed = 0;
+$("btnEndSession").onclick = guard(async () => {
+  if (!endArmed) { endArmed = setTimeout(() => { endArmed = 0; render(); }, 4000); $("btnEndSession").textContent = "Tap again to end the session"; return; }
+  clearTimeout(endArmed); endArmed = 0;
+  await ctrl.endSession();
+});
+$("btnLedger").onclick = () => openLedger(false);
+$("btnHostLink").onclick = async () => {
+  const url = `${location.origin}${location.pathname}?code=${view.code}&host=${view.hostKey}#online`;
+  try { await navigator.clipboard.writeText(url); $("btnHostLink").textContent = "Host link copied. Keep it private"; }
+  catch { $("btnHostLink").textContent = url; }
+  setTimeout(() => $("btnHostLink").textContent = "Copy host link", 3500);
+};
 $("btnLeave").onclick = guard(async () => {
   if (!leaveArmed) { leaveArmed = setTimeout(() => { leaveArmed = 0; render(); }, 4000); render(); return; }
   clearTimeout(leaveArmed); leaveArmed = 0;
@@ -836,7 +877,7 @@ $("btnClose").onclick = guard(async () => {
   await ctrl.close();
 });
 document.addEventListener("keydown", e => {
-  if (!view || $("lookDlg").open || $("replayDlg").open || e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!view || $("lookDlg").open || $("replayDlg").open || $("ledgerDlg").open || e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
   const legal = view.table?.hand?.legal; if (!legal) return;
   const k = e.key.toLowerCase();
   if (k === "f") $("btnFold").click();
@@ -934,12 +975,84 @@ $("log").addEventListener("click", e => {
   });
 });
 
+// ---------- room ledger: each session's result and the running totals ----------
+let lastSessionNo;
+function payList(box, payments, empty) {
+  box.innerHTML = "";
+  if (!payments.length) { box.innerHTML = `<li>${empty}</li>`; return; }
+  payments.forEach(p => { const li = document.createElement("li"); li.textContent = `${p.from} pays ${p.to} ${fmt(p.amount)}`; box.appendChild(li); });
+}
+const isMe = name => !!view.myName && name === view.myName;
+function openLedger(justEnded) {
+  const sessions = view.sessions || [], latest = sessions[sessions.length - 1];
+  $("ldTitle").textContent = justEnded && latest ? `Session ${latest.no} is over` : "Room ledger";
+  $("ldIntro").textContent = `Table ${view.code}. Pretend dollars only: settle up between yourselves. The room stays open, so the same code works next time.`;
+  // the latest session
+  $("ldLatest").hidden = !latest;
+  if (latest) {
+    $("ldLatestTitle").textContent = `Session ${latest.no} · ${latest.hands} hand${latest.hands === 1 ? "" : "s"}`;
+    const body = $("ldLatestRows"); body.innerHTML = "";
+    latest.rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${miniAv(avatarOf(r))}<span></span></td><td></td><td></td><td></td>`;
+      tr.children[0].lastChild.textContent = r.name + (isMe(r.name) ? " (you)" : "");
+      tr.children[1].textContent = fmt(r.buyIn); tr.children[2].textContent = fmt(r.cashOut);
+      tr.children[3].textContent = fmt(r.net, true); tr.children[3].className = netClass(r.net);
+      body.appendChild(tr);
+    });
+    payList($("ldLatestPay"), latest.payments, "Nobody owes anybody for this session.");
+  }
+  // running totals and one list of payments that squares everything
+  const led = view.ledger || [], tb = $("ldTotalRows"); tb.innerHTML = "";
+  if (!led.length) tb.innerHTML = '<tr><td colspan="3">Nothing owed: totals start again from the next session.</td></tr>';
+  led.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td></td><td></td><td></td>";
+    tr.children[0].textContent = r.name + (isMe(r.name) ? " (you)" : "");
+    tr.children[1].textContent = r.sessions; tr.children[2].textContent = fmt(r.net, true); tr.children[2].className = netClass(r.net);
+    tb.appendChild(tr);
+  });
+  const all = settle(led.map(r => ({ name: r.name, buyIn: 0, cashOut: r.net })));
+  payList($("ldTotalPay"), all.payments, "Everyone is square.");
+  $("ldPaidNote").textContent = view.ledgerResetAt ? `Totals since ${new Date(view.ledgerResetAt).toLocaleDateString()}.` : "";
+  // history
+  const hist = $("ldHistory"); hist.innerHTML = "";
+  if (!sessions.length) hist.innerHTML = '<p class="note">No sessions finished yet.</p>';
+  sessions.slice().reverse().forEach(x => {
+    const d = document.createElement("div"); d.className = "ld-session";
+    d.innerHTML = "<b></b><span></span>";
+    d.firstChild.textContent = `Session ${x.no} · ${new Date(x.endedAt).toLocaleDateString()} · ${x.hands} hands`;
+    d.lastChild.textContent = x.rows.map(r => `${r.name} ${fmt(r.net, true)}`).join(" · ");
+    hist.appendChild(d);
+  });
+  $("ldMarkPaid").hidden = !(view.isHost && led.some(r => r.net !== 0));
+  $("ldMarkPaid").textContent = "Everyone's paid: start totals again";
+  if (!$("ledgerDlg").open) $("ledgerDlg").showModal();
+  if (justEnded && animOk) play("pot");
+}
+let paidArmed = 0;
+$("ldMarkPaid").onclick = guard(async () => {
+  if (!paidArmed) { paidArmed = setTimeout(() => { paidArmed = 0; $("ldMarkPaid").textContent = "Everyone's paid: start totals again"; }, 4000); $("ldMarkPaid").textContent = "Tap again: totals go back to zero"; return; }
+  clearTimeout(paidArmed); paidArmed = 0;
+  await ctrl.markPaid();
+  openLedger(false);
+});
+$("ldCopy").onclick = async () => {
+  const latest = (view.sessions || []).slice(-1)[0], led = view.ledger || [];
+  const all = settle(led.map(r => ({ name: r.name, buyIn: 0, cashOut: r.net })));
+  const lines = [`Texas Hold'em, table ${view.code}`];
+  if (latest) lines.push(`Session ${latest.no}:`, ...latest.rows.map(r => `  ${r.name}: ${fmt(r.net, true)}`), ...latest.payments.map(p => `  ${p.from} pays ${p.to} ${fmt(p.amount)}`));
+  if (led.length) lines.push("All sessions:", ...led.map(r => `  ${r.name}: ${fmt(r.net, true)} (${r.sessions} sessions)`), "To settle everything:", ...all.payments.map(p => `  ${p.from} pays ${p.to} ${fmt(p.amount)}`));
+  try { await navigator.clipboard.writeText(lines.join("\n")); $("ldCopy").textContent = "Copied"; } catch { $("ldCopy").textContent = "Copy failed"; }
+  setTimeout(() => $("ldCopy").textContent = "Copy results", 2000);
+};
+
 // ---------- summary ----------
 function renderSummary() {
   showScreen("scrSummary");
   const s = view.summary;
   if (!s) return;
-  $("sumTitle").textContent = view.mode === "ai" ? "Session over" : view.tableClosed ? "Table closed" : "You cashed out";
+  $("sumTitle").textContent = view.mode === "ai" ? "Session over" : view.tableClosed ? "Room closed" : "You cashed out";
   $("sumIntro").textContent = `${s.hands} hand${s.hands === 1 ? "" : "s"} played. Pretend dollars only: settle up between yourselves.`;
   const body = $("sumRows"); body.innerHTML = "";
   s.rows.forEach(r => {
@@ -956,6 +1069,14 @@ function renderSummary() {
   if (s.partial) pay.innerHTML = "<li>The table is still going. Who pays whom is worked out when the host closes it.</li>";
   else if (!s.payments.length) pay.innerHTML = "<li>Nobody owes anybody.</li>";
   s.payments.forEach(p => { const li = document.createElement("li"); li.textContent = `${p.from} pays ${p.to} ${fmt(p.amount)}`; pay.appendChild(li); });
+  // a room closed after several sessions: the running totals too
+  if (s.ledger && s.ledger.some(r => r.sessions > 1)) {
+    const all = settle(s.ledger.map(r => ({ name: r.name, buyIn: 0, cashOut: r.net })));
+    const head = document.createElement("li"); head.className = "pay-head";
+    head.textContent = "All sessions in this room: " + s.ledger.map(r => `${r.name} ${fmt(r.net, true)}`).join(" · ");
+    pay.appendChild(head);
+    all.payments.forEach(p => { const li = document.createElement("li"); li.textContent = `To settle everything: ${p.from} pays ${p.to} ${fmt(p.amount)}`; pay.appendChild(li); });
+  }
 }
 $("btnSumDone").onclick = () => backToLobby();
 function backToLobby() {

@@ -47,16 +47,18 @@ async function commit(roomId: string, version: number, state: any) {
 
 async function createRoom(body: any) {
   const now = Date.now(), token = newToken(), id = crypto.randomUUID();
+  // the host's private key: the host link carries it so the room can be opened as host from any device
+  const hostKey = newToken(), hostKeyHash = await sha256(hostKey);
   const settings = R.validateSettings(body.settings || {});
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = newCode();
-    const state = R.newRoom({ code, settings, host: { id, name: body.name, buyIn: body.buyIn, tokenHash: await sha256(token), avatar: body.avatar, show: body.show }, now });
+    const state = R.newRoom({ code, settings, host: { id, name: body.name, buyIn: body.buyIn, tokenHash: await sha256(token), hostKeyHash, avatar: body.avatar, show: body.show }, now });
     const { data: room, error } = await db.from("poker_rooms")
       .insert({ code, settings, public_state: R.publicState(state), status: R.roomStatus(state) }).select("id").single();
     if (error) { if (error.code === "23505") continue; throw error; } // code taken: try another
     const { error: e2 } = await db.from("poker_secrets").insert({ room_id: room.id, state });
     if (e2) throw e2;
-    return { roomId: room.id, playerId: id, token, state: R.personalState(state, id) };
+    return { roomId: room.id, playerId: id, token, hostKey, state: R.personalState(state, id) };
   }
   throw new R.RoomError("Couldn't open a table right now. Try again.");
 }
@@ -93,6 +95,18 @@ Deno.serve(async req => {
         sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length,
         odds: s.settings.odds || {}, step: s.table.step || 1, ante: s.table.ante || 0, straddle: !!s.table.straddle, runTwice: !!s.table.runTwice
       }, serverNow: now });
+    }
+
+    // The host's private link: a fresh token for the host on this device.
+    if (type === "claim") {
+      const token = newToken(), tokenHash = await sha256(token), hostKeyHash = await sha256(String(body.hostKey || ""));
+      let playerId = "";
+      const result = await mutate({ code: body.code }, state => {
+        playerId = R.claimHost(state, { hostKeyHash, id: crypto.randomUUID(), tokenHash, now: Date.now() });
+        return { result: R.personalState(state, playerId) };
+      });
+      const loaded = await load({ code: body.code });
+      return json({ roomId: loaded!.room.id, playerId, token, state: result, serverNow: Date.now() });
     }
 
     // Joining takes a seat; watching takes a seat-less spot. Both get a private token for later requests.

@@ -3,7 +3,7 @@
 
 export const FIELDS = ["k", "g", "sk", "e", "hs", "hc", "fh", "hat", "htc", "gl", "sh", "bg"];
 
-export const KINDS = ["Person", "Grim Reaper", "Snowman", "Fox", "Cat", "Bear", "Owl", "Robot"];
+export const KINDS = ["Person", "Grim Reaper", "Snowman", "Fox", "Cat", "Bear", "Owl", "Robot", "Trooper"];
 export const SKIN = ["#f7dcc8", "#efc6a2", "#e2b47f", "#c68b5c", "#94603c", "#5b3820"];
 export const SKIN_NAMES = ["Fair", "Light", "Golden", "Tan", "Brown", "Deep"];
 export const EYES = ["Round", "Almond"];
@@ -14,7 +14,7 @@ export const HATS = ["None", "Cowboy", "Beanie", "Top hat"];
 export const HAT_COLOR = ["#7b4a26", "#c9a56a", "#232326", "#efe9dc", "#8c2b24"];
 export const GLASSES = ["None", "Sunglasses", "Glasses"];
 export const SHIRT = ["#2f5d8a", "#8c2b24", "#2e6b46", "#3a3a42", "#c9a227", "#6d3f8a", "#efe9dc"];
-export const BG = ["#24543a", "#7a2a22", "#24496e", "#c9a227", "#4b2e6b", "#2a2a30", "#b85c2a", "#5b8fa8"];
+export const BG = ["#24543a", "#7a2a22", "#24496e", "#c9a227", "#4b2e6b", "#2a2a30", "#b85c2a", "#5b8fa8", "#f78fc0"]; // last: candy pink
 
 const SIZES = { k: KINDS.length, g: 2, sk: SKIN.length, e: EYES.length, hs: HAIR.length, hc: HAIR_COLOR.length, fh: FACIAL.length, hat: HATS.length, htc: HAT_COLOR.length, gl: GLASSES.length, sh: SHIRT.length, bg: BG.length };
 export const optionCount = key => SIZES[key];
@@ -50,7 +50,9 @@ export const PRESETS = [
   P("Cat", { k: 4, bg: 2 }),
   P("Bear", { k: 5, bg: 6 }),
   P("Owl", { k: 6, bg: 4 }),
-  P("Robot", { k: 7, bg: 5 })
+  P("Robot", { k: 7, bg: 5 }),
+  P("Trooper", { k: 8, bg: 5 }),
+  P("Candy", { g: 1, sk: 1, hs: 8, hc: 8, gl: 1, sh: 6, bg: 8 })
 ];
 export const DEFAULT_AVATAR = PRESETS[2].code;
 
@@ -170,6 +172,19 @@ const FUR = {
     <rect x="39" y="55" width="22" height="6" rx="2" fill="#1d2a35"/><path d="M44 55 v6 M50 55 v6 M56 55 v6" stroke="#5ee1ff" stroke-opacity=".6" stroke-width="1"/>`
 };
 
+// A white-armoured space trooper helmet.
+function trooper() {
+  return `${torso("#eceff2")}<path d="M30 100 Q31 84 50 82 Q69 84 70 100Z" fill="#1b1d21"/><path d="M38 86 h24" stroke="#b9c1c9" stroke-width="2"/>
+    <path d="M26 50 C24 25 36 15 50 15 C64 15 76 25 74 50 L74 63 Q74 72 66 74 L34 74 Q26 72 26 63Z" fill="#f5f7f9" stroke="#b7bfc7" stroke-width="1.2"/>
+    <path d="M29 36 Q50 29 71 36" stroke="#c3cad1" stroke-width="1.6" fill="none"/>
+    <rect x="24" y="48" width="5" height="14" rx="2" fill="#d5dbe0"/><rect x="71" y="48" width="5" height="14" rx="2" fill="#d5dbe0"/>
+    <path d="M32 41 L46 43.5 L44.5 52.5 Q38 55 32.5 49.5Z" fill="#15171a"/><path d="M68 41 L54 43.5 L55.5 52.5 Q62 55 67.5 49.5Z" fill="#15171a"/>
+    <path d="M35 44 l5 1" stroke="#5a6470" stroke-width="1" stroke-linecap="round"/><path d="M65 44 l-5 1" stroke="#5a6470" stroke-width="1" stroke-linecap="round"/>
+    <path d="M50 44 L46.5 59 L53.5 59Z" fill="#e2e7ec"/>
+    <path d="M37 68 Q41 59 50 61 Q59 59 63 68 Q56 64.5 50 65.5 Q44 64.5 37 68Z" fill="#2b2f35"/>
+    ${[44, 47.3, 50.6, 53.9].map(x => `<rect x="${x}" y="66" width="1.6" height="5.5" rx=".8" fill="#2b2f35"/>`).join("")}
+    <circle cx="36" cy="61" r="2.1" fill="#3a3f46"/><circle cx="64" cy="61" r="2.1" fill="#3a3f46"/>`;
+}
 function reaper() {
   return `<path d="M79 100 L75 6" stroke="#6b4a2a" stroke-width="3.2" stroke-linecap="round"/><path d="M75.5 8 Q57 0 37 13 Q57 8 74.5 17Z" fill="#cfd6dc"/>
     <path d="M13 100 C13 70 21 19 50 13 C79 19 87 70 87 100Z" fill="#1e1c24"/>
@@ -209,7 +224,7 @@ let uid = 0;
 // The avatar as an SVG string. `label` is announced to screen readers.
 export function avatarSvg(code, label = "") {
   const a = decode(code), id = "av" + (++uid);
-  let body = a.k === 0 ? person(a) : a.k === 1 ? reaper() : a.k === 2 ? snowman(a) : FUR[a.k](a);
+  let body = a.k === 0 ? person(a) : a.k === 1 ? reaper() : a.k === 2 ? snowman(a) : a.k === 8 ? trooper() : FUR[a.k](a);
   body += glasses(a) + hat(a);
   const aria = label ? `role="img" aria-label="${label.replace(/[<>"&]/g, "")}"` : `aria-hidden="true"`;
   return `<svg viewBox="0 0 100 100" ${aria}><defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#${id})"><rect width="100" height="100" fill="${BG[a.bg]}"/><circle cx="50" cy="38" r="40" fill="#fff" opacity=".07"/>${body}</g></svg>`;

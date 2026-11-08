@@ -112,6 +112,7 @@ test("next hand deals after the pause; closing waits for the hand to finish, the
     R.applyAction(s, { type: "tick" }, ctx("a"));
     assert.ok(E.handInProgress(s.table), "next hand was not dealt");
   }
+  const bought = boughtTotal(s);
   R.applyAction(s, { type: "close" }, ctx("h"));
   assert.ok(!s.closed && s.closing);                                  // hand still running
   while (E.handInProgress(s.table)) {
@@ -121,7 +122,7 @@ test("next hand deals after the pause; closing waits for the hand to finish, the
   assert.ok(s.closed);
   const sum = s.summary;
   assert.strictEqual(sum.rows.reduce((a, r) => a + r.net, 0), 0);
-  assert.strictEqual(sum.rows.reduce((a, r) => a + r.cashOut, 0), boughtTotal(s));
+  assert.strictEqual(sum.rows.reduce((a, r) => a + r.cashOut, 0), bought);
   const paid = {};
   for (const p of sum.payments) { paid[p.from] = (paid[p.from] || 0) - p.amount; paid[p.to] = (paid[p.to] || 0) + p.amount; }
   for (const r of sum.rows) assert.strictEqual(paid[r.name] || 0, r.net);
@@ -245,4 +246,53 @@ test("ante and straddle settings reach the table", () => {
   assert.strictEqual(s.table.ante, 50);
   assert.strictEqual(s.table.straddle, true);
   assert.strictEqual(R.publicState(s).view.ante, 50);
+});
+
+test("ending a session settles it, keeps the room and its players, and builds a running ledger", () => {
+  const s = room();
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.throws(() => R.applyAction(s, { type: "endSession" }, ctx("a")), /host/);
+  R.applyAction(s, { type: "endSession" }, ctx("h"));
+  assert.ok(s.ending && s.started);                                  // waits for the hand in play
+  while (E.handInProgress(s.table)) R.applyAction(s, { type: "act", action: "fold" }, ctx(toActId(s)));
+  assert.ok(!s.closed && !s.started && !s.ending);
+  assert.strictEqual(s.sessions.length, 1);
+  const s1 = s.sessions[0];
+  assert.strictEqual(s1.rows.reduce((a, r) => a + r.net, 0), 0);
+  assert.deepStrictEqual(Object.keys(s.ledger).sort(), ["ana", "bo", "host"]);
+  // everyone is still seated with nothing in front of them, and buys in again
+  assert.ok(s.table.seats.filter(Boolean).every(x => x.stack === 0));
+  assert.throws(() => R.applyAction(s, { type: "start" }, ctx("h")), /two players/);
+  R.applyAction(s, { type: "rebuy", amount: 10000 }, ctx("h"));
+  R.applyAction(s, { type: "rebuy", amount: 10000 }, ctx("a"));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.ok(E.handInProgress(s.table));
+  assert.strictEqual(R.publicState(s).sessionNo, 2);
+  // second session: Bo didn't play, so isn't in it; the ledger adds up both
+  while (E.handInProgress(s.table)) R.applyAction(s, { type: "act", action: "fold" }, ctx(toActId(s)));
+  clock += 1; R.applyAction(s, { type: "endSession" }, ctx("h"));
+  assert.strictEqual(s.sessions.length, 2);
+  assert.deepStrictEqual(s.sessions[1].rows.map(r => r.name).sort(), ["Ana", "Host"]);
+  const led = R.publicState(s).ledger;
+  assert.strictEqual(led.reduce((a, r) => a + r.net, 0), 0);
+  assert.strictEqual(led.find(r => r.name === "Host").sessions, 2);
+  // settled in real life: totals start again; the session history stays
+  assert.throws(() => R.applyAction(s, { type: "markPaid" }, ctx("a")), /host/);
+  R.applyAction(s, { type: "markPaid" }, ctx("h"));
+  assert.deepStrictEqual(R.publicState(s).ledger, []);
+  assert.strictEqual(R.publicState(s).sessions.length, 2);
+});
+
+test("host link: the right key reconnects the host; a wrong one is refused", () => {
+  const s = R.newRoom({ code: "ABC234", settings, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th", hostKeyHash: "secret" }, now: clock });
+  assert.throws(() => R.claimHost(s, { hostKeyHash: "nope", id: "x", tokenHash: "tx", now: clock }), /host link/);
+  assert.strictEqual(R.claimHost(s, { hostKeyHash: "secret", id: "x", tokenHash: "t2", now: clock }), "h");
+  assert.strictEqual(R.findPlayerByTokenHash(s, "t2"), "h");          // new device works
+  assert.strictEqual(R.findPlayerByTokenHash(s, "th"), null);         // old token retired
+  R.applyAction(s, { type: "leave" }, ctx("h"));                       // host walks away
+  assert.strictEqual(R.claimHost(s, { hostKeyHash: "secret", id: "y", tokenHash: "t3", now: clock }), "y");
+  assert.strictEqual(s.hostId, "y");
+  assert.strictEqual(R.personalState(s, "y").watching, true);          // back as host, watching until they sit
+  R.applyAction(s, { type: "sit", buyIn: 20000 }, ctx("y"));
+  assert.ok(R.personalState(s, "y").isHost);
 });

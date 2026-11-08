@@ -6,6 +6,7 @@
 <title>Texas Hold'em Table</title>
 <meta name="description" content="No-limit Texas Hold'em with pretend money. Play against bots or open a table for up to 8 friends online, then see who owes whom.">
 <meta name="theme-color" content="#2b1910">
+<script src="../theme.js"></script>
 <link rel="icon" type="image/svg+xml" href="../logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -215,7 +216,10 @@
           <button class="ghost" id="btnSitOut">Sit out next hand</button>
           <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
           <button class="ghost" id="btnPause" hidden>Pause table</button>
-          <button class="danger" id="btnClose" hidden>Close table for everyone</button>
+          <button class="ghost" id="btnLedger" hidden>Room ledger</button>
+          <button class="ghost" id="btnHostLink" hidden>Copy host link</button>
+          <button class="primary" id="btnEndSession" hidden>End session &amp; settle up</button>
+          <button class="danger" id="btnClose" hidden>Close room for good</button>
           <button class="danger" id="btnLeave">Leave table</button>
         </div>
         <p class="note" id="toolsNote"></p>
@@ -242,6 +246,35 @@
 
 </main>
 </div>
+
+<dialog id="ledgerDlg" class="look-dlg ledger-dlg" aria-labelledby="ldTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head"><div class="look-head-text"><h2 id="ldTitle">Room ledger</h2><p class="note" id="ldIntro"></p></div></div>
+    <div class="look-body">
+      <section id="ldLatest">
+        <h3 id="ldLatestTitle">This session</h3>
+        <div class="scroll-x"><table class="summary-table"><thead><tr><th>Player</th><th>Bought in</th><th>Left with</th><th>Up / down</th></tr></thead><tbody id="ldLatestRows"></tbody></table></div>
+        <ul class="payments" id="ldLatestPay"></ul>
+      </section>
+      <section>
+        <h3>All sessions so far</h3>
+        <div class="scroll-x"><table class="summary-table"><thead><tr><th>Player</th><th>Sessions</th><th>Up / down</th></tr></thead><tbody id="ldTotalRows"></tbody></table></div>
+        <h3>Settle everything</h3>
+        <ul class="payments" id="ldTotalPay"></ul>
+        <p class="note" id="ldPaidNote"></p>
+      </section>
+      <section>
+        <h3>Past sessions</h3>
+        <div class="ld-history" id="ldHistory"></div>
+      </section>
+    </div>
+    <div class="look-foot">
+      <button type="button" class="danger" id="ldMarkPaid" hidden>Everyone's paid: start totals again</button>
+      <button type="button" class="ghost" id="ldCopy">Copy results</button>
+      <button value="close" class="primary">Back to the table</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="replayDlg" class="look-dlg replay-dlg" aria-labelledby="rpTitle">
   <form method="dialog" class="look-in">

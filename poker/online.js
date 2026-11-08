@@ -8,6 +8,12 @@ const loadSeat = () => { try { return JSON.parse(localStorage.getItem(SEAT_KEY))
 const clearSeat = () => { try { localStorage.removeItem(SEAT_KEY); } catch {} };
 export const hasSavedSeat = () => !!loadSeat();
 
+// The host's private keys, by room code: the host link needs them to open the room from another device.
+const HOST_KEYS = "pk-hostkeys";
+const hostKeys = () => { try { return JSON.parse(localStorage.getItem(HOST_KEYS)) || {}; } catch { return {}; } };
+const saveHostKey = (code, key) => { try { localStorage.setItem(HOST_KEYS, JSON.stringify({ ...hostKeys(), [code]: key })); } catch {} };
+export const hostKeyFor = code => hostKeys()[code] || null;
+
 async function call(body) {
   let res;
   try {
@@ -43,6 +49,14 @@ export class OnlineTable {
     const r = await call({ type: "create", name: opts.name, buyIn: opts.buyIn, avatar: opts.avatar, show: opts.show, settings: { sb: opts.sb, bb: opts.bb, minBuyIn: opts.minBuyIn, maxSeats: opts.maxSeats, actSeconds: opts.actSeconds, odds: opts.odds, step: opts.step, ante: opts.ante, straddle: opts.straddle, runTwice: opts.runTwice } });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
+    if (r.hostKey) saveHostKey(r.state.code, r.hostKey);
+    return new OnlineTable(seat, r.state, r.serverNow);
+  }
+  // open a room with the host's private link
+  static async claim({ code, hostKey }) {
+    const r = await call({ type: "claim", code, hostKey });
+    const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
+    saveSeat(seat); saveHostKey(r.state.code, hostKey);
     return new OnlineTable(seat, r.state, r.serverNow);
   }
   static async join({ code, name, buyIn, avatar, show }) {
@@ -139,7 +153,9 @@ export class OnlineTable {
       deadline: toLocal(s.deadline), nextHandAt: toLocal(s.nextHandAt), actMs: s.actMs,
       ended: s.closed || s.left, tableClosed: s.closed, summary: s.summary,
       waitingForRebuy: !!(mySeat && mySeat.stack === 0 && !inLiveHand),
-      watching: !!s.watching, watchers: s.watchers || [], paused: !!s.paused, chat: s.chat || [], myName: s.myName || ""
+      watching: !!s.watching, watchers: s.watchers || [], paused: !!s.paused, chat: s.chat || [], myName: s.myName || "",
+      sessionNo: s.sessionNo || 1, ending: !!s.ending, sessions: s.sessions || [], ledger: s.ledger || [], ledgerResetAt: s.ledgerResetAt || null,
+      hostKey: s.isHost ? hostKeyFor(s.code) : null
     };
   }
 
@@ -152,6 +168,8 @@ export class OnlineTable {
   chat(text) { return this.send("chat", { text }); }
   react(emoji) { return this.send("react", { emoji }); }
   setPause(on) { return this.send("pause", { on }); }
+  endSession() { return this.send("endSession"); }
+  markPaid() { return this.send("markPaid"); }
   start() { return this.send("start"); }
   leave() { return this.send("leave"); }
   close() { return this.send("close"); }

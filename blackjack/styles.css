@@ -63,7 +63,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 .table {
   max-width: 980px; margin: 0 auto;
-  background: radial-gradient(ellipse at 50% 30%, #156048 0%, var(--felt) 45%, var(--felt-deep) 100%);
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-hi, #156048) 0%, var(--felt) 45%, var(--felt-deep) 100%);
   border: 10px solid var(--rail);
   border-radius: 28px 28px 200px 200px / 28px 28px 90px 90px;
   box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 2px var(--rail-hi);
@@ -254,3 +254,20 @@ a.brand-link:hover .logo { transform: rotate(-6deg) scale(1.04); }
   .felt-print { width: min(560px, 100%, 30vh); width: min(560px, 100%, 30dvh); }
   .zone-label .total { font-size: 1.15rem; padding: 3px 10px; }
 }
+
+/* ---------- dark mode (charcoal) ---------- */
+:root[data-theme="dark"] {
+  --felt: #2a2d32; --felt-deep: #131417; --felt-hi: #393d44;
+  --rail: #0d0e10; --rail-hi: #1e2024;
+  --print: #e7e2d4; --gold: #cfae66; --muted: #9ba1a8;
+  --card-back: #464b55; --line: rgba(231, 226, 212, .12);
+  --btn: #e7e2d4; --btn-ink: #17181b;
+}
+:root[data-theme="dark"] .bar { border-bottom-color: #000; }
+.theme-btn {
+  min-width: 0; width: 36px; height: 36px; padding: 0; border-radius: 50%; flex: none;
+  background: transparent; color: var(--print); font-size: 1.05rem; line-height: 1;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.theme-btn:hover { box-shadow: inset 0 0 0 1.5px var(--gold); }
+:root[data-theme="dark"] { --felt-hi: #393d44; }
