@@ -29,11 +29,11 @@
       c: { felt: "#4b5864", deep: "#171d23", hi: "#7a8996", rail: "#0e1317", railHi: "#2d363e", text: "#eef4f8", accent: "#79e3ff", muted: "#aebcc8", back: "#5d6c78", btn: "#dde6ed" },
       page: "repeating-linear-gradient(0deg, rgba(121,227,255,.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(121,227,255,.05) 0 1px, transparent 1px 40px), linear-gradient(135deg, #2b343c, #11161b)",
       glow: "0 0 8px rgba(121,227,255,.6)" },
-    { id: "aurora", name: "Northern Lights", tag: "My pick: a night sky with slow green and violet light", font: ["Josefin Sans", "'Josefin Sans', sans-serif"],
+    { id: "aurora", name: "Northern Lights", tag: "A night sky with slow green and violet light", font: ["Josefin Sans", "'Josefin Sans', sans-serif"],
       c: { felt: "#0f3b45", deep: "#071a24", hi: "#1f6b6a", rail: "#0a1020", railHi: "#1d2540", text: "#eaf8f2", accent: "#7dffb3", muted: "#a3cdc4", back: "#3b2a6b", btn: "#e2fff1" },
       page: "radial-gradient(60% 40% at 25% 10%, rgba(125,255,179,.30), transparent 70%), radial-gradient(55% 45% at 80% 20%, rgba(155,110,255,.28), transparent 70%), radial-gradient(70% 50% at 50% 0%, rgba(80,220,200,.18), transparent 75%), linear-gradient(#0a2230, #050c14)",
       pageSize: "200% 200%, 200% 200%, 200% 200%, 100% 100%", animate: "aurora" },
-    { id: "lantern", name: "Lantern Night", tag: "My pick: red lacquer, gold and warm lantern glow", font: ["Cinzel", "'Cinzel', serif"],
+    { id: "lantern", name: "Lantern Night", tag: "Red lacquer, gold and warm lantern glow", font: ["Cinzel", "'Cinzel', serif"],
       c: { felt: "#7a1414", deep: "#240505", hi: "#a32626", rail: "#160904", railHi: "#3b1d0e", text: "#fff1d6", accent: "#ffb347", muted: "#e4bea2", back: "#b8892a", btn: "#ffe3b3" },
       page: "radial-gradient(circle at 10% 15%, rgba(255,160,60,.45) 0 10px, rgba(255,120,40,.12) 22px, transparent 48px), radial-gradient(circle at 88% 22%, rgba(255,160,60,.4) 0 9px, rgba(255,120,40,.1) 20px, transparent 44px), radial-gradient(circle at 50% 6%, rgba(255,190,90,.35) 0 8px, transparent 36px), linear-gradient(#3a0a0a, #160303 70%)",
       pageSize: "100% 520px, 100% 560px, 100% 480px, 100% 100%" }
@@ -71,6 +71,25 @@
     document.head.appendChild(l);
   }
 
+  // ---------- scenery ----------
+  const here = (document.currentScript && document.currentScript.src) || "";
+  let decoLayer = null, decoFor = null;
+  function renderDeco() {
+    if (!decoLayer || !window.CR_DECO) return;
+    const id = root.dataset.themeName;
+    if (decoFor === id) return;
+    decoFor = id;
+    const draw = window.CR_DECO[id];
+    decoLayer.innerHTML = draw ? draw() : "";
+    if (draw) root.dataset.deco = ""; else delete root.dataset.deco;
+  }
+  window.CR_DECO_READY = renderDeco;
+  if (here) {
+    const sc = document.createElement("script");
+    sc.src = new URL("theme-deco.js", here).href; sc.defer = true; // sits next to theme.js
+    document.head.appendChild(sc);
+  }
+
   function apply() {
     const t = find(themeId), dark = mode === "dark";
     const c = dark ? (t.dark || darkOf(t.c)) : t.c;
@@ -90,6 +109,7 @@
     root.style.colorScheme = "dark";
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = c.rail;
+    renderDeco();
   }
   apply();
   const save = () => { try { localStorage.setItem(KEY_THEME, themeId); localStorage.setItem(KEY_MODE, mode); } catch {} };
@@ -121,6 +141,43 @@
     .theme-opt b { font-size: .9rem; } .theme-opt small { font-size: .7rem; font-weight: 400; opacity: .75; line-height: 1.2; }
     .theme-dlg .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
     @media (max-width: 520px) { .theme-btn { width: 30px; height: 30px; font-size: .9rem; } }
+
+    /* scenery layer: behind everything, never in the way of a tap */
+    .theme-deco { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .theme-deco .d { position: absolute; display: block; height: auto; }
+    .wrap { position: relative; z-index: 1; }
+    :root[data-mode="dark"] .theme-deco { opacity: .55; filter: brightness(.75) saturate(.85); }
+    :root[data-deco] .panel, :root[data-deco] .box { background: rgba(0,0,0,.45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    .theme-deco .sway { transform-origin: 50% 100%; animation: cr-sway 7s ease-in-out infinite alternate; }
+    .theme-deco .sway-2 { transform-origin: 50% 100%; animation: cr-sway 9s ease-in-out -3s infinite alternate; }
+    .theme-deco .sway-1 { transform-origin: 50% 0; animation: cr-swing 5s ease-in-out infinite alternate; }
+    .theme-deco svg.sway-2[preserveAspectRatio^="xMidYMin"] { transform-origin: 50% 0; animation: cr-swing 6.5s ease-in-out -2s infinite alternate; }
+    .theme-deco .sway-slow { animation: cr-bob 12s ease-in-out infinite alternate; }
+    .theme-deco .float { animation: cr-bob 6s ease-in-out infinite alternate; }
+    .theme-deco .float-2 { animation: cr-bob 8s ease-in-out -2s infinite alternate; }
+    .theme-deco .drift { animation: cr-drift 26s linear infinite alternate; }
+    .theme-deco .roll { animation: cr-roll 14s linear infinite; }
+    .theme-deco .twinkle circle:nth-child(3n) { animation: cr-twinkle 3s ease-in-out infinite alternate; }
+    .theme-deco .twinkle circle:nth-child(3n+1) { animation: cr-twinkle 4.5s ease-in-out -1s infinite alternate; }
+    .theme-deco .glow { filter: drop-shadow(0 0 14px rgba(255,150,50,.65)); }
+    .theme-deco .neon { filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 3px #fff); color: #ff4fb4; }
+    .theme-deco .flicker { animation: cr-flicker 5s steps(1) infinite; }
+    .theme-deco .flicker-2 { animation: cr-flicker 7s steps(1) -2s infinite; }
+    .theme-deco .blink { animation: cr-twinkle 1.2s steps(2) infinite; }
+    .theme-deco .beam-a { transform-origin: 300px 600px; animation: cr-beam 9s ease-in-out infinite alternate; }
+    .theme-deco .beam-b { transform-origin: 1140px 600px; animation: cr-beam 11s ease-in-out -4s infinite alternate-reverse; }
+    .theme-deco .wave { animation: cr-wave 5s ease-in-out infinite alternate; }
+    @keyframes cr-sway { from { rotate: -1.5deg; } to { rotate: 1.8deg; } }
+    @keyframes cr-swing { from { rotate: -4deg; } to { rotate: 4deg; } }
+    @keyframes cr-bob { from { translate: 0 -6px; } to { translate: 0 6px; } }
+    @keyframes cr-drift { from { translate: -4vw 0; } to { translate: 6vw -2vh; } }
+    @keyframes cr-roll { from { rotate: 0deg; translate: -10vw 0; } to { rotate: 720deg; translate: 10vw 0; } }
+    @keyframes cr-twinkle { from { opacity: .15; } to { opacity: 1; } }
+    @keyframes cr-flicker { 0%, 100% { opacity: 1; } 42% { opacity: .35; } 44% { opacity: 1; } 47% { opacity: .5; } 49% { opacity: 1; } }
+    @keyframes cr-beam { from { rotate: -18deg; } to { rotate: 14deg; } }
+    @keyframes cr-wave { from { translate: -20px 0; } to { translate: 20px 4px; } }
+    @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } }
+    @media (max-width: 720px) { .theme-deco { opacity: .8; } }
   `;
   const style = document.createElement("style");
   style.textContent = css;
@@ -128,6 +185,10 @@
 
   // ---------- header buttons and the picker ----------
   document.addEventListener("DOMContentLoaded", () => {
+    decoLayer = document.createElement("div");
+    decoLayer.className = "theme-deco"; decoLayer.setAttribute("aria-hidden", "true");
+    document.body.prepend(decoLayer);
+    renderDeco();
     const bar = document.querySelector(".bar-in");
     if (!bar) return;
     const tools = document.createElement("div");
