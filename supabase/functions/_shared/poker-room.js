@@ -26,7 +26,8 @@ export function validateSettings(s) {
   if (!(maxSeats >= 2 && maxSeats <= 8)) fail("A table has 2 to 8 seats.");
   if (![20, 30, 60, 120].includes(actSeconds)) fail("Pick a time to act from the list.");
   // which parts of the odds helper players may switch on (both, unless the host turns them off)
-  const odds = { win: !(s.odds && s.odds.win === false), cats: !(s.odds && s.odds.cats === false) };
+  const off = k => !!(s.odds && s.odds[k] === false);
+  const odds = { win: !off("win"), strong: !off("strong"), cats: !off("cats") };
   return { sb, bb, minBuyIn, maxSeats, actSeconds, odds };
 }
 

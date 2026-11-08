@@ -141,8 +141,8 @@ test("players set their own avatar and show/muck choice; junk avatars are droppe
 });
 
 test("the host decides which odds helpers the table allows", () => {
-  assert.deepStrictEqual(R.validateSettings(settings).odds, { win: true, cats: true });   // on unless turned off
-  assert.deepStrictEqual(R.validateSettings({ ...settings, odds: { win: false, cats: true } }).odds, { win: false, cats: true });
+  assert.deepStrictEqual(R.validateSettings(settings).odds, { win: true, strong: true, cats: true });   // on unless turned off
+  assert.deepStrictEqual(R.validateSettings({ ...settings, odds: { win: false, strong: false } }).odds, { win: false, strong: false, cats: true });
   const s = R.newRoom({ code: "ABC234", settings: { ...settings, odds: { win: true, cats: false } }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
-  assert.deepStrictEqual(R.publicState(s).settings.odds, { win: true, cats: false });
+  assert.deepStrictEqual(R.publicState(s).settings.odds, { win: true, strong: true, cats: false });
 });

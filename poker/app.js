@@ -2,7 +2,7 @@
 import { LocalTable, savedAiTable } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "./avatars.js";
 import { openLook } from "./look.js";
-import { handOdds } from "./odds.js";
+import { handOdds, STRONG_FROM } from "./odds.js";
 import { CATEGORY, evaluate } from "../supabase/functions/_shared/poker-engine.js";
 
 const $ = id => document.getElementById(id);
@@ -191,7 +191,7 @@ $("formCreate").addEventListener("submit", async e => {
     store.set("pk-name", name);
     const { OnlineTable } = await online();
     attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
-      odds: { win: $("crOddsWin").checked, cats: $("crOddsCats").checked }, avatar: myAvatar(), show: myShow() }));
+      odds: { win: $("crOddsWin").checked, strong: $("crOddsStrong").checked, cats: $("crOddsCats").checked }, avatar: myAvatar(), show: myShow() }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -218,7 +218,9 @@ async function lookupRules() {
   try {
     const { peekTable } = await online();
     const r = await peekTable(code);
-    const odds = !r || !r.odds ? "" : r.odds.win && r.odds.cats ? " · odds helper on" : !r.odds.win && !r.odds.cats ? " · odds helper off" : r.odds.win ? " · win % only" : " · hand odds only";
+    const NAMES = { win: "win %", strong: "strong hand", cats: "hand odds" };
+    const on = r && r.odds ? ODDS_PARTS.filter(k => r.odds[k] !== false) : null;
+    const odds = !on ? "" : on.length === 3 ? " · odds helper on" : !on.length ? " · odds helper off" : " · odds helper: " + on.map(k => NAMES[k]).join(", ");
     $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }
@@ -424,24 +426,30 @@ function render() {
 
 // ---------- odds helper ----------
 let oddsKey = "", oddsResult = null, oddsTimer = 0;
-const oddsPrefs = () => store.get("pk-odds", { win: true, cats: true });
+const oddsPrefs = () => store.get("pk-odds", {});
+// the three parts of the odds helper: chance to win, chance of a strong hand, chance of each hand
+const ODDS_PARTS = ["win", "strong", "cats"];
+const ALL_ODDS = { win: true, strong: true, cats: true };
+const ODDS_UI = { win: { toggle: "tgWin", box: "oddsWin" }, strong: { toggle: "tgStrong", box: "oddsStrong" }, cats: { toggle: "tgCats", box: "oddsCats" } };
 const pct = x => x >= .995 && x < 1 ? ">99%" : x > 0 && x < .01 ? "<1%" : Math.round(x * 100) + "%";
 function renderOdds() {
   // the host decides what the table allows; each player then switches on what they want
-  const rules = view.oddsRules || { win: true, cats: true }, saved = oddsPrefs();
-  const pref = { win: rules.win && saved.win, cats: rules.cats && saved.cats }, t = view.table, h = t.hand, me = view.me;
-  $("tgWin").hidden = !rules.win; $("tgCats").hidden = !rules.cats;
-  $("tgWin").setAttribute("aria-pressed", pref.win);
-  $("tgCats").setAttribute("aria-pressed", pref.cats);
+  const rules = { ...ALL_ODDS, ...(view.oddsRules || {}) }, saved = oddsPrefs(), t = view.table, h = t.hand, me = view.me;
+  const pref = {};
+  for (const k of ODDS_PARTS) {
+    pref[k] = rules[k] && saved[k] !== false;
+    const tg = $(ODDS_UI[k].toggle), box = $(ODDS_UI[k].box);
+    tg.hidden = !rules[k]; tg.setAttribute("aria-pressed", pref[k]);
+    box.hidden = !pref[k];
+  }
   const myP = h && me >= 0 ? h.players[me] : null;
   const live = !!(myP && myP.hole && !myP.folded && h.street !== "done");
-  $("odds").hidden = me < 0 || (!rules.win && !rules.cats);
-  $("oddsWin").hidden = !pref.win; $("oddsCats").hidden = !pref.cats;
-  if (!pref.win && !pref.cats) return;
+  $("odds").hidden = me < 0 || !ODDS_PARTS.some(k => rules[k]);
+  if (!ODDS_PARTS.some(k => pref[k])) return;
   if (!live) {
     oddsKey = ""; clearTimeout(oddsTimer);
-    $("oddsWin").innerHTML = pref.win ? `<span class="quiet">Your odds show here while you're in a hand.</span>` : "";
-    $("oddsCats").innerHTML = "";
+    const first = ODDS_PARTS.find(k => pref[k]);
+    for (const k of ODDS_PARTS) $(ODDS_UI[k].box).innerHTML = k === first ? `<span class="quiet">Your odds show here while you're in a hand.</span>` : "";
     return;
   }
   const opponents = h.players.filter((p, i) => p && !p.folded && i !== me).length;
@@ -460,18 +468,29 @@ function renderOdds() {
 }
 function drawOdds(opponents, hole, board) {
   const r = oddsResult;
-  if (!r) { $("oddsWin").innerHTML = `<span class="quiet">Working out your odds…</span>`; $("oddsCats").innerHTML = ""; return; }
+  if (!r) {
+    const first = ODDS_PARTS.find(k => !$(ODDS_UI[k].box).hidden);
+    for (const k of ODDS_PARTS) $(ODDS_UI[k].box).innerHTML = k === first ? `<span class="quiet">Working out your odds…</span>` : "";
+    return;
+  }
   const split = r.tie >= .005 ? ` · split ${pct(r.tie)}` : "";
   $("oddsWin").innerHTML = `<div class="big"><b>${pct(r.win)}</b><span>to win</span></div>
     <div class="meter-bar" aria-hidden="true"><i style="width:${r.win * 100}%"></i><i style="width:${r.tie * 100}%"></i></div>
     <small>against ${opponents} player${opponents === 1 ? "" : "s"} still in${split}</small>`;
-  const made = evaluateFn && board.length >= 3 ? evaluateFn([...hole, ...board]).cat : hole[0][0] === hole[1][0] ? 1 : 0;
+  const made = board.length >= 3 ? evaluateFn([...hole, ...board]).cat : hole[0][0] === hole[1][0] ? 1 : 0;
+  // strong hand: three of a kind or better
+  const haveStrong = made >= STRONG_FROM;
+  const nextLabel = board.length === 0 ? "on the flop" : board.length === 3 ? "on the turn" : "on the river";
+  $("oddsStrong").innerHTML = haveStrong
+    ? `<div class="big"><b>✓</b><span>you have a strong hand</span></div><small>three of a kind or better</small>`
+    : `<div class="big"><b>${pct(r.strong)}</b><span>strong hand by the river</span></div>
+       <div class="meter-bar" aria-hidden="true"><i style="width:${r.strong * 100}%"></i></div>
+       <small>three of a kind or better${r.nextStrong == null ? "" : ` · ${pct(r.nextStrong)} ${nextLabel}`}</small>`;
   const rows = CATEGORY.map((name, c) => ({ name, c, p: r.cats[c] })).filter(x => x.c > 0 && (x.p >= .001 || x.c === made)).reverse();
   $("oddsCats").innerHTML = `<small>${board.length === 5 ? "Your final hand" : "Chance to end up with, by the river"}</small>` + rows.map(x =>
     `<div class="oc${x.c === made ? " made" : ""}"><span>${x.name}</span><span class="meter-bar" aria-hidden="true"><i style="width:${x.p * 100}%"></i></span><b>${pct(x.p)}</b></div>`).join("");
 }
-$("tgWin").onclick = () => { const p = oddsPrefs(); p.win = !p.win; store.set("pk-odds", p); renderOdds(); };
-$("tgCats").onclick = () => { const p = oddsPrefs(); p.cats = !p.cats; store.set("pk-odds", p); renderOdds(); };
+for (const k of ODDS_PARTS) $(ODDS_UI[k].toggle).onclick = () => { const p = oddsPrefs(); p[k] = p[k] === false; store.set("pk-odds", p); renderOdds(); };
 
 const evaluateFn = evaluate;
 const bestName = (hole, board) => evaluateFn([...hole, ...board]).name;

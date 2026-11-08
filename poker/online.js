@@ -127,7 +127,7 @@ export class OnlineTable {
     const inLiveHand = !!(myHand && !myHand.folded && s.view.hand.street !== "done");
     return {
       mode: "online", me, isHost: s.isHost, hostSeat: s.hostSeat, code: s.code,
-      players: s.players, departed: s.departed, minBuyIn: s.settings.minBuyIn, oddsRules: s.settings.odds || { win: true, cats: true },
+      players: s.players, departed: s.departed, minBuyIn: s.settings.minBuyIn, oddsRules: s.settings.odds || {},
       table: s.view, started: s.started, closing: s.closing, leaving: s.leaving,
       deadline: toLocal(s.deadline), nextHandAt: toLocal(s.nextHandAt), actMs: s.actMs,
       ended: s.closed || s.left, tableClosed: s.closed, summary: s.summary,

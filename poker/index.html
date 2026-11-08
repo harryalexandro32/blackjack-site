@@ -87,6 +87,7 @@
           <select id="crTime"><option value="20">20 seconds</option><option value="30" selected>30 seconds</option><option value="60">60 seconds</option><option value="120">2 minutes</option></select></div>
         <div class="field"><span class="label">Odds helper for players</span>
           <label class="switch"><input type="checkbox" id="crOddsWin" checked><span class="track" aria-hidden="true"></span><span>Chance to win<small>Each player's live chance of winning the hand</small></span></label>
+          <label class="switch"><input type="checkbox" id="crOddsStrong" checked><span class="track" aria-hidden="true"></span><span>Strong hand chance<small>Chance of three of a kind or better, on the next card and by the river</small></span></label>
           <label class="switch"><input type="checkbox" id="crOddsCats" checked><span class="track" aria-hidden="true"></span><span>Hand odds<small>Chance of making a pair, flush, straight and so on by the river</small></span></label>
         </div>
         <p class="err" id="crErr"></p>
@@ -129,9 +130,11 @@
       <div class="odds" id="odds">
         <div class="odds-toggles" role="group" aria-label="Odds helper">
           <button type="button" class="chip" id="tgWin">Win %</button>
+          <button type="button" class="chip" id="tgStrong">Strong hand</button>
           <button type="button" class="chip" id="tgCats">Hand odds</button>
         </div>
         <div class="odds-win" id="oddsWin" hidden></div>
+        <div class="odds-strong" id="oddsStrong" hidden></div>
         <div class="odds-cats" id="oddsCats" hidden></div>
       </div>
       <div class="actions">

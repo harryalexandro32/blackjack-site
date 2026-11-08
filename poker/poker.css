@@ -116,14 +116,16 @@
 .presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .presets button { min-width: 0; padding: 5px 11px; font-size: .8rem; }
 /* ---------- odds helper ---------- */
-.odds { display: grid; gap: 8px; width: 210px; align-self: stretch; align-content: start; background: rgba(0,0,0,.22); border-radius: 12px; padding: 8px 10px; }
-.odds-toggles { display: flex; gap: 6px; }
+.odds { display: grid; gap: 8px; width: 230px; align-self: stretch; align-content: start; background: rgba(0,0,0,.22); border-radius: 12px; padding: 8px 10px; }
+.odds-toggles { display: flex; flex-wrap: wrap; gap: 5px; }
 .chip { min-width: 0; padding: 3px 10px; font-size: .74rem; border-radius: 999px; background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 600; }
 .chip[aria-pressed="true"] { background: var(--gold); color: var(--btn-ink); box-shadow: none; }
-.odds-win { display: grid; gap: 4px; }
-.odds-win .big { display: flex; align-items: baseline; gap: 8px; }
+.odds-win, .odds-strong { display: grid; gap: 4px; }
+.odds-win .big, .odds-strong .big { display: flex; align-items: baseline; gap: 8px; }
 .odds-win .big b { font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1; }
-.odds-win small, .odds-cats small { color: var(--muted); font-size: .72rem; }
+.odds-strong .big b { font-size: 1.25rem; font-variant-numeric: tabular-nums; line-height: 1; color: var(--gold); }
+.odds-strong .meter-bar i { background: var(--gold); }
+.odds-win small, .odds-cats small, .odds-strong small { color: var(--muted); font-size: .72rem; }
 .meter-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; display: flex; }
 .meter-bar i { display: block; height: 100%; background: var(--win); transition: width .35s; }
 .meter-bar i + i { background: var(--gold); }
@@ -241,7 +243,7 @@
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; border-radius: 16px 16px 0 0;
     padding: 8px max(12px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -6px 20px rgba(0,0,0,.45);
-    grid-template-columns: auto 1fr; grid-template-areas: "mine tog" "mine win" "cats cats" "act act";
+    grid-template-columns: auto 1fr; grid-template-areas: "mine tog" "mine win" "strong strong" "cats cats" "act act";
     gap: 6px 12px; align-items: start;
   }
   .rail .mine { grid-area: mine; }
@@ -253,6 +255,11 @@
   .rail .odds-win .big b { font-size: 1.3rem; }
   .rail .odds-win small { font-size: .66rem; }
   .rail .odds-win .meter-bar { width: 100%; }
+  .rail .odds-strong { grid-area: strong; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: .78rem; }
+  .rail .odds-strong .big { gap: 5px; }
+  .rail .odds-strong .big b { font-size: .95rem; }
+  .rail .odds-strong .meter-bar { display: none; }
+  .rail .odds-toggles .chip { padding: 3px 8px; font-size: .68rem; }
   .rail .odds-cats { grid-area: cats; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
   .rail .odds-cats::-webkit-scrollbar { display: none; }
   .rail .odds-cats > small, .rail .odds-cats .meter-bar { display: none; }
