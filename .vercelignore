@@ -1,0 +1,5 @@
+supabase/.temp
+*.test.js
+*.test.mjs
+.vercel
+.env*

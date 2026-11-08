@@ -62,4 +62,9 @@ The anon key is safe to publish: it can only read the public table state. Decks,
 
 ## Put it online
 
-The site is static. GitHub Pages serves it from the `main` branch root. Netlify, Cloudflare Pages and Vercel work too, with no build command.
+The site is static, so there's no build step.
+
+- **Main address: https://thecardroom.vercel.app.** This is the Vercel project `thecardroom`, linked to this repo. Every push to `main` goes live by itself. To deploy by hand, run `npx vercel deploy --prod`.
+- **GitHub Pages** still serves the same files at https://harryalexandro32.github.io/blackjack-site/.
+
+Saved data (bankroll, avatar, seat) is kept per address, so it doesn't carry over between the two.
