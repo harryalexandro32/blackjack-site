@@ -404,3 +404,28 @@
   .bar-in .theme-tools { grid-column: 2; grid-row: 1; }
   .bar-in .meters { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* ---------- Omaha and Five Card Draw: more cards in a hand ---------- */
+.mine .cards[data-n="4"] .card { --cw: 60px; }
+.mine .cards[data-n="5"] .card { --cw: 56px; }
+.mine .cards[data-n="5"] { gap: 4px; }
+.seat .holes .card + .card { margin-left: -18px; }
+.felt[data-game="omaha"] .seat .holes .card { --cw: 40px; }
+.felt[data-game="omaha"] .seat .holes .card + .card { margin-left: -24px; }
+.felt[data-game="draw"] .seat .holes .card { --cw: 38px; }
+.felt[data-game="draw"] .seat .holes .card + .card { margin-left: -26px; }
+.mine .cards.picking .card { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.mine .cards.picking .card:hover { transform: translateY(-4px); }
+.mine .cards .card.picked { transform: translateY(-14px); box-shadow: 0 0 0 3px var(--lose), 0 6px 14px rgba(0,0,0,.4); }
+.mine .cards .card.picked::before { content: "swap"; position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); font: 700 .62rem var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--lose); }
+.game-seg button { padding-inline: 12px; }
+@media (max-width: 720px) {
+  .mine .cards[data-n="4"] .card { --cw: 44px; }
+  .mine .cards[data-n="5"] .card { --cw: 40px; }
+  .mine .cards[data-n="4"], .mine .cards[data-n="5"] { gap: 3px; }
+  .felt[data-game="omaha"] .seat .holes .card { --cw: 29px; }
+  .felt[data-game="omaha"] .seat .holes .card + .card { margin-left: -19px; }
+  .felt[data-game="draw"] .seat .holes .card { --cw: 27px; }
+  .felt[data-game="draw"] .seat .holes .card + .card { margin-left: -19px; }
+  .mine .cards .card.picked { transform: translateY(-10px); }
+}

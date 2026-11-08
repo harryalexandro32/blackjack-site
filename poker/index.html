@@ -41,6 +41,11 @@
     <div class="setup-grid" id="setupAi">
       <form class="panel" id="formAi" novalidate>
         <h2>Deal a table vs bots</h2>
+        <div class="field"><span class="label">Game</span>
+          <div class="seg game-seg" id="aiGame" role="group" aria-label="Game">
+            <button type="button" data-v="holdem" aria-pressed="true">Texas Hold'em</button><button type="button" data-v="omaha">Omaha</button><button type="button" data-v="draw">Five Card Draw</button>
+          </div>
+          <p class="note game-note" id="aiGameNote"></p></div>
         <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
           <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
         <div class="field"><span class="label">Bots at the table</span>
@@ -79,6 +84,11 @@
       <form class="panel" id="formCreate" novalidate>
         <h2>Open a table</h2>
         <p class="note">You set the rules. Share the code so friends can join from their own phones.</p>
+        <div class="field"><span class="label">Game</span>
+          <div class="seg game-seg" id="crGame" role="group" aria-label="Game">
+            <button type="button" data-v="holdem" aria-pressed="true">Texas Hold'em</button><button type="button" data-v="omaha">Omaha</button><button type="button" data-v="draw">Five Card Draw</button>
+          </div>
+          <p class="note game-note" id="crGameNote"></p></div>
         <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
           <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
         <div class="row2">
@@ -182,6 +192,10 @@
         <div class="act-row" id="betweenRow" hidden>
           <button class="primary" id="btnDealNow">Deal next hand</button>
           <button class="ghost" id="btnStart" hidden>Start the game</button>
+        </div>
+        <div class="act-row" id="drawRow" hidden>
+          <button class="primary" id="btnDraw">Keep all</button>
+          <button class="ghost" id="btnDrawHint">Suggest</button>
         </div>
         <div class="act-row" id="ritRow" hidden>
           <button class="primary" id="btnRitYes">Run it twice</button>

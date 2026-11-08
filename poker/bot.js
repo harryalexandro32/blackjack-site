@@ -1,33 +1,17 @@
 // Bot decisions for AI mode. Bots see only what a player would: their own cards, the board, stacks and bets.
-import { evaluate, newDeck, legalActions } from "../supabase/functions/_shared/poker-engine.js";
+import { legalActions } from "../supabase/functions/_shared/poker-engine.js";
+import { simulate, drawChoice } from "./odds.js";
 
 const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 0x100000000;
 
-// Chance to win against `opponents` random hands, by simulation. Ties count as shared wins.
-export function equity(hole, board, opponents, iterations = 300) {
-  const seen = new Set([...hole, ...board]);
-  const rest = newDeck().filter(c => !seen.has(c));
-  let score = 0;
-  for (let it = 0; it < iterations; it++) {
-    // partial shuffle: only as many cards as we need
-    const need = opponents * 2 + (5 - board.length);
-    for (let i = 0; i < need; i++) {
-      const j = i + Math.floor(rnd() * (rest.length - i));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
-    }
-    const fullBoard = board.concat(rest.slice(opponents * 2, need));
-    const mine = evaluate(hole.concat(fullBoard)).score;
-    let best = 0, tiedWith = 0, lost = false;
-    for (let o = 0; o < opponents; o++) {
-      const s = evaluate([rest[o * 2], rest[o * 2 + 1], ...fullBoard]).score;
-      if (s > mine) { lost = true; break; }
-      if (s === mine) tiedWith++;
-      best = Math.max(best, s);
-    }
-    if (!lost) score += 1 / (tiedWith + 1);
-  }
-  return score / iterations;
+// Chance to win against `opponents` random hands, by simulation. Ties count as half a win.
+// game: holdem | omaha | draw. In Five Card Draw before the draw, everyone (you included) is assumed to swap sensibly.
+export function equity(hole, board, opponents, iterations = 300, game = "holdem", stage = null) {
+  const preDraw = game === "draw" && (stage === "first" || stage === "draw");
+  const r = simulate({ game, hole, board, opponents, iterations, discard: preDraw ? drawChoice(hole) : null, oppDraw: preDraw });
+  return r.win + r.tie / 2;
 }
+export { drawChoice };
 
 const SKILL = {
   easy:   { iters: 120, noise: 0.18, aggression: 0.35, bluff: 0.02, callSlack: 0.12 },
@@ -59,12 +43,18 @@ export function decide(table, seat, skill = "normal", style = null) {
   // skill sets how carefully the bot reads its hand; a personality sets how it likes to play
   const cfg = st ? { ...base, aggression: st.aggression, bluff: st.bluff, callSlack: st.callSlack + (base.callSlack - SKILL.normal.callSlack) } : base;
   const entry = st ? st.entry : 0.8, stubborn = st ? st.stubborn : 0, barrel = st ? st.barrel : 0.4;
-  const h = table.hand, me = h.players[seat], legal = legalActions(table, seat);
+  const h = table.hand, me = h.players[seat], legal = legalActions(table, seat), game = table.game || "holdem";
+  // Five Card Draw: the draw itself. Good players swap sensibly; easy bots sometimes keep a card too many.
+  if (legal.draw) {
+    let discard = drawChoice(me.hole);
+    if (skill === "easy" && discard.length > 1 && rnd() < 0.3) discard = discard.slice(1);
+    return { type: "draw", discard };
+  }
   const opponents = h.players.filter((p, i) => p && i !== seat && !p.folded).length;
   const pot = h.players.reduce((s, p) => s + (p ? p.committed : 0), 0);
   const toCall = legal.call;
   const potOdds = toCall / (pot + toCall || 1);
-  let eq = equity(me.hole, h.board, Math.max(1, opponents), cfg.iters);
+  let eq = equity(me.hole, h.board, Math.max(1, opponents), game === "holdem" ? cfg.iters : Math.round(cfg.iters * 0.6), game, h.street);
   eq = Math.min(1, Math.max(0, eq + (rnd() * 2 - 1) * cfg.noise));
   // What a hand "should" win against this many opponents, so thresholds scale with table size.
   const fair = 1 / (opponents + 1);
@@ -89,7 +79,7 @@ export function decide(table, seat, skill = "normal", style = null) {
     return { type: "check" };
   }
   // Before the flop, picky players fold hands below their standard.
-  if (h.street === "preflop" && strength < entry && toCall > table.bb && rnd() > stubborn) return { type: "fold" };
+  if ((h.street === "preflop" || h.street === "first") && strength < entry && toCall > table.bb && rnd() > stubborn) return { type: "fold" };
   // Facing a bet: call when the price is right, raise sometimes, otherwise fold.
   if (eq + cfg.callSlack + stubborn * (h.street === "river" ? 0.5 : 1) >= potOdds) {
     if (legal.raise && strength > 1.6 && rnd() < cfg.aggression * 0.5) return raiseTo(0.6 + rnd() * 0.5);

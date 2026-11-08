@@ -303,3 +303,19 @@ test("host link: the right key reconnects the host; a wrong one is refused", () 
   R.applyAction(s, { type: "sit", buyIn: 20000 }, ctx("y"));
   assert.ok(R.personalState(s, "y").isHost);
 });
+
+test("the host picks the game; five card draw tables play a draw round through the server", () => {
+  assert.throws(() => R.validateSettings({ ...settings, game: "bingo" }), /game/);
+  assert.throws(() => R.validateSettings({ ...settings, game: "draw", maxSeats: 8 }), /2 to 6/);
+  const s = R.newRoom({ code: "ABC234", settings: { ...settings, game: "draw" }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana", buyIn: 20000 }, ctx("a", { tokenHash: "ta" }));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.strictEqual(s.table.hand.players.filter(Boolean)[0].hole.length, 5);
+  while (s.table.hand.street === "first") R.applyAction(s, { type: "act", action: E.legalActions(s.table, s.table.hand.toAct).check ? "check" : "call" }, ctx(toActId(s)));
+  assert.strictEqual(s.table.hand.street, "draw");
+  const id = toActId(s), hole = s.table.hand.players[seat(s, id)].hole;
+  assert.throws(() => R.applyAction(s, { type: "act", action: "draw", discard: hole.slice(0, 5) }, ctx(id)), /Swap up to 3/);
+  R.applyAction(s, { type: "act", action: "draw", discard: hole.slice(0, 2) }, ctx(id));
+  assert.strictEqual(R.publicState(s).view.hand.players[seat(s, id)].drawn, 2);
+  assert.strictEqual(R.publicState(s).view.game, "draw");
+});

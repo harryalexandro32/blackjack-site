@@ -99,18 +99,58 @@ export function evaluate(cards) {
   return { score: score(0, top.map(rv)), cat: 0, best: top, name: `High card, ${SINGLE[rv(top[0])]}` };
 }
 
+// ---------- games ----------
+// holdem: 2 cards + 5 on the board. omaha: 4 cards, a hand uses exactly 2 of them and 3 from the board, pot-limit.
+// draw (five card draw): 5 cards, no board; one betting round, a draw (swap up to 3, or 4 when keeping an ace), another round.
+export const GAMES = {
+  holdem: { name: "Texas Hold'em", hole: 2, maxSeats: 8, limit: "no" },
+  omaha:  { name: "Omaha",         hole: 4, maxSeats: 8, limit: "pot" },
+  draw:   { name: "Five Card Draw", hole: 5, maxSeats: 6, limit: "no" }
+};
+const gameOf = t => GAMES[t.game] ? t.game : "holdem";
+
+// Omaha: the best hand made from exactly 2 of your cards and exactly 3 from the board.
+export function evaluateOmaha(hole, board) {
+  if (board.length < 3) return evaluate(hole.slice(0, 2).concat(board));
+  let best = null;
+  const five = [null, null, null, null, null];
+  for (let i = 0; i < hole.length; i++) for (let j = i + 1; j < hole.length; j++) {
+    five[0] = hole[i]; five[1] = hole[j];
+    for (let a = 0; a < board.length; a++) for (let b = a + 1; b < board.length; b++) for (let c = b + 1; c < board.length; c++) {
+      five[2] = board[a]; five[3] = board[b]; five[4] = board[c];
+      const e = evaluate(five);
+      if (!best || e.score > best.score) best = e;
+    }
+  }
+  return best;
+}
+// The hand a player holds in a given game.
+export function evaluateFor(game, hole, board) {
+  if (game === "omaha") return evaluateOmaha(hole, board);
+  if (game === "draw") return evaluate(hole);
+  return evaluate([...hole, ...board]);
+}
+// Five card draw: how many cards a player may swap. Up to 3, or 4 when the card kept is an ace.
+export function drawAllowed(hole, discard) {
+  if (discard.length <= 3) return true;
+  if (discard.length === 4) { const kept = hole.filter(c => !discard.includes(c)); return kept.length === 1 && kept[0][0] === "A"; }
+  return false;
+}
+
 // ---------- table ----------
 // table = { sb, bb, maxSeats, step, ante, straddle, runTwice, seats: [ {id, name, stack, sittingOut} | null ], button, handNo, hand }
 // step: bets and raises go up in multiples of this many chips (the minimum raise and all-in are always allowed).
 // ante: everyone dealt in puts this much in before the blinds (0 = none).
 // straddle: with 3 or more players, the player after the big blind posts twice the big blind and acts last before the flop.
 // runTwice: when everyone left is all in with cards to come, they vote; if all agree the board is dealt twice and each pot split.
-export function createTable({ smallBlind, bigBlind, maxSeats = 8, step = 1, ante = 0, straddle = false, runTwice = false }) {
+export function createTable({ smallBlind, bigBlind, maxSeats = 8, step = 1, ante = 0, straddle = false, runTwice = false, game = "holdem" }) {
+  if (!GAMES[game]) throw new Error("Unknown game.");
   if (!(bigBlind > 0) || !(smallBlind > 0) || smallBlind > bigBlind) throw new Error("Blinds must be positive and the small blind no bigger than the big blind.");
-  if (!(maxSeats >= 2 && maxSeats <= 8)) throw new Error("A table has 2 to 8 seats.");
+  if (!(maxSeats >= 2 && maxSeats <= GAMES[game].maxSeats)) throw new Error(`A ${GAMES[game].name} table has 2 to ${GAMES[game].maxSeats} seats.`);
   if (!(Number.isSafeInteger(step) && step >= 1)) throw new Error("The raise step must be a whole number of chips.");
   if (!(Number.isSafeInteger(ante) && ante >= 0)) throw new Error("The ante must be a whole number of chips.");
-  return { sb: smallBlind, bb: bigBlind, maxSeats, step, ante, straddle: !!straddle, runTwice: !!runTwice, seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
+  return { game, sb: smallBlind, bb: bigBlind, maxSeats, step, ante, straddle: !!straddle, runTwice: !!runTwice && game !== "draw",
+    seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
 }
 export const raiseStep = t => t.step || 1;
 // Is `to` an allowed raise size? Multiples of the step, plus the exact minimum and all-in.
@@ -158,7 +198,7 @@ export function startHand(t, deck) {
   const bbSeat = nextSeat(n, sbSeat, dealt);
   t.handNo += 1;
   t.hand = {
-    no: t.handNo, deck: deck.slice(), board: [], street: "preflop",
+    no: t.handNo, deck: deck.slice(), board: [], street: gameOf(t) === "draw" ? "first" : "preflop", muck: [],
     players: t.seats.map((s, i) => dealt(i) ? { hole: [], bet: 0, committed: 0, folded: false, allIn: false, acted: false, startStack: s.stack } : null),
     sbSeat, bbSeat, toAct: -1, currentBet: 0, minRaise: t.bb, log: [], results: null, reveal: {}, runout: false
   };
@@ -175,7 +215,7 @@ export function startHand(t, deck) {
       h.currentBet = Math.max(t.bb, h.players[st].bet); h.minRaise = t.bb * 2; h.straddleSeat = st; lastBlind = st;
     }
   }
-  for (let round = 0; round < 2; round++) {
+  for (let round = 0; round < GAMES[gameOf(t)].hole; round++) {
     let i = nextSeat(n, t.button, dealt);
     for (let k = 0; k < inSeats.length; k++) { h.players[i].hole.push(h.deck.pop()); i = nextSeat(n, i, dealt); }
   }
@@ -189,26 +229,54 @@ export function legalActions(t, seat) {
   const h = t.hand;
   if (!handInProgress(t) || h.toAct !== seat) return null;
   const p = h.players[seat], stack = t.seats[seat].stack;
+  if (h.street === "draw") return { draw: { max: 3, maxWithAce: 4 }, fold: false, check: false, call: 0, raise: null };
   const toCall = Math.max(0, h.currentBet - p.bet);
   const othersCanAct = h.players.some((q, i) => i !== seat && canAct(q));
   const res = { fold: true, check: toCall === 0, call: toCall > 0 ? Math.min(toCall, stack) : 0, raise: null };
   // Raising needs betting to be open for this player (no incomplete all-in raise since they acted),
   // chips beyond the call, and someone left who could respond.
   if (!p.acted && stack > toCall && othersCanAct) {
-    const maxTo = p.bet + stack;
+    let maxTo = p.bet + stack;
+    // pot-limit: the biggest raise is to the current bet, plus the pot after calling
+    if (GAMES[gameOf(t)].limit === "pot") {
+      const pot = h.players.reduce((sum, q) => sum + (q ? q.committed : 0), 0);
+      maxTo = Math.min(maxTo, h.currentBet + pot + toCall);
+    }
     res.raise = { min: Math.min(h.currentBet + h.minRaise, maxTo), max: maxTo, isBet: h.currentBet === 0, step: raiseStep(t) };
   }
   return res;
 }
 
-// action = { type: "fold" | "check" | "call" | "raise", to?: total bet for this street when raising }
-export function act(t, seat, action) {
+// action = { type: "fold" | "check" | "call" | "raise" | "draw", to?: total bet for this street, discard?: cards to swap }
+// shuffled: a freshly shuffled deck, only needed if a draw runs the deck out (it decides the order of reshuffled discards).
+export function act(t, seat, action, shuffled = null) {
   const h = t.hand, legal = legalActions(t, seat);
   if (!legal) throw new Error("It's not your turn.");
   const p = h.players[seat];
+  if (h.street === "draw" && action.type !== "draw") throw new Error("Choose the cards to swap, or keep them all.");
   switch (action.type) {
+    case "draw": {
+      if (h.street !== "draw") throw new Error("There's no draw right now.");
+      const discard = [...new Set(Array.isArray(action.discard) ? action.discard : [])];
+      if (!discard.every(c => p.hole.includes(c))) throw new Error("You can only swap cards you hold.");
+      if (!drawAllowed(p.hole, discard)) throw new Error("Swap up to 3 cards, or 4 if the card you keep is an ace.");
+      p.hole = p.hole.filter(c => !discard.includes(c));
+      h.muck.push(...discard);
+      for (let k = 0; k < discard.length; k++) {
+        if (!h.deck.length) {
+          // the deck ran out: the thrown-away cards are shuffled and used
+          const order = shuffled || newDeck();
+          h.deck = h.muck.filter(c => !p.hole.includes(c)).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+          h.muck = [];
+        }
+        p.hole.push(h.deck.pop());
+      }
+      p.drawn = discard.length;
+      log(t, { seat, type: "draw", count: discard.length });
+      return afterDraw(t, seat);
+    }
     case "fold":
-      p.folded = true; log(t, { seat, type: "fold" }); break;
+      p.folded = true; h.muck.push(...p.hole); log(t, { seat, type: "fold" }); break;
     case "check":
       if (!legal.check) throw new Error("You can't check when there's a bet to call.");
       p.acted = true; log(t, { seat, type: "check" }); break;
@@ -242,7 +310,7 @@ export function act(t, seat, action) {
 export function autoAction(t) {
   const seat = t.hand && t.hand.toAct, legal = seat >= 0 ? legalActions(t, seat) : null;
   if (!legal) return null;
-  const a = legal.check ? { type: "check" } : { type: "fold" };
+  const a = legal.draw ? { type: "draw", discard: [] } : legal.check ? { type: "check" } : { type: "fold" };
   act(t, seat, a);
   return { seat, ...a };
 }
@@ -261,6 +329,13 @@ function advanceIfRoundOver(t, fromSeat) {
   // betting round over
   h.players.forEach(p => { if (p) { p.bet = 0; p.acted = false; } });
   h.currentBet = 0; h.minRaise = t.bb;
+  if (gameOf(t) === "draw") {
+    if (h.street === "second") return finishHand(t);
+    // the draw: everyone still in, going round from the left of the dealer
+    h.street = "draw";
+    h.toAct = nextSeat(n, t.button, i => h.players[i] && !h.players[i].folded);
+    return;
+  }
   if (h.street === "river") return finishHand(t);
   if (h.players.filter(canAct).length < 2) {
     // Nobody left who can bet: the hands are turned face up and the rest of the board is dealt.
@@ -275,6 +350,17 @@ function advanceIfRoundOver(t, fromSeat) {
   }
   dealStreet(h);
   h.toAct = nextSeat(n, t.button, i => canAct(h.players[i]));
+}
+
+// After a player draws: the next player draws, or the second betting round starts.
+function afterDraw(t, seat) {
+  const h = t.hand, n = t.maxSeats;
+  const next = nextSeat(n, seat, i => h.players[i] && !h.players[i].folded && h.players[i].drawn === undefined);
+  if (next >= 0 && next !== seat) { h.toAct = next; return t; }
+  h.street = "second";
+  if (h.players.filter(canAct).length < 2) { finishHand(t); return t; } // nobody left to bet against
+  h.toAct = nextSeat(n, t.button, i => canAct(h.players[i]));
+  return t;
 }
 
 function dealStreet(h, board = h.board) {
@@ -353,7 +439,7 @@ function finishHand(t) {
   const boards = showdown && h.boards ? h.boards : [h.board];
   const evalsByRun = boards.map(b => {
     const e = {};
-    if (showdown) for (const i of live) e[i] = evaluate([...h.players[i].hole, ...b]);
+    if (showdown) for (const i of live) e[i] = evaluateFor(gameOf(t), h.players[i].hole, b);
     return e;
   });
   const evals = evalsByRun[0];
@@ -409,14 +495,14 @@ export const potTotal = h => h && h.street !== "done" ? h.players.reduce((s, p) 
 export function publicView(t, viewerSeat = -1) {
   const h = t.hand;
   return {
-    sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, step: raiseStep(t), ante: t.ante || 0, straddle: !!t.straddle, runTwice: !!t.runTwice,
+    game: gameOf(t), sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, step: raiseStep(t), ante: t.ante || 0, straddle: !!t.straddle, runTwice: !!t.runTwice,
     button: t.button, handNo: t.handNo,
     seats: t.seats.map(s => s && { id: s.id, name: s.name, stack: s.stack, sittingOut: !!s.sittingOut, avatar: s.avatar || "", show: !!s.show }),
     hand: h && {
       no: h.no, board: h.board, street: h.street, toAct: h.toAct, currentBet: h.currentBet, minRaise: h.minRaise,
       sbSeat: h.sbSeat, bbSeat: h.bbSeat, pot: potTotal(h), runout: h.runout, showdown: !!h.showdown,
       players: h.players.map((p, i) => p && {
-        bet: p.bet, committed: p.committed, folded: p.folded, allIn: p.allIn,
+        bet: p.bet, committed: p.committed, folded: p.folded, allIn: p.allIn, drawn: p.drawn ?? null,
         hole: i === viewerSeat || h.reveal[i] ? p.hole : null, hasCards: !p.folded
       }),
       log: h.log, results: h.results, pots: h.pots || null, handNames: h.handNames || {}, uncalled: h.uncalled || null, mucked: h.mucked || [],

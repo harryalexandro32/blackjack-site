@@ -17,18 +17,19 @@ function betSize(toCall, pot) {
 
 // Called just before you act. Returns what the coach needs to remember about the decision.
 export function snapshot(table, seat, action) {
+  if (action.type === "draw") return null; // the coach comments on bets, not swaps
   const h = table.hand, legal = { call: Math.max(0, h.currentBet - h.players[seat].bet) };
   const pot = h.players.reduce((s, p) => s + (p ? p.committed : 0), 0);
   const opponents = h.players.filter((p, i) => p && i !== seat && !p.folded).length;
   const toCall = Math.min(legal.call, table.seats[seat].stack);
   return {
     street: h.street, type: action.type, opponents, toCall, pot,
-    eq: equity(h.players[seat].hole, h.board, Math.max(1, opponents), 1500),
+    eq: equity(h.players[seat].hole, h.board, Math.max(1, opponents), table.game === "omaha" ? 400 : table.game === "draw" ? 700 : 1500, table.game || "holdem", h.street),
     need: toCall / (pot + toCall || 1), size: toCall ? betSize(toCall, pot) : ""
   };
 }
 
-const STREET = { preflop: "before the flop", flop: "on the flop", turn: "on the turn", river: "on the river" };
+const STREET = { preflop: "before the flop", flop: "on the flop", turn: "on the turn", river: "on the river", first: "before the draw", second: "after the draw" };
 
 // One note for the hand: the costliest mistake if there was one, otherwise the decision that mattered most.
 export function noteFor(decisions) {

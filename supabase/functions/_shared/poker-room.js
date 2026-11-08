@@ -28,7 +28,9 @@ export function validateSettings(s) {
   if (!(sb > 0 && bb > 0 && sb <= bb)) fail("Blinds must be positive and the small blind no bigger than the big blind.");
   if (bb > LIMITS.maxCents / 10) fail("Those blinds are too big.");
   if (!(minBuyIn >= bb && minBuyIn <= LIMITS.maxCents)) fail("The minimum buy-in has to be at least one big blind.");
-  if (!(maxSeats >= 2 && maxSeats <= 8)) fail("A table has 2 to 8 seats.");
+  const game = s.game === undefined ? "holdem" : String(s.game);
+  if (!E.GAMES[game]) fail("Pick a game from the list.");
+  if (!(maxSeats >= 2 && maxSeats <= E.GAMES[game].maxSeats)) fail(`${E.GAMES[game].name} tables have 2 to ${E.GAMES[game].maxSeats} seats.`);
   if (![20, 30, 60, 120].includes(actSeconds)) fail("Pick a time to act from the list.");
   // which parts of the odds helper players may switch on (all, unless the host turns them off)
   const off = k => !!(s.odds && s.odds[k] === false);
@@ -40,7 +42,7 @@ export function validateSettings(s) {
   if (!(ante >= 0 && ante <= bb)) fail("The ante can be anything from nothing up to the big blind.");
   const straddle = !!s.straddle;
   const runTwice = s.runTwice === undefined ? true : !!s.runTwice;
-  return { sb, bb, minBuyIn, maxSeats, actSeconds, odds, step, ante, straddle, runTwice };
+  return { game, sb, bb, minBuyIn, maxSeats, actSeconds, odds, step, ante, straddle, runTwice: runTwice && game !== "draw" };
 }
 
 function checkBuyIn(state, amount) {
@@ -55,7 +57,7 @@ export function newRoom({ code, settings, host, now }) {
   const s = validateSettings(settings);
   const state = {
     code, settings: s,
-    table: E.createTable({ smallBlind: s.sb, bigBlind: s.bb, maxSeats: s.maxSeats, step: s.step, ante: s.ante, straddle: s.straddle, runTwice: s.runTwice }),
+    table: E.createTable({ smallBlind: s.sb, bigBlind: s.bb, maxSeats: s.maxSeats, step: s.step, ante: s.ante, straddle: s.straddle, runTwice: s.runTwice, game: s.game || "holdem" }),
     players: {}, hostId: host.id, hostKeyHash: host.hostKeyHash || null, started: false, paused: false, chat: [], chatSeq: 0,
     sessionNo: 1, sessionStartHand: 0, sessions: [], ledger: {}, ending: false,
     deadline: null, deadlineKey: null, nextHandAt: null, closing: false, closed: false, summary: null, createdAt: now
@@ -245,13 +247,14 @@ export function applyAction(state, action, ctx) {
       needSeat();
       if (!E.handInProgress(t) || t.hand.toAct !== mySeat) fail("It's not your turn.");
       const a = { type: String(action.action) };
+      if (a.type === "draw") a.discard = Array.isArray(action.discard) ? action.discard.map(String).slice(0, 5) : [];
       if (a.type === "raise") {
         a.to = int(action.to);
         const legal = E.legalActions(t, mySeat);
         if (legal && legal.raise && a.to >= legal.raise.min && a.to <= legal.raise.max && !E.onStep(t, legal.raise, a.to))
           fail(`Raises at this table go up in steps of ${dollars(E.raiseStep(t))}.`);
       }
-      try { E.act(t, mySeat, a); } catch (e) { fail(e.message); }
+      try { E.act(t, mySeat, a, ctx.shuffledDeck()); } catch (e) { fail(e.message); }
       state.players[me].timeouts = 0;
       break;
     }

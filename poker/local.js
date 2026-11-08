@@ -26,7 +26,7 @@ export class LocalTable {
   static create(opts) {
     const seats = opts.bots + 1;
     // bots mode: bets and raises go up in big-blind steps
-    const t = E.createTable({ smallBlind: opts.sb, bigBlind: opts.bb, maxSeats: seats, step: opts.bb });
+    const t = E.createTable({ smallBlind: opts.sb, bigBlind: opts.bb, maxSeats: seats, step: opts.bb, game: opts.game || "holdem" });
     const names = botNames(opts.bots, opts.name);
     const players = {};
     const me = 0;
@@ -86,7 +86,7 @@ export class LocalTable {
       if (seat !== this.s.me && seat >= 0) {
         this.botTimer = setTimeout(() => {
           if (!E.handInProgress(t) || t.hand.toAct !== seat) return;
-          E.act(t, seat, decide(t, seat, this.s.skill, this.s.players[seat]?.style));
+          E.act(t, seat, decide(t, seat, this.s.skill, this.s.players[seat]?.style), E.shuffle(E.newDeck(), rng));
           this.afterAction();
         }, sleepMs());
       }
@@ -136,9 +136,10 @@ export class LocalTable {
     const t = this.s.table, me = this.s.me;
     if (this.s.coach !== false && E.legalActions(t, me)) {
       if (!this.s.decisions || this.s.decisions.no !== t.hand.no) this.s.decisions = { no: t.hand.no, list: [] };
-      this.s.decisions.list.push(snapshot(t, me, action));
+      const snap = snapshot(t, me, action);
+      if (snap) this.s.decisions.list.push(snap);
     }
-    E.act(t, me, action);
+    E.act(t, me, action, E.shuffle(E.newDeck(), rng));
     this.afterAction();
   }
 

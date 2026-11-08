@@ -2,8 +2,8 @@
 import { LocalTable, savedAiTable } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "./avatars.js";
 import { openLook } from "./look.js";
-import { handOdds, STRONG_FROM } from "./odds.js";
-import { CATEGORY, evaluate, settle } from "../supabase/functions/_shared/poker-engine.js";
+import { handOdds, STRONG_FROM, drawChoice } from "./odds.js";
+import { CATEGORY, evaluate, settle, GAMES, evaluateFor, drawAllowed } from "../supabase/functions/_shared/poker-engine.js";
 import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { play, soundOn, setSound } from "./sound.js";
 import { useTable, saveHand, hasReplay, openReplay, setupReplay } from "./replay.js";
@@ -93,7 +93,7 @@ function animateDeal(fresh) {
   const t = view.table, h = t.hand, n = t.maxSeats, from = dealOrigin();
   const order = h.players.map((p, i) => p ? i : -1).filter(i => i >= 0).sort((a, b) => (a - t.button - 1 + n) % n - (b - t.button - 1 + n) % n);
   let step = 0;
-  for (let round = 0; round < 2; round++) for (const i of order) {
+  for (let round = 0; round < GAMES[t.game || "holdem"].hole; round++) for (const i of order) {
     const el = fresh[i] && fresh[i][round];
     if (el) { fly(el, step * 95, from, i === view.me); play("deal", step * 0.095); }
     step++;
@@ -136,6 +136,25 @@ document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e
 }));
 const segValue = id => $(id).querySelector('[aria-pressed="true"]').dataset.v;
 
+// ---------- the game picker: Hold'em, Omaha, Five Card Draw ----------
+const GAME_NOTES = {
+  holdem: "Two cards each, five shared on the board. No-limit.",
+  omaha: "Four cards each. Your hand must use exactly two of them and three from the board. Pot-limit: the biggest raise is the size of the pot.",
+  draw: "Five cards each, no board. Bet, swap up to 3 cards (4 if you keep an ace), bet again, show down. Up to 6 players."
+};
+function gamePicked(segId, noteId, countSeg, offset) {
+  const g = segValue(segId), max = GAMES[g].maxSeats - offset;
+  $(noteId).textContent = GAME_NOTES[g];
+  // Five Card Draw seats at most 6: grey out bigger tables and step down if needed
+  const btns = [...$(countSeg).querySelectorAll("button")];
+  btns.forEach(b => { b.disabled = +b.dataset.v > max; });
+  const on = btns.find(b => b.getAttribute("aria-pressed") === "true");
+  if (on && on.disabled) { on.setAttribute("aria-pressed", "false"); btns.filter(b => !b.disabled).pop().setAttribute("aria-pressed", "true"); }
+}
+$("aiGame").addEventListener("click", () => gamePicked("aiGame", "aiGameNote", "aiBots", 1));
+$("crGame").addEventListener("click", () => gamePicked("crGame", "crGameNote", "crSeats", 0));
+queueMicrotask(() => { gamePicked("aiGame", "aiGameNote", "aiBots", 1); gamePicked("crGame", "crGameNote", "crSeats", 0); });
+
 function readBlinds(sbId, bbId) {
   const sb = toCents($(sbId).value), bb = toCents($(bbId).value);
   if (!(sb > 0) || !(bb > 0)) return { err: "Enter both blinds." };
@@ -174,7 +193,7 @@ $("formAi").addEventListener("submit", e => {
   $("aiErr").textContent = "";
   store.set("pk-name", name);
   store.set("pk-coach", $("aiCoach").checked);
-  attach(LocalTable.create({ name, bots: +segValue("aiBots"), skill: segValue("aiSkill"), botStyle: segValue("aiStyle"), coach: $("aiCoach").checked, botShow: segValue("aiShow"), sb: bl.sb, bb: bl.bb, buyIn, avatar: myAvatar(), show: myShow() }));
+  attach(LocalTable.create({ name, game: segValue("aiGame"), bots: +segValue("aiBots"), skill: segValue("aiSkill"), botStyle: segValue("aiStyle"), coach: $("aiCoach").checked, botShow: segValue("aiShow"), sb: bl.sb, bb: bl.bb, buyIn, avatar: myAvatar(), show: myShow() }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedAiTable(); if (s) attach(new LocalTable(s)); });
 // what each bot style means, under the picker
@@ -210,7 +229,7 @@ $("formCreate").addEventListener("submit", async e => {
   try {
     store.set("pk-name", name);
     const { OnlineTable } = await online();
-    attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, step, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
+    attach(await OnlineTable.create({ name, game: segValue("crGame"), sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, step, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
       odds: { win: $("crOddsWin").checked, strong: $("crOddsStrong").checked, cats: $("crOddsCats").checked },
       ante, straddle: $("crStraddle").checked, runTwice: $("crRit").checked, avatar: myAvatar(), show: myShow() }));
   } catch (err) { $("crErr").textContent = err.message; }
@@ -261,7 +280,7 @@ async function lookupRules() {
     const odds = !on ? "" : on.length === 3 ? " · odds helper on" : !on.length ? " · odds helper off" : " · odds helper: " + on.map(k => NAMES[k]).join(", ");
     const steps = (r && r.step > 1 ? ` · raises in ${fmt(r.step)} steps` : "")
       + (r && r.ante ? ` · ${fmt(r.ante)} ante` : "") + (r && r.straddle ? " · straddle" : "") + (r && r.runTwice ? " · run it twice allowed" : "");
-    $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)}${steps} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
+    $("jnRules").textContent = r ? `${GAMES[r.game || "holdem"].name} · blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)}${steps} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }
 }
@@ -346,6 +365,7 @@ function describeEntry(e, whoFn, verbFn) {
     case "straddle": return `${w} ${verb(s, "straddle")} ${fmt(e.amount)}`;
     case "run twice": return "Everyone agreed to run it twice";
     case "run once": return "Running it once";
+    case "draw": return e.count ? `${w} ${verb(s, "draw")} ${e.count} card${e.count === 1 ? "" : "s"}` : `${w} ${verb(s, "stand", "stands")} pat`;
     case "small blind": case "big blind": return `${w} ${verb(s, "post")} the ${e.type} ${fmt(e.amount)}`;
     case "fold": return `${w} ${verb(s, "fold")}`;
     case "check": return `${w} ${verb(s, "check")}`;
@@ -455,13 +475,16 @@ function render() {
   // run it twice: two boards, each with its own winners
   const runs = h && h.runs;
   const boardWin = runs ? runs[0].results.flatMap(r => r.best || []) : winCards;
-  const boardDealt = syncCards($("board"), h ? h.board : [], { slots: 5, highlight: boardWin });
+  const game = t.game || "holdem", holeN = GAMES[game].hole;
+  $("board").hidden = game === "draw";
+  const boardDealt = syncCards($("board"), h ? h.board : [], { slots: game === "draw" ? 0 : 5, highlight: boardWin });
   $("board2").hidden = !runs;
   const board2Dealt = runs ? syncCards($("board2"), runs[1].board, { slots: 5, highlight: runs[1].results.flatMap(r => r.best || []) }) : [];
   if (!runs) $("board2").innerHTML = "";
   const betsOut = h ? h.players.reduce((s, p) => s + (p ? p.bet : 0), 0) : 0;
   $("pot").textContent = h && h.street !== "done" && h.pot ? `Pot ${fmt(h.pot)}` + (betsOut && h.pot !== betsOut ? ` · in the middle ${fmt(h.pot - betsOut)}` : "") : "";
-  $("feltPrint").textContent = `NO LIMIT HOLD'EM · ${fmt(t.sb)}/${fmt(t.bb)}`;
+  $("feltPrint").textContent = `${game === "omaha" ? "POT LIMIT OMAHA" : game === "draw" ? "FIVE CARD DRAW" : "NO LIMIT HOLD'EM"} · ${fmt(t.sb)}/${fmt(t.bb)}`;
+  $("felt").dataset.game = game;
 
   // seats
   for (let i = 0; i < n; i++) {
@@ -480,7 +503,7 @@ function render() {
     const pic = el.querySelector(".pic"), av = s ? avatarOf(s) : "";
     if (pic.dataset.av !== av) { pic.dataset.av = av; pic.innerHTML = av ? avatarSvg(av, s.name) : ""; }
     const holes = el.querySelector(".holes");
-    if (p && !p.folded && !mucked && i !== me) fresh[i] = syncCards(holes, p.hole || [], { faceDown: 2, highlight: winCards && p.hole ? winCards : null });
+    if (p && !p.folded && !mucked && i !== me) fresh[i] = syncCards(holes, p.hole || [], { faceDown: holeN, highlight: winCards && p.hole ? winCards : null });
     else syncCards(holes, []);
     el.querySelector(".hand-name").textContent = h && h.street === "done" && h.handNames[i] ? h.handNames[i] : "";
     betEls[i].textContent = p && p.bet ? fmt(p.bet) : "";
@@ -491,8 +514,10 @@ function render() {
 
   // my cards
   const myP = h && me >= 0 ? h.players[me] : null;
-  if (me >= 0) fresh[me] = syncCards($("myCards"), myP && myP.hole ? myP.hole : [], { slots: 2, highlight: winCards });
-  $("myHandName").textContent = myP && myP.hole && h.board.length >= 3 ? bestName(myP.hole, h.board) : myP && myP.hole ? startingName(myP.hole) : "";
+  if (me >= 0) fresh[me] = syncCards($("myCards"), myP && myP.hole ? myP.hole : [], { slots: holeN, highlight: winCards });
+  $("myCards").dataset.n = holeN;
+  markDrawPicks();
+  $("myHandName").textContent = myP && myP.hole ? handLabel(game, myP.hole, h.board) : "";
   $("myPos").textContent = me < 0 ? "Watching" : !h ? "" : positionName(me);
 
   renderWinner();
@@ -594,14 +619,20 @@ function renderOdds() {
     return;
   }
   const opponents = h.players.filter((p, i) => p && !p.folded && i !== me).length;
-  const key = `${h.no}|${myP.hole.join("")}|${h.board.join("")}|${opponents}`;
+  const game = t.game || "holdem";
+  // Five Card Draw: the odds follow the cards you've picked to swap (or a sensible swap until you pick)
+  const preDraw = game === "draw" && (h.street === "first" || (h.street === "draw" && myP.drawn == null));
+  const discard = preDraw ? (h.street === "draw" && h.toAct === me ? [...drawPicks] : drawChoice(myP.hole)) : null;
+  const key = `${h.no}|${myP.hole.join("")}|${h.board.join("")}|${opponents}|${discard ? discard.join("") : "-"}`;
   if (key !== oddsKey) {
     oddsKey = key; oddsResult = null;
     clearTimeout(oddsTimer);
     // work it out just after this frame so dealing and buttons stay smooth
     oddsTimer = setTimeout(() => {
       if (oddsKey !== key) return;
-      oddsResult = handOdds(myP.hole, h.board, opponents, opponents >= 4 ? 3000 : 5000);
+      const runs = game === "omaha" ? (opponents >= 4 ? 500 : 900) : game === "draw" ? 1500 : opponents >= 4 ? 3000 : 5000;
+      oddsResult = handOdds(myP.hole, h.board, opponents, runs, game, { discard, oppDraw: preDraw || (game === "draw" && h.street === "draw") });
+      oddsResult.game = game; oddsResult.drawing = !!discard;
       drawOdds(opponents, myP.hole, h.board);
     }, 60);
   }
@@ -618,23 +649,38 @@ function drawOdds(opponents, hole, board) {
   $("oddsWin").innerHTML = `<div class="big"><b>${pct(r.win)}</b><span>to win</span></div>
     <div class="meter-bar" aria-hidden="true"><i style="width:${r.win * 100}%"></i><i style="width:${r.tie * 100}%"></i></div>
     <small>against ${opponents} player${opponents === 1 ? "" : "s"} still in${split}</small>`;
-  const made = board.length >= 3 ? evaluateFn([...hole, ...board]).cat : hole[0][0] === hole[1][0] ? 1 : 0;
+  const g = r.game || "holdem";
+  const made = g === "draw" ? evaluate(hole).cat : g === "omaha" ? (board.length >= 3 ? evaluateFor("omaha", hole, board).cat : 0)
+    : board.length >= 3 ? evaluateFn([...hole, ...board]).cat : hole[0][0] === hole[1][0] ? 1 : 0;
+  const by = g === "draw" ? (r.drawing ? "after the draw" : "now") : "by the river";
   // strong hand: three of a kind or better
-  const haveStrong = made >= STRONG_FROM;
+  const haveStrong = made >= STRONG_FROM && !(g === "draw" && r.drawing && r.strong < 0.999);
   const nextLabel = board.length === 0 ? "on the flop" : board.length === 3 ? "on the turn" : "on the river";
   $("oddsStrong").innerHTML = haveStrong
     ? `<div class="big"><b>✓</b><span>you have a strong hand</span></div><small>three of a kind or better</small>`
-    : `<div class="big"><b>${pct(r.strong)}</b><span>strong hand by the river</span></div>
+    : `<div class="big"><b>${pct(r.strong)}</b><span>strong hand ${by}</span></div>
        <div class="meter-bar" aria-hidden="true"><i style="width:${r.strong * 100}%"></i></div>
        <small>three of a kind or better${r.nextStrong == null ? "" : ` · ${pct(r.nextStrong)} ${nextLabel}`}</small>`;
   const rows = CATEGORY.map((name, c) => ({ name, c, p: r.cats[c] })).filter(x => x.c > 0 && (x.p >= .001 || x.c === made)).reverse();
-  $("oddsCats").innerHTML = `<small>${board.length === 5 ? "Your final hand" : "Chance to end up with, by the river"}</small>` + rows.map(x =>
+  $("oddsCats").innerHTML = `<small>${(g !== "draw" && board.length === 5) || (g === "draw" && !r.drawing) ? "Your final hand" : `Chance to end up with, ${by}`}</small>` + rows.map(x =>
     `<div class="oc${x.c === made ? " made" : ""}"><span>${x.name}</span><span class="meter-bar" aria-hidden="true"><i style="width:${x.p * 100}%"></i></span><b>${pct(x.p)}</b></div>`).join("");
 }
 for (const k of ODDS_PARTS) $(ODDS_UI[k].toggle).onclick = () => { const p = oddsPrefs(); p[k] = p[k] === false; store.set("pk-odds", p); renderOdds(); };
 
 const evaluateFn = evaluate;
 const bestName = (hole, board) => evaluateFn([...hole, ...board]).name;
+function handLabel(game, hole, board) {
+  if (game === "draw") return evaluate(hole).name;
+  if (game === "omaha") {
+    if (board.length >= 3) return evaluateFor("omaha", hole, board).name;
+    const suits = {};
+    hole.forEach(c => suits[c[1]] = (suits[c[1]] || 0) + 1);
+    const pairsSuited = Object.values(suits).filter(n => n >= 2).length;
+    const ranks = hole.map(c => rankText(c[0])).join(" ");
+    return ranks + (pairsSuited >= 2 ? ", double-suited" : pairsSuited === 1 ? ", suited" : "");
+  }
+  return board.length >= 3 ? bestName(hole, board) : startingName(hole);
+}
 function startingName(hole) {
   const [a, b] = hole, ra = rankText(a[0]), rb = rankText(b[0]);
   if (a[0] === b[0]) return `Pocket ${ra}s`;
@@ -649,9 +695,42 @@ function positionName(seat) {
   return "";
 }
 
+// ---------- five card draw: picking cards to swap ----------
+let drawPicks = new Set(), drawPickHand = null;
+function myDrawTurn() { const h = view && view.table.hand; return !!(h && h.legal && h.legal.draw); }
+function markDrawPicks() {
+  const h = view.table.hand;
+  if (!h || h.no !== drawPickHand) { drawPicks = new Set(); drawPickHand = h ? h.no : null; }
+  const on = myDrawTurn();
+  $("myCards").classList.toggle("picking", on);
+  [...$("myCards").children].forEach(el => el.classList.toggle("picked", on && drawPicks.has(el.dataset.code)));
+}
+$("myCards").addEventListener("click", e => {
+  const el = e.target.closest(".card"); if (!el || !myDrawTurn() || !el.dataset.code) return;
+  const c = el.dataset.code;
+  drawPicks.has(c) ? drawPicks.delete(c) : drawPicks.add(c);
+  markDrawPicks(); renderActions(); renderOdds();
+});
+$("btnDrawHint").onclick = () => {
+  const me = view.table.hand.players[view.me];
+  drawPicks = new Set(drawChoice(me.hole)); markDrawPicks(); renderActions(); renderOdds();
+};
+$("btnDraw").onclick = guard(async () => {
+  const discard = [...drawPicks];
+  drawPicks = new Set();
+  await ctrl.act({ type: "draw", discard });
+});
+
 function renderActions() {
   const t = view.table, h = t.hand, me = view.me, legal = h && h.legal;
-  const myTurn = !!(legal && h.street !== "done");
+  const drawing = !!(legal && legal.draw);
+  $("drawRow").hidden = !drawing;
+  if (drawing) {
+    const hole = h.players[me].hole, picks = [...drawPicks], ok = drawAllowed(hole, picks);
+    $("btnDraw").textContent = !picks.length ? "Keep all (stand pat)" : ok ? `Swap ${picks.length} card${picks.length === 1 ? "" : "s"}` : "Too many cards";
+    $("btnDraw").disabled = !ok;
+  }
+  const myTurn = !!(legal && h.street !== "done" && !drawing);
   if (!myTurn) raiseOpen = false;
   $("actRow").hidden = !myTurn;
   // phones: the slider opens only after tapping Raise, so the buttons never move
@@ -710,6 +789,8 @@ function renderActions() {
         : `${legal.raise.isBet ? "Bet" : "Raise to"} ${fmt(raiseTo)}${allIn ? " all in" : ""}`;
     }
     $("btnRaise").hidden = !legal.raise;
+    const allBtn = $("presets").querySelector('[data-p="all"]');
+    if (allBtn) allBtn.textContent = (t.game === "omaha") ? "Max (pot)" : "All in";
   }
   $("status").textContent = statusText();
 }
@@ -744,6 +825,8 @@ function statusText() {
       : view.mode === "online" ? " Waiting for another player to sit down, sit back in or buy back in." : "";
     return lines.join(". ") + "." + wait;
   }
+  if (h.legal && h.legal.draw) return "Your draw: tap the cards you want to swap (up to 3, or 4 if you keep an ace).";
+  if (h.street === "draw" && h.toAct >= 0) return `${seatName(h.toAct)} is choosing cards to swap…`;
   if (h.legal) return h.legal.check ? "Your turn." : `Your turn. ${fmt(h.legal.call)} to call.`;
   if (h.toAct >= 0) return `Waiting for ${seatName(h.toAct)}…`;
   return "";

@@ -301,3 +301,90 @@ test("run it twice: all in players vote; twice splits each pot across two boards
   assert.strictEqual(t.hand.ritTwice, false);
   assert.strictEqual(chips(t), 2000);
 });
+
+test("omaha: a hand uses exactly two of your four cards and three from the board", () => {
+  // four hearts in hand and one on the board is NOT a flush in Omaha
+  assert.notStrictEqual(P.evaluateOmaha(["Ah", "Kh", "7h", "2h"], ["Qh", "9c", "8d", "3s", "4c"]).cat, 5);
+  // two hearts in hand + three on the board is
+  assert.strictEqual(P.evaluateOmaha(["Ah", "Kh", "7c", "2d"], ["Qh", "9h", "8h", "3s", "4c"]).name, "Flush, Ace high");
+  // a board straight needs two of your cards to play: with no card to help it isn't yours
+  assert.notStrictEqual(P.evaluateOmaha(["2c", "2d", "3h", "3s"], ["Th", "Jc", "Qd", "Ks", "Ah"]).cat, 4);
+  assert.strictEqual(P.evaluateOmaha(["2c", "2d", "3h", "3s"], ["Th", "Jc", "Qd", "Ks", "Ah"]).name, "Pair of Threes"); // best: 3-3 with A-K-Q
+});
+
+test("omaha: four cards each, pot-limit raises", () => {
+  const t = P.createTable({ smallBlind: 1, bigBlind: 2, maxSeats: 3, game: "omaha" });
+  [1000, 1000, 1000].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+  P.startHand(t, P.newDeck());
+  t.hand.players.forEach(p => assert.strictEqual(p.hole.length, 4));
+  // under the gun: pot is 3, calling makes 5, so the biggest raise is to 2 + 5 = 7
+  assert.strictEqual(P.legalActions(t, 0).raise.max, 7);
+  P.act(t, 0, { type: "raise", to: 7 });
+  // small blind: pot 10, call 6 more -> 16, raise to 7 + 16 = 23
+  assert.strictEqual(P.legalActions(t, 1).raise.max, 23);
+  assert.throws(() => P.act(t, 1, { type: "raise", to: 30 }));
+});
+
+test("five card draw: bet, swap, bet, showdown; at most 3 cards, or 4 when keeping an ace", () => {
+  const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 3, game: "draw" });
+  [1000, 1000, 1000].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+  P.startHand(t, P.shuffle(P.newDeck(), webcrypto.getRandomValues.bind(webcrypto)));
+  assert.strictEqual(t.hand.street, "first");
+  t.hand.players.forEach(p => assert.strictEqual(p.hole.length, 5));
+  P.act(t, 0, { type: "call" }); P.act(t, 1, { type: "call" }); P.act(t, 2, { type: "check" });
+  assert.strictEqual(t.hand.street, "draw");
+  assert.strictEqual(t.hand.toAct, 1);                               // left of the dealer draws first
+  const h1 = t.hand.players[1].hole;
+  assert.throws(() => P.act(t, 1, { type: "check" }), /swap/);
+  assert.throws(() => P.act(t, 1, { type: "draw", discard: h1.slice(0, 5) }), /Swap up to 3/);
+  P.act(t, 1, { type: "draw", discard: h1.slice(0, 3) });
+  assert.strictEqual(t.hand.players[1].hole.length, 5);
+  assert.ok(h1.slice(0, 3).every(c => !t.hand.players[1].hole.includes(c)));
+  P.act(t, 2, { type: "draw", discard: [] });                        // stands pat
+  // keeping an ace allows four
+  const h0 = t.hand.players[0].hole, ace = h0.find(c => c[0] === "A");
+  if (ace) P.act(t, 0, { type: "draw", discard: h0.filter(c => c !== ace) });
+  else P.act(t, 0, { type: "draw", discard: h0.slice(0, 2) });
+  assert.strictEqual(t.hand.street, "second");
+  assert.strictEqual(P.publicView(t).hand.players[1].drawn, 3);
+  P.act(t, 1, { type: "check" }); P.act(t, 2, { type: "check" }); P.act(t, 0, { type: "check" });
+  assert.strictEqual(t.hand.street, "done");
+  assert.strictEqual(chips(t), 3000);
+  assert.ok(P.drawAllowed(["As", "2c", "3d", "4h", "5s"], ["2c", "3d", "4h", "5s"]));
+  assert.ok(!P.drawAllowed(["Ks", "2c", "3d", "4h", "5s"], ["2c", "3d", "4h", "5s"]));
+});
+
+test("five card draw: when the deck runs out, the thrown-away cards are shuffled back in", () => {
+  const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 6, game: "draw" });
+  for (let i = 0; i < 6; i++) t.seats[i] = { id: "p" + i, name: "P" + i, stack: 1000 };
+  P.startHand(t, P.shuffle(P.newDeck(), webcrypto.getRandomValues.bind(webcrypto)));
+  while (t.hand.street === "first") { const s = t.hand.toAct; P.act(t, s, P.legalActions(t, s).check ? { type: "check" } : { type: "call" }); }
+  while (t.hand.street === "draw") {
+    const s = t.hand.toAct, hole = t.hand.players[s].hole;
+    P.act(t, s, { type: "draw", discard: hole.slice(0, 3) }, P.shuffle(P.newDeck(), webcrypto.getRandomValues.bind(webcrypto)));
+  }
+  const all = t.hand.players.flatMap(p => p.hole);
+  assert.strictEqual(new Set(all).size, 30);                          // no card twice
+});
+
+test("random play keeps every chip in omaha and five card draw", () => {
+  const rng = webcrypto.getRandomValues.bind(webcrypto);
+  for (const game of ["omaha", "draw"]) {
+    const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 4, game, runTwice: true });
+    for (let i = 0; i < 4; i++) t.seats[i] = { id: "p" + i, name: "P" + i, stack: 500 + i * 100 };
+    for (let n = 0; n < 150; n++) {
+      t.seats.forEach(s => { if (s.stack === 0) s.stack = 500; });
+      const before = chips(t);
+      P.startHand(t, P.shuffle(P.newDeck(), rng));
+      while (P.handInProgress(t)) {
+        if (t.hand.ritPending) { P.voteRunTwice(t, +Object.keys(t.hand.ritVotes).find(k => t.hand.ritVotes[k] === null), Math.random() < .5); continue; }
+        const s = t.hand.toAct, L = P.legalActions(t, s);
+        if (L.draw) { const k = Math.floor(Math.random() * 4); P.act(t, s, { type: "draw", discard: t.hand.players[s].hole.slice(0, k) }, P.shuffle(P.newDeck(), rng)); continue; }
+        const r = Math.random();
+        const a = L.raise && r < 0.3 ? { type: "raise", to: L.raise.min + Math.floor(Math.random() * (L.raise.max - L.raise.min + 1)) } : r < 0.45 && !L.check ? { type: "fold" } : L.check ? { type: "check" } : { type: "call" };
+        P.act(t, s, a);
+      }
+      assert.strictEqual(chips(t), before, `${game} hand ${n} lost chips`);
+    }
+  }
+});
