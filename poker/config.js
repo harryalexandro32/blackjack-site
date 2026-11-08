@@ -1,6 +1,6 @@
-// Online play settings. Fill these in from your Supabase project (Settings → API) to switch on tables with friends.
-// The anon key is meant to be public; every move is checked on the server.
+// Online poker server (Supabase project "Card-game").
+// The anon key is public by design: it can only read the public table state.
 window.POKER_CONFIG = {
-  supabaseUrl: "",
-  anonKey: ""
+  supabaseUrl: "https://szzcddsimsvmqptcjmih.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6emNkZHNpbXN2bXFwdGNqbWloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNzYwNTUsImV4cCI6MjEwOTY1MjA1NX0.wJyfCKHvwKJJD6ydTJJFXq3gg0vKbH64aXnoC_Ujn7A",
 };
