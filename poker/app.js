@@ -485,6 +485,8 @@ function render() {
   $("pot").textContent = h && h.street !== "done" && h.pot ? `Pot ${fmt(h.pot)}` + (betsOut && h.pot !== betsOut ? ` · in the middle ${fmt(h.pot - betsOut)}` : "") : "";
   $("feltPrint").textContent = `${game === "omaha" ? "POT LIMIT OMAHA" : game === "draw" ? "FIVE CARD DRAW" : "NO LIMIT HOLD'EM"} · ${fmt(t.sb)}/${fmt(t.bb)}`;
   $("felt").dataset.game = game;
+  const sub = document.querySelector(".brand-sub");
+  if (sub && sub.textContent !== GAMES[game].name) { sub.textContent = GAMES[game].name; document.title = GAMES[game].name + " Table"; }
 
   // seats
   for (let i = 0; i < n; i++) {
