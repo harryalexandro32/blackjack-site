@@ -40,13 +40,20 @@ export async function peekTable(code) {
 
 export class OnlineTable {
   static async create(opts) {
-    const r = await call({ type: "create", name: opts.name, buyIn: opts.buyIn, avatar: opts.avatar, show: opts.show, settings: { sb: opts.sb, bb: opts.bb, minBuyIn: opts.minBuyIn, maxSeats: opts.maxSeats, actSeconds: opts.actSeconds, odds: opts.odds, step: opts.step } });
+    const r = await call({ type: "create", name: opts.name, buyIn: opts.buyIn, avatar: opts.avatar, show: opts.show, settings: { sb: opts.sb, bb: opts.bb, minBuyIn: opts.minBuyIn, maxSeats: opts.maxSeats, actSeconds: opts.actSeconds, odds: opts.odds, step: opts.step, ante: opts.ante, straddle: opts.straddle, runTwice: opts.runTwice } });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
     return new OnlineTable(seat, r.state, r.serverNow);
   }
   static async join({ code, name, buyIn, avatar, show }) {
     const r = await call({ type: "join", code, name, buyIn, avatar, show });
+    const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
+    saveSeat(seat);
+    return new OnlineTable(seat, r.state, r.serverNow);
+  }
+  // a seat-less spot: see the table, chat, and sit down later
+  static async watch({ code, name }) {
+    const r = await call({ type: "watch", code, name });
     const seat = { roomId: r.roomId, playerId: r.playerId, token: r.token, code: r.state.code };
     saveSeat(seat);
     return new OnlineTable(seat, r.state, r.serverNow);
@@ -131,7 +138,8 @@ export class OnlineTable {
       table: s.view, started: s.started, closing: s.closing, leaving: s.leaving,
       deadline: toLocal(s.deadline), nextHandAt: toLocal(s.nextHandAt), actMs: s.actMs,
       ended: s.closed || s.left, tableClosed: s.closed, summary: s.summary,
-      waitingForRebuy: !!(mySeat && mySeat.stack === 0 && !inLiveHand)
+      waitingForRebuy: !!(mySeat && mySeat.stack === 0 && !inLiveHand),
+      watching: !!s.watching, watchers: s.watchers || [], paused: !!s.paused, chat: s.chat || [], myName: s.myName || ""
     };
   }
 
@@ -139,6 +147,11 @@ export class OnlineTable {
   rebuy(amount) { return this.send("rebuy", { amount }); }
   setSitOut(on) { return this.send("sitout", { on }); }
   setPrefs(p) { return this.send("prefs", p); }
+  sit(o) { return this.send("sit", o); }
+  voteRunTwice(yes) { return this.send("rit", { yes }); }
+  chat(text) { return this.send("chat", { text }); }
+  react(emoji) { return this.send("react", { emoji }); }
+  setPause(on) { return this.send("pause", { on }); }
   start() { return this.send("start"); }
   leave() { return this.send("leave"); }
   close() { return this.send("close"); }

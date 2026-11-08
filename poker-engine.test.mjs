@@ -235,3 +235,69 @@ test("raise steps: only multiples of the step, plus the exact minimum and all-in
   assert.strictEqual(t.hand.currentBet, 3333);
   assert.throws(() => P.createTable({ smallBlind: 1, bigBlind: 2, step: 0 }), /raise step/);
 });
+
+test("antes go in before the blinds as dead money", () => {
+  const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 3, ante: 2 });
+  [1000, 1000, 1000].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+  P.startHand(t, P.newDeck());
+  assert.deepStrictEqual(t.seats.map(s => s.stack), [998, 993, 988]);
+  assert.strictEqual(P.potTotal(t.hand), 21);
+  assert.strictEqual(P.legalActions(t, 0).call, 10);                 // the ante isn't part of the bet to call
+  P.act(t, 0, { type: "fold" }); P.act(t, 1, { type: "fold" });
+  assert.strictEqual(t.seats[2].stack, 1009);                       // +4 in antes and +5 small blind
+  assert.strictEqual(chips(t), 3000);
+});
+
+test("straddle: the player after the big blind posts double and acts last before the flop", () => {
+  const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 4, straddle: true });
+  [1000, 1000, 1000, 1000].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+  P.startHand(t, P.newDeck());                                        // button 0, blinds 1 and 2, straddle 3
+  assert.strictEqual(t.hand.straddleSeat, 3);
+  assert.strictEqual(t.seats[3].stack, 980);
+  assert.strictEqual(t.hand.toAct, 0);
+  assert.strictEqual(P.legalActions(t, 0).call, 20);
+  assert.strictEqual(P.legalActions(t, 0).raise.min, 40);             // min raise is another straddle
+  P.act(t, 0, { type: "call" }); P.act(t, 1, { type: "call" }); P.act(t, 2, { type: "call" });
+  assert.strictEqual(t.hand.toAct, 3);                                // the straddler gets the option
+  assert.ok(P.legalActions(t, 3).check);
+  const heads = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 2, straddle: true });
+  [1000, 1000].forEach((s, i) => heads.seats[i] = { id: "h" + i, name: "H" + i, stack: s });
+  P.startHand(heads, P.newDeck());
+  assert.strictEqual(heads.hand.straddleSeat, undefined);             // no straddle heads-up
+});
+
+test("run it twice: all in players vote; twice splits each pot across two boards", () => {
+  // seat 0: As Ad, seat 1: Kc Kd. Deals pop from the end of the deck.
+  const make = () => {
+    const t = P.createTable({ smallBlind: 5, bigBlind: 10, maxSeats: 2, runTwice: true });
+    [1000, 1000].forEach((s, i) => t.seats[i] = { id: "p" + i, name: "P" + i, stack: s });
+    P.startHand(t, stacked(["Kc", "As", "Kd", "Ad"]));
+    P.act(t, 0, { type: "raise", to: 1000 }); P.act(t, 1, { type: "call" });
+    return t;
+  };
+  let t = make();
+  assert.strictEqual(t.hand.ritPending, true);
+  assert.ok(P.publicView(t).hand.players[0].hole && P.publicView(t).hand.players[1].hole); // tabled while voting
+  assert.strictEqual(P.legalActions(t, 0), null);
+  P.voteRunTwice(t, 0, true);
+  assert.strictEqual(t.hand.ritPending, true);                        // still waiting for the other player
+  assert.throws(() => P.voteRunTwice(t, 0, true), /already voted/);
+  P.voteRunTwice(t, 1, true);
+  assert.strictEqual(t.hand.street, "done");
+  assert.strictEqual(t.hand.runs.length, 2);
+  assert.notDeepStrictEqual(t.hand.runs[0].board, t.hand.runs[1].board);
+  assert.strictEqual(t.hand.runs.reduce((a, r) => a + r.results.reduce((b, x) => b + x.amount, 0), 0), 2000);
+  assert.strictEqual(chips(t), 2000);
+
+  t = make();
+  P.voteRunTwice(t, 1, false);                                        // one "no" means once
+  assert.strictEqual(t.hand.street, "done");
+  assert.strictEqual(t.hand.runs, undefined);
+  assert.strictEqual(t.hand.board.length, 5);
+
+  t = make();
+  P.voteRunTwice(t, 0, true);
+  P.resolveRunTwice(t);                                               // time's up: no vote counts as no
+  assert.strictEqual(t.hand.ritTwice, false);
+  assert.strictEqual(chips(t), 2000);
+});

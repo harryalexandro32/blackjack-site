@@ -6,6 +6,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 - **Texas Hold'em** (`poker/`): no-limit cash game.
   - **vs bots**: runs entirely in the browser with 1–7 bots (easy, normal, hard).
   - **with friends**: online tables for 2–8 players. The host sets the blinds, minimum buy-in and time to act, and shares a 6-character code. Players buy in, rebuy when busted, and cash out. When the host closes the table, everyone sees what they bought in for, what they left with, and who pays whom. No real money moves: friends settle up themselves.
+  - **Playing with friends**: table chat and emoji reactions that pop up over seats, watchers who can chat and sit down later, a host pause button, and house rules the host picks: ante, straddle and run it twice (everyone all in agrees, the rest of the board is dealt twice and the pot split).
   - **At every table**: cards are dealt round the table from the dealer. You pick an avatar: 21 ready-made characters, or build your own from skin, eyes, hair, facial hair, hat, glasses, shirt and background. An odds helper shows your chance to win, your chance of a strong hand (three of a kind or better) on the next card and by the river, and your chance of each hand. Each part can be switched off by the player, and the host of an online table decides which parts are allowed. A switch decides whether you show or muck when the rules let you choose. Winning at showdown and all-in hands always show. In bots mode you also set how the bots behave.
 
 ## Files
@@ -18,6 +19,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `poker/app.js` | Poker screens and table rendering |
 | `poker/local.js`, `poker/bot.js` | Bots mode: local table and bot decisions |
 | `poker/avatars.js`, `poker/look.js` | Avatar drawings (SVG from a short code) and the picker |
+| `poker/sound.js`, `poker/replay.js` | Table sounds (made in the browser, with mute) and hand replay |
 | `poker/odds.js` | Odds helper: simulates the rest of the hand from what you can see |
 | `poker/online.js` | Online mode client (talks to the edge function, listens for table updates) |
 | `poker/config.js` | Supabase URL and anon key for online mode (empty = online mode switched off) |

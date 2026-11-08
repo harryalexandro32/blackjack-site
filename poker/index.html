@@ -92,6 +92,13 @@
           <label class="switch"><input type="checkbox" id="crOddsStrong" checked><span class="track" aria-hidden="true"></span><span>Strong hand chance<small>Chance of three of a kind or better, on the next card and by the river</small></span></label>
           <label class="switch"><input type="checkbox" id="crOddsCats" checked><span class="track" aria-hidden="true"></span><span>Hand odds<small>Chance of making a pair, flush, straight and so on by the river</small></span></label>
         </div>
+        <div class="field"><span class="label">House rules</span>
+          <div class="row2">
+            <div class="field"><label for="crAnte">Ante (0 = none)</label><span class="money-input"><span>$</span><input id="crAnte" type="number" inputmode="decimal" min="0" step="0.01" value="0"></span></div>
+          </div>
+          <label class="switch"><input type="checkbox" id="crStraddle"><span class="track" aria-hidden="true"></span><span>Straddle<small>With 3 or more players, the player after the big blind posts double the big blind and acts last before the flop</small></span></label>
+          <label class="switch"><input type="checkbox" id="crRit" checked><span class="track" aria-hidden="true"></span><span>Allow run it twice<small>When everyone left is all in, they can agree to deal the rest of the board twice and split the pot</small></span></label>
+        </div>
         <p class="err" id="crErr"></p>
         <button class="primary" type="submit" id="btnCreate">Open table</button>
       </form>
@@ -104,6 +111,7 @@
         <p class="note" id="jnRules"></p>
         <p class="err" id="jnErr"></p>
         <button class="primary" type="submit" id="btnJoin">Join table</button>
+        <button class="ghost" type="button" id="btnWatch">Just watch</button>
         <button class="ghost" type="button" id="btnRejoin" hidden>Back to your table</button>
       </form>
       <div class="panel" id="onlineOff" hidden>
@@ -119,9 +127,15 @@
       <div class="center">
         <div class="pot" id="pot"></div>
         <div class="board" id="board"></div>
+        <div class="board board2" id="board2" hidden></div>
         <div class="felt-print" id="feltPrint">NO LIMIT HOLD'EM</div>
       </div>
       <div class="dealer-btn" id="dealerBtn" hidden>D</div>
+      <button type="button" class="felt-btn sound-btn" id="btnSound" aria-label="Sound on" title="Sound">🔊</button>
+      <div class="react-wrap" id="reactWrap" hidden>
+        <button type="button" class="felt-btn" id="btnReact" aria-label="Send a reaction" aria-expanded="false">😀</button>
+        <div class="react-pop" id="reactPop" hidden role="group" aria-label="Reactions"></div>
+      </div>
       <div class="win-banner" id="winBanner" hidden aria-live="polite" title="Tap to hide"></div>
     </div>
 
@@ -162,6 +176,14 @@
           <button class="primary" id="btnDealNow">Deal next hand</button>
           <button class="ghost" id="btnStart" hidden>Start the game</button>
         </div>
+        <div class="act-row" id="ritRow" hidden>
+          <button class="primary" id="btnRitYes">Run it twice</button>
+          <button id="btnRitNo">Run it once</button>
+        </div>
+        <div class="act-row" id="sitRow" hidden>
+          <span class="money-input"><span>$</span><input id="sitInput" type="number" inputmode="decimal" min="1" step="1" aria-label="Buy-in in dollars"></span>
+          <button class="primary" id="btnSit">Take a seat</button>
+        </div>
         <div class="act-row" id="rebuyRow" hidden>
           <span class="money-input"><span>$</span><input id="rebuyInput" type="number" inputmode="decimal" min="1" step="1" aria-label="Rebuy amount in dollars"></span>
           <button class="primary" id="btnRebuy">Buy back in</button>
@@ -174,6 +196,15 @@
         <h2>Hand history</h2>
         <div class="log" id="log"></div>
       </div>
+      <div class="panel" id="chatPanel" hidden>
+        <h2>Table chat</h2>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="chat-reacts" id="chatReacts" role="group" aria-label="Reactions"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <input class="text-input" id="chatInput" maxlength="160" placeholder="Say something…" aria-label="Chat message">
+          <button class="primary" type="submit">Send</button>
+        </form>
+      </div>
       <div class="panel">
         <h2>Players</h2>
         <div class="players-list" id="playersList"></div>
@@ -183,6 +214,7 @@
           <button class="ghost" id="btnLook">Change look</button>
           <button class="ghost" id="btnSitOut">Sit out next hand</button>
           <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
+          <button class="ghost" id="btnPause" hidden>Pause table</button>
           <button class="danger" id="btnClose" hidden>Close table for everyone</button>
           <button class="danger" id="btnLeave">Leave table</button>
         </div>
@@ -210,6 +242,23 @@
 
 </main>
 </div>
+
+<dialog id="replayDlg" class="look-dlg replay-dlg" aria-labelledby="rpTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head"><h2 id="rpTitle">Hand</h2><span class="note" id="rpStep"></span></div>
+    <div class="look-body">
+      <div class="rp-table"><div id="rpBoard"></div><div class="pot" id="rpPot"></div></div>
+      <div class="rp-players" id="rpPlayers"></div>
+      <div class="rp-log log" id="rpLog"></div>
+    </div>
+    <div class="look-foot">
+      <button type="button" class="ghost" id="rpPrev">Back</button>
+      <button type="button" class="primary" id="rpPlay">Play</button>
+      <button type="button" class="ghost" id="rpNext">Next</button>
+      <button value="close" class="ghost">Close</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="lookDlg" class="look-dlg" aria-labelledby="lookTitle">
   <form method="dialog" class="look-in">

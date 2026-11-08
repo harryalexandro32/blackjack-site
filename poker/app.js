@@ -4,6 +4,9 @@ import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "./avatars.js";
 import { openLook } from "./look.js";
 import { handOdds, STRONG_FROM } from "./odds.js";
 import { CATEGORY, evaluate } from "../supabase/functions/_shared/poker-engine.js";
+import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
+import { play, soundOn, setSound } from "./sound.js";
+import { useTable, saveHand, hasReplay, openReplay, setupReplay } from "./replay.js";
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -92,7 +95,7 @@ function animateDeal(fresh) {
   let step = 0;
   for (let round = 0; round < 2; round++) for (const i of order) {
     const el = fresh[i] && fresh[i][round];
-    if (el) fly(el, step * 95, from, i === view.me);
+    if (el) { fly(el, step * 95, from, i === view.me); play("deal", step * 0.095); }
     step++;
   }
   return step * 95;
@@ -115,7 +118,8 @@ function attach(controller) {
   if (unsub) unsub();
   if (ctrl && ctrl !== controller && ctrl.destroy) ctrl.destroy();
   ctrl = controller; history = []; seen = { hand: 0, log: 0, board: 0, results: false };
-  animOk = false; lastHandNo = null; oddsKey = "";
+  animOk = false; lastHandNo = null; oddsKey = ""; lastChatN = null; lastTurnKey = "";
+  useTable(controller.seat ? "online:" + controller.seat.code : "ai");
   buildSeats(0);
   showScreen("scrTable");
   unsub = ctrl.subscribe(v => { view = v; render(); });
@@ -188,12 +192,15 @@ $("formCreate").addEventListener("submit", async e => {
   if (!(buyIn >= minBuyIn)) return $("crErr").textContent = `Your buy-in has to be at least the minimum, ${fmt(minBuyIn)}.`;
   const step = toCents($("crStep").value);
   if (!(step >= 1)) return $("crErr").textContent = "Enter the raise step, for example the big blind.";
+  const ante = toCents($("crAnte").value || 0);
+  if (!(ante >= 0 && ante <= bl.bb)) return $("crErr").textContent = "The ante can be anything from nothing up to the big blind.";
   $("crErr").textContent = ""; $("btnCreate").disabled = true;
   try {
     store.set("pk-name", name);
     const { OnlineTable } = await online();
     attach(await OnlineTable.create({ name, sb: bl.sb, bb: bl.bb, minBuyIn, buyIn, step, maxSeats: +segValue("crSeats"), actSeconds: +$("crTime").value,
-      odds: { win: $("crOddsWin").checked, strong: $("crOddsStrong").checked, cats: $("crOddsCats").checked }, avatar: myAvatar(), show: myShow() }));
+      odds: { win: $("crOddsWin").checked, strong: $("crOddsStrong").checked, cats: $("crOddsCats").checked },
+      ante, straddle: $("crStraddle").checked, runTwice: $("crRit").checked, avatar: myAvatar(), show: myShow() }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -217,6 +224,18 @@ $("formJoin").addEventListener("submit", async e => {
   } catch (err) { $("jnErr").textContent = err.message; }
   finally { $("btnJoin").disabled = false; }
 });
+$("btnWatch").addEventListener("click", async () => {
+  const code = $("jnCode").value.trim().toUpperCase(), name = nameOf("jnName");
+  if (code.length !== 6) return $("jnErr").textContent = "Table codes are 6 letters and numbers.";
+  if (!name) return $("jnErr").textContent = "Enter your name.";
+  $("jnErr").textContent = ""; $("btnWatch").disabled = true;
+  try {
+    store.set("pk-name", name);
+    const { OnlineTable } = await online();
+    attach(await OnlineTable.watch({ code, name }));
+  } catch (err) { $("jnErr").textContent = err.message; }
+  finally { $("btnWatch").disabled = false; }
+});
 $("jnCode").addEventListener("change", lookupRules);
 async function lookupRules() {
   const code = $("jnCode").value.trim().toUpperCase();
@@ -228,7 +247,8 @@ async function lookupRules() {
     const NAMES = { win: "win %", strong: "strong hand", cats: "hand odds" };
     const on = r && r.odds ? ODDS_PARTS.filter(k => r.odds[k] !== false) : null;
     const odds = !on ? "" : on.length === 3 ? " · odds helper on" : !on.length ? " · odds helper off" : " · odds helper: " + on.map(k => NAMES[k]).join(", ");
-    const steps = r && r.step > 1 ? ` · raises in ${fmt(r.step)} steps` : "";
+    const steps = (r && r.step > 1 ? ` · raises in ${fmt(r.step)} steps` : "")
+      + (r && r.ante ? ` · ${fmt(r.ante)} ante` : "") + (r && r.straddle ? " · straddle" : "") + (r && r.runTwice ? " · run it twice allowed" : "");
     $("jnRules").textContent = r ? `Blinds ${fmt(r.sb)}/${fmt(r.bb)} · minimum buy-in ${fmt(r.minBuyIn)}${steps} · ${r.seated} of ${r.maxSeats} seats taken${odds}` : "No open table with that code.";
     if (r && toCents($("jnBuy").value) < r.minBuyIn) $("jnBuy").value = r.minBuyIn / 100;
   } catch { /* the join itself reports errors */ }
@@ -269,7 +289,7 @@ function buildSeats(n) {
   for (let i = 0; i < n; i++) {
     const s = document.createElement("div");
     s.className = "seat";
-    s.innerHTML = `<div class="top"><div class="pic"></div><div class="holes"></div></div><div class="plate"><div class="name"></div><div class="stack"></div><div class="tag"></div><div class="timer"></div></div><div class="hand-name"></div>`;
+    s.innerHTML = `<div class="top"><div class="pic"></div><div class="holes"></div></div><div class="plate"><div class="name"></div><div class="stack"></div><div class="tag"></div><div class="timer"></div></div><div class="hand-name"></div><div class="bubble" hidden></div>`;
     felt.appendChild(s); seatEls.push(s);
     const b = document.createElement("div"); b.className = "bet"; felt.appendChild(b); betEls.push(b);
   }
@@ -294,9 +314,16 @@ function seatName(i) { return view.table.seats[i]?.name || view.players?.[i]?.na
 // "You fold" / "Rosa folds"
 const who = i => i === view.me ? "You" : seatName(i);
 const verb = (i, base, third = base + "s") => i === view.me ? base : third;
-function describe(e) {
-  const w = who(e.seat), s = e.seat;
+function describe(e) { return describeEntry(e, who, verb); }
+// Shared wording for the history and the replay. whoFn/verbFn decide "You fold" vs "Rosa folds".
+function describeEntry(e, whoFn, verbFn) {
+  const w = whoFn(e.seat), s = e.seat;
+  const verb = verbFn;
   switch (e.type) {
+    case "ante": return `${w} ${verb(s, "post")} an ante ${fmt(e.amount)}`;
+    case "straddle": return `${w} ${verb(s, "straddle")} ${fmt(e.amount)}`;
+    case "run twice": return "Everyone agreed to run it twice";
+    case "run once": return "Running it once";
     case "small blind": case "big blind": return `${w} ${verb(s, "post")} the ${e.type} ${fmt(e.amount)}`;
     case "fold": return `${w} ${verb(s, "fold")}`;
     case "check": return `${w} ${verb(s, "check")}`;
@@ -315,7 +342,7 @@ function updateHistory() {
   if (!h) return;
   if (h.no !== seen.hand) {
     seen = { hand: h.no, log: 0, board: 0, results: false };
-    history.push({ sep: true, text: `Hand ${h.no} · ${view.table.button === view.me ? "you have" : seatName(view.table.button) + " has"} the button` });
+    history.push({ sep: true, no: h.no, text: `Hand ${h.no} · ${view.table.button === view.me ? "you have" : seatName(view.table.button) + " has"} the button` });
   }
   // put each board card line just before the first action on that street
   const cardsFor = { flop: 3, turn: 4, river: 5 }, label = { 3: "Flop", 4: "Turn", 5: "River" };
@@ -325,10 +352,12 @@ function updateHistory() {
       seen.board = k;
     }
   };
+  let k = 0;
   while (seen.log < h.log.length) {
     const e = h.log[seen.log++];
     if (cardsFor[e.street]) showBoardTo(cardsFor[e.street]);
     history.push({ text: describe(e) });
+    if (animOk) play(actionSound(e.type), 0.12 * k++);
   }
   if (h.street !== "preflop") showBoardTo(h.street === "done" ? 5 : cardsFor[h.street]);
   if (h.results && !seen.results) {
@@ -340,14 +369,31 @@ function updateHistory() {
       const p = h.players[r.seat], showed = r.seat === view.me ? view.table.seats[r.seat]?.show : p && p.hole;
       if (showed && p.hole) history.push({ text: `${who(r.seat)} ${verb(r.seat, "show")} ${p.hole.map(cardName).join(" ")}` });
     });
-    h.results.forEach(r => history.push({ text: winLine(r), win: true }));
+    if (h.runs) h.runs.forEach((run, i) => {
+      history.push({ text: `Run ${i + 1}: ${run.board.map(cardName).join(" ")}` });
+      run.results.forEach(r => history.push({ text: `Run ${i + 1}: ` + winLine(r), win: true }));
+    });
+    else h.results.forEach(r => history.push({ text: winLine(r), win: true }));
   }
   if (history.length > 300) history = history.slice(-300);
 }
 function renderHistory() {
   const box = $("log"), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
   box.innerHTML = "";
-  history.forEach(x => { const d = document.createElement("div"); d.textContent = x.text; if (x.sep) d.className = "hand-sep"; if (x.win) d.className = "pos"; box.appendChild(d); });
+  history.forEach(x => {
+    const d = document.createElement("div"); d.textContent = x.text;
+    if (x.sep) {
+      d.className = "hand-sep";
+      if (hasReplay(x.no)) {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "replay-btn"; b.textContent = "▶ Replay"; b.dataset.no = x.no;
+        b.setAttribute("aria-label", `Replay hand ${x.no}`);
+        d.appendChild(b);
+      }
+    }
+    if (x.win) d.className = "pos";
+    box.appendChild(d);
+  });
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
@@ -355,6 +401,7 @@ function renderHistory() {
 let raiseTo = 0, lastLegalKey = "", animOk = false, lastHandNo = null, raiseOpen = false;
 function render() {
   if (!view) return;
+  if (view.ended && !view.summary) return backToLobby(); // a watcher who left
   if (view.ended) return renderSummary();
   const t = view.table, h = t.hand, me = view.me, n = t.maxSeats;
   if (seatCount !== n) buildSeats(n);
@@ -381,7 +428,13 @@ function render() {
 
   // board + pot
   const winCards = h && h.street === "done" && h.showdown ? (h.results || []).flatMap(r => r.best || []) : null;
-  const boardDealt = syncCards($("board"), h ? h.board : [], { slots: 5, highlight: winCards });
+  // run it twice: two boards, each with its own winners
+  const runs = h && h.runs;
+  const boardWin = runs ? runs[0].results.flatMap(r => r.best || []) : winCards;
+  const boardDealt = syncCards($("board"), h ? h.board : [], { slots: 5, highlight: boardWin });
+  $("board2").hidden = !runs;
+  const board2Dealt = runs ? syncCards($("board2"), runs[1].board, { slots: 5, highlight: runs[1].results.flatMap(r => r.best || []) }) : [];
+  if (!runs) $("board2").innerHTML = "";
   const betsOut = h ? h.players.reduce((s, p) => s + (p ? p.bet : 0), 0) : 0;
   $("pot").textContent = h && h.street !== "done" && h.pot ? `Pot ${fmt(h.pot)}` + (betsOut && h.pot !== betsOut ? ` · in the middle ${fmt(h.pot - betsOut)}` : "") : "";
   $("feltPrint").textContent = `NO LIMIT HOLD'EM · ${fmt(t.sb)}/${fmt(t.bb)}`;
@@ -396,8 +449,10 @@ function render() {
     const won = h && h.street === "done" && (h.results || []).find(r => r.seat === i);
     const mucked = !!(h && h.street === "done" && (h.mucked || []).includes(i));
     const tag = el.querySelector(".tag");
-    tag.className = "tag" + (won ? " win" : mucked ? " mucked" : p && p.allIn && h.street !== "done" ? " allin" : "");
-    tag.textContent = !s ? "" : won ? `Wins ${fmt(won.amount)}` : mucked ? "Mucked" : p && p.folded ? "Folded" : p && p.allIn && h.street !== "done" ? "All in" : s.sittingOut ? "Sitting out" : s.stack === 0 && !p ? "Out of chips" : i === me ? "You" : "";
+    const vote = h && h.ritPending && h.ritVotes && String(i) in h.ritVotes ? h.ritVotes[i] : undefined;
+    tag.className = "tag" + (won ? " win" : mucked ? " mucked" : vote !== undefined ? " vote" : p && p.allIn && h.street !== "done" ? " allin" : "");
+    tag.textContent = !s ? "" : won ? `Wins ${fmt(won.amount)}` : mucked ? "Mucked"
+      : vote === null ? "Deciding…" : vote === true ? "Twice ✓" : vote === false ? "Once" : p && p.folded ? "Folded" : p && p.allIn && h.street !== "done" ? "All in" : s.sittingOut ? "Sitting out" : s.stack === 0 && !p ? "Out of chips" : i === me ? "You" : "";
     const pic = el.querySelector(".pic"), av = s ? avatarOf(s) : "";
     if (pic.dataset.av !== av) { pic.dataset.av = av; pic.innerHTML = av ? avatarSvg(av, s.name) : ""; }
     const holes = el.querySelector(".holes");
@@ -421,10 +476,13 @@ function render() {
   // card movement: hole cards round the table on a new hand, then each street's board cards
   let after = 0;
   if (animate && newHand) after = animateDeal(fresh);
-  if (animate && boardDealt.length) {
+  const boardCards = [...boardDealt, ...board2Dealt];
+  if (animate && boardCards.length) {
     const from = dealOrigin();
-    boardDealt.forEach((el, k) => fly(el, after + k * 150, from, true));
+    boardCards.forEach((el, k) => { fly(el, after + k * 150, from, true); play("flip", (after + k * 150 + FLY_MS) / 1000); });
   }
+  if (h && h.street === "done") saveHand(view);
+  renderChat(animate);
   animOk = true;
 
   renderActions();
@@ -446,7 +504,13 @@ function renderWinner() {
   if (bannerHand === h.no) { box.hidden = false; return; }
   bannerHand = h.no;
   box.innerHTML = "";
-  for (const r of h.results) {
+  if (animOk) play(h.results.some(r => r.seat === view.me) ? "win" : "pot", 0.6);
+  const groups = h.runs ? h.runs.map((run, i) => ({ label: `Run ${i + 1}`, results: run.results })) : [{ label: "", results: h.results }];
+  let rows = 0;
+  for (const g of groups) {
+  if (g.label) box.insertAdjacentHTML("beforeend", `<div class="wb-run">${g.label}</div>`);
+  for (const r of g.results) {
+    rows++;
     const seat = view.table.seats[r.seat];
     const row = document.createElement("div");
     row.className = "wb-row";
@@ -461,7 +525,8 @@ function renderWinner() {
     }
     box.appendChild(row);
   }
-  box.classList.toggle("multi", h.results.length > 1);
+  }
+  box.classList.toggle("multi", rows > 1);
   box.hidden = false;
 }
 $("winBanner").addEventListener("click", () => { bannerHidden = bannerHand; $("winBanner").hidden = true; });
@@ -560,6 +625,15 @@ function renderActions() {
   $("raiseBox").hidden = !(myTurn && legal.raise && sliderUp);
   const between = !h || h.street === "done";
   const mine = me >= 0 ? t.seats[me] : null;
+  // run it twice: players still in the pot vote
+  const myVote = h && h.ritPending && me >= 0 && h.ritVotes && String(me) in h.ritVotes ? h.ritVotes[me] : undefined;
+  $("ritRow").hidden = myVote !== null;
+  // watchers can take a free seat
+  const freeSeat = t.seats.some(x => !x);
+  $("sitRow").hidden = !(view.watching && freeSeat);
+  if (view.watching && !$("sitInput").value) $("sitInput").value = (view.minBuyIn / 100).toString();
+  $("btnPause").hidden = !(view.mode === "online" && view.isHost && view.started);
+  $("btnPause").textContent = view.paused ? "Resume table" : "Pause table";
   const needRebuy = view.waitingForRebuy;
   $("rebuyRow").hidden = !needRebuy;
   if (needRebuy && !$("rebuyInput").value) $("rebuyInput").value = (view.minBuyIn / 100).toString();
@@ -570,10 +644,12 @@ function renderActions() {
   $("btnSitOut").textContent = mine && mine.sittingOut ? "Deal me back in" : "Sit out next hand";
   $("btnCopyLink").hidden = view.mode !== "online";
   $("btnClose").hidden = !(view.mode === "online" && view.isHost);
-  $("btnLeave").textContent = leaveArmed ? "Tap again to leave" : view.mode === "ai" ? "Leave and see results" : "Cash out and leave";
+  $("btnLeave").textContent = leaveArmed ? "Tap again to leave" : view.watching ? "Stop watching" : view.mode === "ai" ? "Leave and see results" : "Cash out and leave";
   $("toolsNote").textContent = view.mode === "online" ? (view.isHost ? "You're the host. Closing the table cashes everyone out and shows the final results." : "Cashing out records what you leave with. The host closes the table when the game is over.") : "";
 
   if (myTurn) {
+    const turnKey = `${h.no}:${h.log.length}`;
+    if (turnKey !== lastTurnKey) { lastTurnKey = turnKey; if (animOk) play("turn"); }
     const toCall = legal.call;
     $("btnCall").firstChild.textContent = legal.check ? "Check" : toCall >= mine.stack ? `Call ${fmt(toCall)} all in` : `Call ${fmt(toCall)}`;
     $("btnFold").firstChild.textContent = legal.check ? "Fold" : "Fold";
@@ -601,6 +677,14 @@ function statusText() {
     return view.isHost ? `${seated} of ${t.maxSeats} seats taken. Start the game when everyone's in (at least 2 players).` : `Waiting for the host to start the game. ${seated} players seated.`;
   }
   if (view.closing) return "The host is closing the table. Final results come up when this hand ends.";
+  if (view.paused) return h && h.street !== "done" ? "The host paused the table. Finish this hand at your own pace; the clock is stopped." : "The host paused the table. No new hands until it's resumed.";
+  if (h && h.ritPending) {
+    const left = Object.entries(h.ritVotes).filter(([, v]) => v === null).map(([i]) => who(+i));
+    const secs = view.deadline ? ` (${Math.max(0, Math.ceil((view.deadline - Date.now()) / 1000))}s)` : "";
+    const mine = h.ritVotes[me] === null;
+    return `All in! Run it twice?${secs} ${mine ? "Everyone in the pot has to agree." : "Waiting for " + left.join(", ") + "."}`;
+  }
+  if (view.watching && (!h || h.street === "done")) return "You're watching. " + (view.table.seats.some(x => !x) ? "Take a seat whenever you like." : "The table is full.");
   if (view.leaving) return "You've cashed out. You'll leave the table when this hand ends.";
   if (view.waitingForRebuy) return `You're out of chips. Buy back in (at least ${fmt(view.minBuyIn)}) or leave the table.`;
   if (!h) return view.nextHandAt ? "Shuffling up…" : "Waiting for players.";
@@ -631,6 +715,12 @@ function renderPlayers() {
     row.children[2].textContent = fmt(net, true);
     box.appendChild(row);
   });
+  if (view.watchers && view.watchers.length) {
+    const w = document.createElement("div");
+    w.className = "pl watchers";
+    w.textContent = `Watching: ${view.watchers.join(", ")}`;
+    box.appendChild(w);
+  }
   (view.departed || []).forEach(d => {
     const row = document.createElement("div");
     row.className = "pl";
@@ -651,7 +741,7 @@ function tickClock() {
     const on = view.deadline && h && h.street !== "done" && h.toAct === i;
     bar.style.width = on ? Math.max(0, Math.min(100, (view.deadline - Date.now()) / (view.actMs || 30000) * 100)) + "%" : "0";
   });
-  if (h && h.street === "done" && view.nextHandAt) $("status").textContent = statusText();
+  if ((h && h.street === "done" && view.nextHandAt) || (h && h.ritPending)) $("status").textContent = statusText();
 }
 setInterval(tickClock, 250);
 
@@ -699,6 +789,15 @@ $("presets").addEventListener("click", e => {
   renderActions();
 });
 $("btnDealNow").onclick = guard(() => ctrl.dealNow());
+$("btnRitYes").onclick = guard(() => ctrl.voteRunTwice(true));
+$("btnRitNo").onclick = guard(() => ctrl.voteRunTwice(false));
+$("btnPause").onclick = guard(() => ctrl.setPause(!view.paused));
+$("btnSit").onclick = guard(async () => {
+  const c = toCents($("sitInput").value);
+  if (!(c >= view.minBuyIn)) throw new Error(`The minimum buy-in is ${fmt(view.minBuyIn)}.`);
+  await ctrl.sit({ buyIn: c, avatar: myAvatar(), show: myShow() });
+  $("sitInput").value = "";
+});
 $("btnStart").onclick = guard(() => ctrl.start());
 $("btnRebuy").onclick = guard(async () => {
   const c = toCents($("rebuyInput").value);
@@ -728,6 +827,7 @@ let leaveArmed = 0, closeArmed = 0;
 $("btnLeave").onclick = guard(async () => {
   if (!leaveArmed) { leaveArmed = setTimeout(() => { leaveArmed = 0; render(); }, 4000); render(); return; }
   clearTimeout(leaveArmed); leaveArmed = 0;
+  if (view.watching) { await ctrl.leave().catch(() => {}); return backToLobby(); }
   await ctrl.leave();
 });
 $("btnClose").onclick = guard(async () => {
@@ -736,12 +836,102 @@ $("btnClose").onclick = guard(async () => {
   await ctrl.close();
 });
 document.addEventListener("keydown", e => {
-  if (!view || $("lookDlg").open || e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!view || $("lookDlg").open || $("replayDlg").open || e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
   const legal = view.table?.hand?.legal; if (!legal) return;
   const k = e.key.toLowerCase();
   if (k === "f") $("btnFold").click();
   else if (k === "c") $("btnCall").click();
   else if (k === "r" && legal.raise) $("btnRaise").click();
+});
+
+// ---------- sounds ----------
+function actionSound(type) {
+  if (type === "fold") return "fold";
+  if (type === "check") return "check";
+  if (type.endsWith("all-in")) return "allin";
+  if (type.startsWith("call") || type.startsWith("bet") || type.startsWith("raise")) return "chips";
+  return "";
+}
+function drawSoundBtn() {
+  $("btnSound").textContent = soundOn() ? "🔊" : "🔇";
+  $("btnSound").setAttribute("aria-label", soundOn() ? "Sound on. Tap to mute" : "Sound off. Tap to turn on");
+}
+$("btnSound").onclick = () => { setSound(!soundOn()); drawSoundBtn(); play("chips"); };
+drawSoundBtn();
+
+// ---------- chat and reactions (tables with friends) ----------
+let lastChatN = null, lastTurnKey = "";
+function renderChat(animate) {
+  const online = view.mode === "online";
+  $("chatPanel").hidden = !online;
+  $("reactWrap").hidden = !online;
+  if (!online) return;
+  const chat = view.chat || [];
+  const newest = chat.length ? chat[chat.length - 1].n : 0;
+  if (lastChatN === null) lastChatN = newest;          // don't replay old messages when you open the table
+  const fresh = chat.filter(c => c.n > lastChatN);
+  lastChatN = Math.max(lastChatN, newest);
+  // the panel
+  const box = $("chatLog"), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+  box.innerHTML = "";
+  if (!chat.length) box.innerHTML = '<div class="note">No messages yet. Say hi, or send a reaction.</div>';
+  chat.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "chat-line" + (c.kind === "react" ? " react" : "");
+    d.innerHTML = "<b></b> <span></span>";
+    d.firstChild.textContent = c.name + (c.seat < 0 ? " (watching)" : "");
+    d.lastChild.textContent = c.kind === "react" ? c.emoji : c.text;
+    box.appendChild(d);
+  });
+  if (atBottom || fresh.length) box.scrollTop = box.scrollHeight;
+  // bubbles over the seats for what just came in
+  if (!animate) return;
+  fresh.forEach((c, k) => {
+    play(c.kind === "react" ? "react" : "chat", k * 0.1);
+    const seatEl = c.seat >= 0 ? seatEls[c.seat] : null;
+    if (!seatEl) return;
+    if (c.kind === "react") {
+      const fl = document.createElement("div");
+      fl.className = "react-float"; fl.textContent = c.emoji;
+      seatEl.appendChild(fl);
+      setTimeout(() => fl.remove(), 2200);
+    } else {
+      const b = seatEl.querySelector(".bubble");
+      b.textContent = c.text; b.hidden = false;
+      clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 4500);
+    }
+  });
+}
+// reaction buttons: one set in the chat panel, one in a pop-up on the table
+for (const box of [$("chatReacts"), $("reactPop")]) {
+  REACTIONS.forEach(e => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "react-btn"; b.textContent = e; b.setAttribute("aria-label", "Send " + e);
+    b.onclick = guard(async () => { $("reactPop").hidden = true; $("btnReact").setAttribute("aria-expanded", "false"); await ctrl.react(e); });
+    box.appendChild(b);
+  });
+}
+$("btnReact").onclick = () => {
+  const open = $("reactPop").hidden;
+  $("reactPop").hidden = !open; $("btnReact").setAttribute("aria-expanded", String(open));
+};
+$("chatForm").addEventListener("submit", guard(async e => {
+  e.preventDefault();
+  const text = $("chatInput").value.trim();
+  if (!text) return;
+  await ctrl.chat(text);
+  $("chatInput").value = "";
+}));
+
+// ---------- hand replay ----------
+setupReplay();
+$("log").addEventListener("click", e => {
+  const b = e.target.closest(".replay-btn"); if (!b) return;
+  openReplay(+b.dataset.no, {
+    cardEl, fmt, avatarSvg, avatarFor: avatarOf,
+    describeFor: (e, r) => describeEntry(e, i => i === r.me ? "You" : r.seats[i]?.name || "Seat " + (i + 1), (i, base, third = base + "s") => i === r.me ? base : third),
+    shortAction: e => describeEntry(e, () => "", (i, base, third = base + "s") => third).trim()
+  });
 });
 
 // ---------- summary ----------
@@ -767,7 +957,14 @@ function renderSummary() {
   else if (!s.payments.length) pay.innerHTML = "<li>Nobody owes anybody.</li>";
   s.payments.forEach(p => { const li = document.createElement("li"); li.textContent = `${p.from} pays ${p.to} ${fmt(p.amount)}`; pay.appendChild(li); });
 }
-$("btnSumDone").onclick = () => { if (ctrl && ctrl.destroy) ctrl.destroy(); ctrl = null; view = null; $("aiResume").hidden = !savedAiTable(); initSetup(); };
+$("btnSumDone").onclick = () => backToLobby();
+function backToLobby() {
+  if (ctrl && ctrl.destroy) ctrl.destroy();
+  if (unsub) unsub();
+  ctrl = null; view = null; unsub = null;
+  $("aiResume").hidden = !savedAiTable();
+  initSetup();
+}
 $("btnSumCopy").onclick = async () => {
   const s = view.summary;
   const text = ["Texas Hold'em results", ...s.rows.map(r => `${r.name}: in ${fmt(r.buyIn)}, out ${r.cashOut == null ? "-" : fmt(r.cashOut)}, ${r.cashOut == null ? "" : fmt(r.net, true)}`), "", ...s.payments.map(p => `${p.from} pays ${p.to} ${fmt(p.amount)}`)].join("\n");

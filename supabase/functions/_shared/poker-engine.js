@@ -100,13 +100,17 @@ export function evaluate(cards) {
 }
 
 // ---------- table ----------
-// table = { sb, bb, maxSeats, step, seats: [ {id, name, stack, sittingOut} | null ], button, handNo, hand }
+// table = { sb, bb, maxSeats, step, ante, straddle, runTwice, seats: [ {id, name, stack, sittingOut} | null ], button, handNo, hand }
 // step: bets and raises go up in multiples of this many chips (the minimum raise and all-in are always allowed).
-export function createTable({ smallBlind, bigBlind, maxSeats = 8, step = 1 }) {
+// ante: everyone dealt in puts this much in before the blinds (0 = none).
+// straddle: with 3 or more players, the player after the big blind posts twice the big blind and acts last before the flop.
+// runTwice: when everyone left is all in with cards to come, they vote; if all agree the board is dealt twice and each pot split.
+export function createTable({ smallBlind, bigBlind, maxSeats = 8, step = 1, ante = 0, straddle = false, runTwice = false }) {
   if (!(bigBlind > 0) || !(smallBlind > 0) || smallBlind > bigBlind) throw new Error("Blinds must be positive and the small blind no bigger than the big blind.");
   if (!(maxSeats >= 2 && maxSeats <= 8)) throw new Error("A table has 2 to 8 seats.");
   if (!(Number.isSafeInteger(step) && step >= 1)) throw new Error("The raise step must be a whole number of chips.");
-  return { sb: smallBlind, bb: bigBlind, maxSeats, step, seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
+  if (!(Number.isSafeInteger(ante) && ante >= 0)) throw new Error("The ante must be a whole number of chips.");
+  return { sb: smallBlind, bb: bigBlind, maxSeats, step, ante, straddle: !!straddle, runTwice: !!runTwice, seats: Array(maxSeats).fill(null), button: -1, handNo: 0, hand: null };
 }
 export const raiseStep = t => t.step || 1;
 // Is `to` an allowed raise size? Multiples of the step, plus the exact minimum and all-in.
@@ -135,6 +139,15 @@ function put(t, seat, amount) {
 
 function log(t, entry) { t.hand.log.push({ ...entry, street: t.hand.street }); }
 
+// Antes are dead money: they go in the pot but don't count as a bet to call.
+function putAnte(t, seat, amount) {
+  const s = t.seats[seat], p = t.hand.players[seat];
+  const a = Math.min(amount, s.stack);
+  s.stack -= a; p.committed += a;
+  if (s.stack === 0) p.allIn = true;
+  return a;
+}
+
 // Starts the next hand. `deck` must be a freshly shuffled 52-card deck.
 export function startHand(t, deck) {
   if (!canStartHand(t)) throw new Error("Need at least two players with chips to deal.");
@@ -150,15 +163,24 @@ export function startHand(t, deck) {
     sbSeat, bbSeat, toAct: -1, currentBet: 0, minRaise: t.bb, log: [], results: null, reveal: {}, runout: false
   };
   const h = t.hand;
+  if (t.ante > 0) for (const i of inSeats) log(t, { seat: i, type: "ante", amount: putAnte(t, i, t.ante) });
   log(t, { seat: sbSeat, type: "small blind", amount: put(t, sbSeat, t.sb) });
   log(t, { seat: bbSeat, type: "big blind", amount: put(t, bbSeat, t.bb) });
   h.currentBet = t.bb; // others call the full big blind even if the big blind is short
+  let lastBlind = bbSeat;
+  if (t.straddle && inSeats.length >= 3) {
+    const st = nextSeat(n, bbSeat, dealt);
+    if (canAct(h.players[st])) {
+      log(t, { seat: st, type: "straddle", amount: put(t, st, t.bb * 2) });
+      h.currentBet = Math.max(t.bb, h.players[st].bet); h.minRaise = t.bb * 2; h.straddleSeat = st; lastBlind = st;
+    }
+  }
   for (let round = 0; round < 2; round++) {
     let i = nextSeat(n, t.button, dealt);
     for (let k = 0; k < inSeats.length; k++) { h.players[i].hole.push(h.deck.pop()); i = nextSeat(n, i, dealt); }
   }
-  h.toAct = nextSeat(n, bbSeat, i => canAct(h.players[i]));
-  advanceIfRoundOver(t, bbSeat);
+  h.toAct = nextSeat(n, lastBlind, i => canAct(h.players[i]));
+  advanceIfRoundOver(t, lastBlind);
   return t;
 }
 
@@ -237,18 +259,67 @@ function advanceIfRoundOver(t, fromSeat) {
   const next = nextSeat(n, fromSeat, i => needsToAct(h, i));
   if (next >= 0) { h.toAct = next; return; }
   // betting round over
-  for (;;) {
-    h.players.forEach(p => { if (p) { p.bet = 0; p.acted = false; } });
-    h.currentBet = 0; h.minRaise = t.bb;
-    if (h.street === "river") return finishHand(t);
-    h.deck.pop(); // burn
-    if (h.street === "preflop") { h.board.push(h.deck.pop(), h.deck.pop(), h.deck.pop()); h.street = "flop"; }
-    else if (h.street === "flop") { h.board.push(h.deck.pop()); h.street = "turn"; }
-    else { h.board.push(h.deck.pop()); h.street = "river"; }
-    const actors = h.players.filter(canAct).length;
-    if (actors >= 2) { h.toAct = nextSeat(n, t.button, i => canAct(h.players[i])); return; }
-    h.runout = true; // everyone else is all-in: deal the rest with no betting
+  h.players.forEach(p => { if (p) { p.bet = 0; p.acted = false; } });
+  h.currentBet = 0; h.minRaise = t.bb;
+  if (h.street === "river") return finishHand(t);
+  if (h.players.filter(canAct).length < 2) {
+    // Nobody left who can bet: the hands are turned face up and the rest of the board is dealt.
+    h.runout = true; h.toAct = -1;
+    for (const i of live) h.reveal[i] = h.players[i].hole;
+    if (t.runTwice) {
+      h.ritPending = true;
+      h.ritVotes = Object.fromEntries(live.map(i => [i, null]));
+      return;
+    }
+    return runOut(t, false);
   }
+  dealStreet(h);
+  h.toAct = nextSeat(n, t.button, i => canAct(h.players[i]));
+}
+
+function dealStreet(h, board = h.board) {
+  h.deck.pop(); // burn
+  if (board.length === 0) board.push(h.deck.pop(), h.deck.pop(), h.deck.pop());
+  else board.push(h.deck.pop());
+  if (board === h.board) h.street = board.length === 3 ? "flop" : board.length === 4 ? "turn" : "river";
+}
+
+// Deals the rest of the board once, or twice from the same deck, then pays out.
+function runOut(t, twice) {
+  const h = t.hand;
+  if (twice) {
+    const first = h.board.slice(), second = h.board.slice();
+    while (first.length < 5) dealStreet(h, first);
+    while (second.length < 5) dealStreet(h, second);
+    h.boards = [first, second];
+    h.board = first;
+  } else {
+    while (h.board.length < 5) dealStreet(h);
+  }
+  h.street = "river";
+  finishHand(t);
+}
+
+// Run it twice: every player still in votes. One "no" means once; all "yes" means twice.
+export function voteRunTwice(t, seat, yes) {
+  const h = t.hand;
+  if (!h || !h.ritPending) throw new Error("There's nothing to vote on.");
+  if (!(String(seat) in h.ritVotes)) throw new Error("You're not in this pot.");
+  if (h.ritVotes[seat] !== null) throw new Error("You've already voted.");
+  h.ritVotes[seat] = !!yes;
+  const votes = Object.values(h.ritVotes);
+  if (votes.includes(false) || votes.every(v => v === true)) resolveRunTwice(t);
+  return t;
+}
+// Settles the vote now; anyone who hasn't voted counts as "no".
+export function resolveRunTwice(t) {
+  const h = t.hand;
+  if (!h || !h.ritPending) return t;
+  const twice = Object.values(h.ritVotes).every(v => v === true);
+  h.ritPending = false; h.ritTwice = twice;
+  log(t, { seat: -1, type: twice ? "run twice" : "run once" });
+  runOut(t, twice);
+  return t;
 }
 
 // Splits everything committed into a main pot and side pots.
@@ -279,24 +350,42 @@ function finishHand(t) {
   }
   const live = h.players.map((p, i) => p && !p.folded ? i : -1).filter(i => i >= 0);
   const showdown = live.length > 1;
-  const evals = {};
-  if (showdown) for (const i of live) evals[i] = evaluate([...h.players[i].hole, ...h.board]);
-  const won = {};
+  const boards = showdown && h.boards ? h.boards : [h.board];
+  const evalsByRun = boards.map(b => {
+    const e = {};
+    if (showdown) for (const i of live) e[i] = evaluate([...h.players[i].hole, ...b]);
+    return e;
+  });
+  const evals = evalsByRun[0];
+  const won = {}, wonByRun = boards.map(() => ({}));
   const pots = buildPots(h);
-  h.pots = pots.map(pot => {
-    let winners = pot.eligible;
+  // pays amount to the best hands among eligible on one board
+  const award = (amount, eligible, run) => {
+    let winners = eligible;
     if (showdown) {
-      const best = Math.max(...pot.eligible.map(i => evals[i].score));
-      winners = pot.eligible.filter(i => evals[i].score === best);
+      const e = evalsByRun[run], best = Math.max(...eligible.map(i => e[i].score));
+      winners = eligible.filter(i => e[i].score === best);
     }
-    const share = Math.floor(pot.amount / winners.length);
-    let odd = pot.amount - share * winners.length;
+    const share = Math.floor(amount / winners.length);
+    let odd = amount - share * winners.length;
     // odd chips go to the first winners clockwise from the button
     const order = [];
     for (let k = 1; k <= n; k++) { const i = (t.button + k) % n; if (winners.includes(i)) order.push(i); }
-    for (const i of order) { const amt = share + (odd > 0 ? 1 : 0); if (odd > 0) odd--; won[i] = (won[i] || 0) + amt; t.seats[i].stack += amt; }
+    for (const i of order) {
+      const amt = share + (odd > 0 ? 1 : 0); if (odd > 0) odd--;
+      won[i] = (won[i] || 0) + amt; wonByRun[run][i] = (wonByRun[run][i] || 0) + amt; t.seats[i].stack += amt;
+    }
+    return winners;
+  };
+  h.pots = pots.map(pot => {
+    // run twice: half of each pot on each board, the odd chip on the first
+    const halves = boards.length === 2 ? [Math.ceil(pot.amount / 2), Math.floor(pot.amount / 2)] : [pot.amount];
+    const winners = [...new Set(halves.flatMap((amt, run) => award(amt, pot.eligible, run)))];
     return { amount: pot.amount, eligible: pot.eligible, winners };
   });
+  if (boards.length === 2) h.runs = boards.map((board, run) => ({
+    board, results: Object.entries(wonByRun[run]).map(([i, amount]) => ({ seat: +i, amount, hand: evalsByRun[run][i].name, best: evalsByRun[run][i].best }))
+  }));
   // Who turns their cards over. A pot winner at showdown must show to claim it, and all-in hands are
   // tabled. Everyone else follows their own setting (seat.show): show, or muck when the rules allow it.
   const wants = i => !!t.seats[i].show;
@@ -320,7 +409,8 @@ export const potTotal = h => h && h.street !== "done" ? h.players.reduce((s, p) 
 export function publicView(t, viewerSeat = -1) {
   const h = t.hand;
   return {
-    sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, step: raiseStep(t), button: t.button, handNo: t.handNo,
+    sb: t.sb, bb: t.bb, maxSeats: t.maxSeats, step: raiseStep(t), ante: t.ante || 0, straddle: !!t.straddle, runTwice: !!t.runTwice,
+    button: t.button, handNo: t.handNo,
     seats: t.seats.map(s => s && { id: s.id, name: s.name, stack: s.stack, sittingOut: !!s.sittingOut, avatar: s.avatar || "", show: !!s.show }),
     hand: h && {
       no: h.no, board: h.board, street: h.street, toAct: h.toAct, currentBet: h.currentBet, minRaise: h.minRaise,
@@ -330,6 +420,7 @@ export function publicView(t, viewerSeat = -1) {
         hole: i === viewerSeat || h.reveal[i] ? p.hole : null, hasCards: !p.folded
       }),
       log: h.log, results: h.results, pots: h.pots || null, handNames: h.handNames || {}, uncalled: h.uncalled || null, mucked: h.mucked || [],
+      ritPending: !!h.ritPending, ritVotes: h.ritVotes || null, runs: h.runs || null, straddleSeat: h.straddleSeat ?? -1,
       legal: viewerSeat >= 0 ? legalActions(t, viewerSeat) : null
     }
   };

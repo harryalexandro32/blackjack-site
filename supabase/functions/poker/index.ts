@@ -89,13 +89,17 @@ Deno.serve(async req => {
       const loaded = await load({ code: body.code });
       if (!loaded || loaded.state.closed) return json({ table: null, serverNow: now });
       const s = loaded.state;
-      return json({ table: { sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length, odds: s.settings.odds || {}, step: s.table.step || 1 }, serverNow: now });
+      return json({ table: {
+        sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length,
+        odds: s.settings.odds || {}, step: s.table.step || 1, ante: s.table.ante || 0, straddle: !!s.table.straddle, runTwice: !!s.table.runTwice
+      }, serverNow: now });
     }
 
-    if (type === "join") {
+    // Joining takes a seat; watching takes a seat-less spot. Both get a private token for later requests.
+    if (type === "join" || type === "watch") {
       const token = newToken(), id = crypto.randomUUID(), tokenHash = await sha256(token);
       const result = await mutate({ code: body.code }, state => {
-        R.applyAction(state, { type: "join", name: body.name, buyIn: body.buyIn, avatar: body.avatar, show: body.show }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
+        R.applyAction(state, { type, name: body.name, buyIn: body.buyIn, avatar: body.avatar, show: body.show }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
         return { result: { roomId: null, playerId: id, token, state: R.personalState(state, id) } };
       });
       const loaded = await load({ code: body.code });

@@ -158,3 +158,91 @@ test("the host sets the raise step; it defaults to the big blind and the server 
   R.applyAction(s, { type: "act", action: "raise", to: 2000 }, ctx(id));
   assert.strictEqual(s.table.hand.currentBet, 2000);
 });
+
+test("chat and reactions: anyone at the table, cleaned, limited, and kept short", () => {
+  const s = room();
+  R.applyAction(s, { type: "chat", text: "  nice   hand\u0007 " }, ctx("a"));
+  R.applyAction(s, { type: "react", emoji: "🔥" }, ctx("b"));
+  const chat = R.publicState(s).chat;
+  assert.deepStrictEqual(chat.map(c => [c.name, c.kind, c.text || c.emoji]), [["Ana", "msg", "nice hand"], ["Bo", "react", "🔥"]]);
+  assert.strictEqual(chat[0].seat, seat(s, "a"));
+  assert.throws(() => R.applyAction(s, { type: "react", emoji: "💩" }, ctx("a")), /reactions/);
+  assert.throws(() => R.applyAction(s, { type: "chat", text: "   " }, ctx("a")), /Type a message/);
+  for (let i = 0; i < R.LIMITS.chatBurst; i++) R.applyAction(s, { type: "chat", text: "spam " + i }, ctx("h"));
+  assert.throws(() => R.applyAction(s, { type: "chat", text: "one more" }, ctx("h")), /Slow down/);
+  assert.throws(() => R.applyAction(s, { type: "chat", text: "hi" }, ctx("stranger")), /not at this table/);
+});
+
+test("pause: only the host; no new hands and no turn clock until resumed", () => {
+  const s = room();
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.throws(() => R.applyAction(s, { type: "pause", on: true }, ctx("a")), /host/);
+  R.applyAction(s, { type: "pause", on: true }, ctx("h"));
+  assert.strictEqual(s.deadline, null);
+  const no = s.table.hand.no;
+  // the hand in progress can still be played out, but no new one is dealt
+  while (E.handInProgress(s.table)) R.applyAction(s, { type: "act", action: "fold" }, ctx(toActId(s)));
+  clock += 60000; R.applyAction(s, { type: "tick" }, ctx("a"));
+  assert.strictEqual(s.table.hand.no, no);
+  assert.strictEqual(s.nextHandAt, null);
+  R.applyAction(s, { type: "pause", on: false }, ctx("h"));
+  clock += LIMITS_resume(); R.applyAction(s, { type: "tick" }, ctx("a"));
+  assert.strictEqual(s.table.hand.no, no + 1);
+});
+const LIMITS_resume = () => R.LIMITS.resumeMs + 1;
+
+test("watchers see the table without cards, chat, sit down later, and stay out of the settle-up", () => {
+  const s = room();
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  R.applyAction(s, { type: "watch", name: "Cy" }, ctx("w", { tokenHash: "tw" }));
+  const v = R.personalState(s, "w");
+  assert.strictEqual(v.watching, true);
+  assert.strictEqual(v.me, -1);
+  assert.ok(v.view.hand.players.every(p => !p || p.hole === null));
+  assert.deepStrictEqual(v.watchers, ["Cy"]);
+  R.applyAction(s, { type: "chat", text: "go Ana" }, ctx("w"));
+  assert.throws(() => R.applyAction(s, { type: "act", action: "fold" }, ctx("w")), /not seated/);
+  assert.throws(() => R.applyAction(s, { type: "sit", buyIn: 100 }, ctx("w")), /minimum buy-in/);
+  R.applyAction(s, { type: "sit", buyIn: 10000 }, ctx("w"));
+  assert.strictEqual(s.players.w.name, "Cy");                          // keeps their name
+  assert.ok(seat(s, "w") >= 0);
+  R.applyAction(s, { type: "watch", name: "Dee" }, ctx("d", { tokenHash: "td" }));
+  R.applyAction(s, { type: "close" }, ctx("h"));
+  while (E.handInProgress(s.table)) R.applyAction(s, { type: "act", action: "fold" }, ctx(toActId(s)));
+  assert.ok(s.closed);
+  assert.deepStrictEqual(s.summary.rows.map(r => r.name).sort(), ["Ana", "Bo", "Cy", "Host"]);  // Dee only watched
+});
+
+test("run it twice over the network: vote, and no answer in time means once", () => {
+  const settings2 = { ...settings, maxSeats: 2 };
+  const mk = () => {
+    const s = R.newRoom({ code: "ABC234", settings: settings2, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
+    R.applyAction(s, { type: "join", name: "Ana", buyIn: 20000 }, ctx("a", { tokenHash: "ta" }));
+    R.applyAction(s, { type: "start" }, ctx("h"));
+    R.applyAction(s, { type: "act", action: "raise", to: 20000 }, ctx(toActId(s)));
+    R.applyAction(s, { type: "act", action: "call" }, ctx(toActId(s)));
+    return s;
+  };
+  assert.strictEqual(R.validateSettings(settings).runTwice, true);      // on unless the host turns it off
+  let s = mk();
+  assert.strictEqual(s.table.hand.ritPending, true);
+  assert.strictEqual(s.deadline, clock + R.LIMITS.ritMs);
+  R.applyAction(s, { type: "rit", yes: true }, ctx("h"));
+  R.applyAction(s, { type: "rit", yes: true }, ctx("a"));
+  assert.strictEqual(s.table.hand.runs.length, 2);
+  assert.strictEqual(chipsTotal(s), boughtTotal(s));
+
+  s = mk();
+  R.applyAction(s, { type: "rit", yes: true }, ctx("h"));
+  clock += R.LIMITS.ritMs; R.applyAction(s, { type: "tick" }, ctx("h"));
+  assert.strictEqual(s.table.hand.ritTwice, false);
+  assert.strictEqual(chipsTotal(s), boughtTotal(s));
+});
+
+test("ante and straddle settings reach the table", () => {
+  assert.throws(() => R.validateSettings({ ...settings, ante: 500 }), /ante/);
+  const s = R.newRoom({ code: "ABC234", settings: { ...settings, ante: 50, straddle: true }, host: { id: "h", name: "Host", buyIn: 20000, tokenHash: "th" }, now: clock });
+  assert.strictEqual(s.table.ante, 50);
+  assert.strictEqual(s.table.straddle, true);
+  assert.strictEqual(R.publicState(s).view.ante, 50);
+});
