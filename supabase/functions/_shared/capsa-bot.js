@@ -1,5 +1,6 @@
 // Capsa Banting bots: shared by the browser (bots mode) and the server (empty seats online).
 // They only look at their own cards, what's on the table, and how many cards everyone has left.
+import { expertMove } from "./capsa-expert.js";
 import { classify, whyNot, isBomb, rankOf, valueOf, byValue, legal } from "./capsa-engine.js";
 
 const NATURAL = { "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, T: 10, J: 11, Q: 12, K: 13, A: 14 };
@@ -73,6 +74,7 @@ function cost(play, hand) {
 
 // Returns { type: "play", cards } or { type: "pass" } for the player whose turn it is.
 export function capsaMove(g, seat, skill = "normal") {
+  if (skill === "expert") return expertMove(g, seat);
   const L = legal(g, seat);
   if (!L) return null;
   const hand = g.hands[seat];

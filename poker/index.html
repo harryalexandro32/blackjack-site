@@ -178,6 +178,13 @@
           <button id="btnCall">Check<kbd>C</kbd></button>
           <button id="btnRaise" class="primary">Raise<kbd>R</kbd></button>
         </div>
+        <div class="act-row pre-row" id="preRow" hidden role="group" aria-label="Act before your turn">
+          <span class="pre-label">Before your turn</span>
+          <button type="button" class="ghost" data-pre="checkfold" aria-pressed="false">Check/Fold</button>
+          <button type="button" class="ghost" data-pre="check" aria-pressed="false">Check</button>
+          <button type="button" class="ghost" data-pre="callx" aria-pressed="false">Call</button>
+          <button type="button" class="ghost" data-pre="callany" aria-pressed="false">Call any</button>
+        </div>
         <div class="raise-box" id="raiseBox" hidden>
           <input type="range" id="raiseRange" aria-label="Raise amount">
           <span class="money-input"><span>$</span><input id="raiseInput" type="number" inputmode="decimal" step="0.01" aria-label="Raise to, in dollars"></span>

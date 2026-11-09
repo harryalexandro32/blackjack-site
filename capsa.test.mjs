@@ -315,3 +315,31 @@ test("loser mode rooms: money only between people, the winner starts the next ga
   clock += 10000; R.applyAction(s, { type: "tick" }, ctx("h"));
   if (f.winner >= 0) assert.strictEqual(s.g.turn, f.winner);
 });
+
+// ---------- playable cards, expert bot ----------
+test("legalPlays: exactly the plays whyNot allows", () => {
+  for (let k = 0; k < 20; k++) {
+    const g = C.startGame(1, shuffled, -1);
+    const seat = g.turn;
+    C.play(g, seat, ["3d"]);                                    // a single on the table
+    const s2 = g.turn, hand = g.hands[s2];
+    const plays = C.legalPlays(hand, g.trick.combo);
+    for (const p of plays) assert.strictEqual(C.whyNot(g, s2, p.cards), "");
+    const singles = hand.filter(c => C.valueOf(c) > C.valueOf("3d")).length;
+    assert.ok(plays.filter(p => p.cards.length === 1).length === singles);
+  }
+  assert.deepStrictEqual(C.legalPlays(["2s"], null).length, 0); // a lone 2 can't be the last card
+});
+
+test("expert bot: only legal moves, whole games finish, in both modes", () => {
+  for (const mode of ["winner", "loser"]) for (let k = 0; k < 30; k++) {
+    const g = C.startGame(1, shuffled, -1, mode);
+    for (let i = 0; i < 800 && !g.finished; i++) {
+      const m = awaitBot.capsaMove(g, g.turn, i % 2 ? "expert" : "hard");
+      if (m.type === "pass") C.pass(g, g.turn); else C.play(g, g.turn, m.cards);
+    }
+    assert.ok(g.finished);
+  }
+  const s = R.newRoom({ code: "CAP234", settings: { ...settingsC, skill: "expert" }, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
+  assert.strictEqual(s.settings.skill, "expert");
+});

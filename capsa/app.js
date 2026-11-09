@@ -203,6 +203,10 @@ const posOf = seat => (seat - view.me + 4) % 4;
 const nameAt = seat => seat === view.me ? "You" : view.seats[seat]?.name || "Seat " + (seat + 1);
 const verb = (seat, base, third = base + "s") => seat === view.me ? base : third;
 
+// Groups: cards you keep together on the left of your hand (kept per game on this device).
+// Premove: a play or a pass picked before your turn; it goes when your turn comes if it still fits.
+let groups = [], groupsFor = null, premove = null, premoveNote = "", firing = false, showPlayable = store.get("cb-playable", true);
+let playCache = { key: "", plays: [] };
 let selected = new Set(), sortBy = store.get("cb-sort", "rank"), lastLog = null, lastGame = null, lastTurn = null, bannerFor = null;
 
 function sortedHand(hand) {
@@ -211,12 +215,11 @@ function sortedHand(hand) {
 }
 
 // What's wrong with the cards picked (same checks as the rules engine, from what this player can see).
-function pickProblem(g) {
-  const cards = [...selected];
+const frameOf = g => g.legal || { table: g.trick ? g.trick.combo : null, mustInclude: g.lead3d ? "3d" : null };
+function pickProblem(g, cards = [...selected], L = g.legal) {
   if (!cards.length) return "";
   const combo = C.classify(cards);
   if (!combo) return "Those cards aren't a combination you can play.";
-  const L = g.legal;
   if (!L) return "";
   if (L.mustInclude && !cards.includes(L.mustInclude)) return "The first play of the game has to include the 3♦.";
   if (L.table && !C.beats(combo, L.table)) {
@@ -277,27 +280,74 @@ function render() {
     ? `<b>${C.NAMES[g.trick.combo.type]}</b> · ${escape(nameAt(g.trick.by))}`
     : g.turn >= 0 ? `${escape(nameAt(g.turn))} ${g.turn === me ? "lead" : "leads"} a new round${g.lead3d ? " · must include the 3♦" : ""}` : "";
 
-  // your hand
-  const hand = g && g.hand ? sortedHand(g.hand) : [];
+  // your hand: groups on the left, the rest sorted
+  syncGroups(g);
+  const hand = g && g.hand ? g.hand : [];
   selected = new Set([...selected].filter(c => hand.includes(c)));
+  const grouped = new Set(groups.flat());
+  const layout = [...groups.map(sortedHand), sortedHand(hand.filter(c => !grouped.has(c)))];
   const hb = $("myHand");
-  const hkey = hand.join(" ");
+  const hkey = JSON.stringify(layout);
   if (hb.dataset.key !== hkey) {
     hb.dataset.key = hkey; hb.innerHTML = "";
-    hand.forEach(c => hb.appendChild(cardEl(c)));
+    layout.slice(0, -1).forEach((gr, i) => {
+      const w = document.createElement("div"); w.className = "grp"; w.dataset.g = i;
+      gr.forEach(c => w.appendChild(cardEl(c)));
+      const tag = document.createElement("button"); tag.type = "button"; tag.className = "grp-tag";
+      const gc = C.classify(gr);
+      tag.textContent = gc ? C.NAMES[gc.type].replace("Bomb: ", "") : `${gr.length} cards`;
+      tag.title = "Pick this group";
+      w.appendChild(tag); hb.appendChild(w);
+    });
+    layout[layout.length - 1].forEach(c => hb.appendChild(cardEl(c)));
   }
-  [...hb.children].forEach(el => el.classList.toggle("sel", selected.has(el.dataset.code)));
+  hb.classList.toggle("has-groups", groups.length > 0);
+  const live = !!(g && !g.finished && hand.length);
+  const plays = live ? playsFor(g) : null;
+  let lit = null;                                   // the cards that stay bright: part of some play you could make
+  if (showPlayable && plays) {
+    const sel = [...selected];
+    lit = new Set(plays.filter(p => sel.every(c => p.cards.includes(c))).flatMap(p => p.cards));
+    sel.forEach(c => lit.add(c));
+  }
+  const pre = new Set(premove && premove.type === "play" ? premove.cards : []);
+  hb.querySelectorAll(".card").forEach(el => {
+    const c = el.dataset.code;
+    el.classList.toggle("sel", selected.has(c));
+    el.classList.toggle("pre", pre.has(c) && !selected.has(c));
+    el.classList.toggle("dim", !!lit && !lit.has(c));
+  });
   const myTurn = !!(g && g.legal && !g.finished);
+  const canPremove = live && !myTurn && !(loserGame(g) && placeOf(g, me));
+  if (!canPremove && !myTurn) premove = null;
   hb.classList.toggle("off", !g || !!g.finished);
+  if (myTurn && premove && !firing) firePremove(g);
 
   // buttons
-  const problem = g ? pickProblem(g) : "";
+  const problem = g ? pickProblem(g, [...selected], live ? frameOf(g) : null) : "";
   const combo = selected.size ? C.classify([...selected]) : null;
+  const stuck = myTurn && plays && !plays.length;  // nothing you hold can be played: only Pass
+  const comboName = c => C.NAMES[c.type].replace("Bomb: ", "bomb ").toLowerCase();
   $("actRow").hidden = !g || !!g.finished;
-  $("btnPlay").disabled = !myTurn || !selected.size || !!problem;
-  $("btnPlay").textContent = combo && !problem ? `Play ${C.NAMES[combo.type].replace("Bomb: ", "bomb ").toLowerCase()}` : "Play";
-  $("btnPass").disabled = !myTurn || !g.legal.canPass;
-  $("btnHint").disabled = !myTurn;
+  if (canPremove) {
+    $("btnPlay").disabled = premove ? premove.type !== "play" : !selected.size || !!problem;
+    $("btnPlay").textContent = premove && premove.type === "play" ? "Cancel premove" : combo && !problem ? `Premove ${comboName(combo)}` : "Premove this";
+    $("btnPass").disabled = !!(premove && premove.type === "play");
+    $("btnPass").textContent = premove && premove.type === "pass" ? "Cancel pass" : "Pass next";
+  } else {
+    $("btnPlay").disabled = !myTurn || stuck || !selected.size || !!problem;
+    $("btnPlay").textContent = combo && !problem ? `Play ${comboName(combo)}` : "Play";
+    $("btnPass").disabled = !myTurn || !g.legal.canPass;
+    $("btnPass").textContent = "Pass";
+  }
+  const passOnly = !!(stuck && g.legal.canPass);
+  $("btnPass").classList.toggle("primary", passOnly);
+  $("btnPass").classList.toggle("ghost", !passOnly);
+  $("btnHint").disabled = !myTurn || stuck;
+  const inGroup = selected.size && groups.find(gr => [...selected].every(c => gr.includes(c)));
+  $("btnGroup").textContent = inGroup ? "Ungroup" : "Group";
+  $("btnGroup").disabled = !live || (!inGroup && selected.size < 2);
+  $("btnPlayable").textContent = `Playable cards: ${showPlayable ? "shown" : "not shown"}`;
   $("btnSort").textContent = sortBy === "rank" ? "Sort: rank" : "Sort: suit";
   const fin = g && g.finished;
   $("betweenRow").hidden = !(fin || (view.mode === "online" && !view.started));
@@ -337,10 +387,13 @@ function statusText(g, problem) {
     if (f.reason === "stuck") return "Everyone was left with a single 2, so nobody can finish. Nobody pays." + left;
     return `${nameAt(f.winner)} ${verb(f.winner, "win")}${f.reason === "bomb" ? ` by bombing ${f.bombed === me ? "your" : nameAt(f.bombed) + "'s"} 2` : ""}!` + left;
   }
+  if (premoveNote && g.legal) return premoveNote;
+  if (premove && !g.legal) return premove.type === "pass" ? "Premove: you'll pass when your turn comes." : `Premove ready: ${premove.cards.map(cardName).join(" ")}. It plays on your turn if it still beats the table.`;
   if (loserGame(g) && placeOf(g, me)) return `You're out in ${ordinal(placeOf(g, me))} place. The others play on until one is left holding cards.`;
   if (g.legal) {
     if (problem) return problem;
     if (g.legal.leading) return g.legal.mustInclude ? "Your lead. Your first play must include the 3♦." : g.hand.length === 1 && g.hand[0][0] === "2" ? "You can't finish on a single 2: pass the lead." : "Your lead: play anything.";
+    if (playsFor(g) && !playsFor(g).length) return `Nothing in your hand beats the ${C.NAMES[g.legal.table.type].replace("Bomb: ", "").toLowerCase()}: pass.`;
     return `Your turn: beat the ${C.NAMES[g.legal.table.type].toLowerCase()} or pass.`;
   }
   return `${nameAt(g.turn)} ${g.turn === me ? "" : "is"} thinking…`;
@@ -489,22 +542,83 @@ function tickClock() {
 }
 setInterval(tickClock, 250);
 
+// ---------- groups, playable cards, premoves ----------
+function syncGroups(g) {
+  const key = g ? `${view.code || "ai"}-${view.gameNo}` : null;
+  if (key !== groupsFor) {                          // a new game: last game's groups and premove are gone
+    groupsFor = key; premove = null; premoveNote = "";
+    const saved = store.get("cb-groups", null);
+    groups = saved && saved.key === key ? saved.groups : [];
+  }
+  const hand = g && g.hand ? g.hand : [];
+  const before = JSON.stringify(groups);
+  groups = groups.map(gr => gr.filter(c => hand.includes(c))).filter(gr => gr.length >= 2); // played cards leave; a lone card un-groups
+  if (JSON.stringify(groups) !== before) saveGroups();
+}
+function saveGroups() { if (groupsFor) store.set("cb-groups", { key: groupsFor, groups }); }
+
+// Every play you could make right now (or against the table as it stands, before your turn).
+function playsFor(g) {
+  if (!g || !g.hand || g.finished) return null;
+  const F = frameOf(g);
+  const key = g.hand.join() + "|" + (g.trick ? g.trick.cards.join() : "") + "|" + F.mustInclude;
+  if (playCache.key !== key) playCache = { key, plays: C.legalPlays(g.hand, F.table, F.mustInclude) };
+  return playCache.plays;
+}
+
+// Your turn came with a premove waiting: play it if it still fits, otherwise drop it and say why.
+function firePremove(g) {
+  const pm = premove; premove = null;
+  const send = fn => { firing = true; queueMicrotask(guard(async () => { try { await fn(); } finally { firing = false; } })); };
+  if (!g.trick) { premoveNote = "Premove cancelled: you're leading a new round, so play anything you like."; return; }
+  if (pm.type === "pass") { if (g.legal.canPass) send(() => ctrl.pass()); return; }
+  if (pm.cards.every(c => g.hand.includes(c)) && !pickProblem(g, pm.cards)) return send(() => ctrl.play(pm.cards));
+  premoveNote = `Premove cancelled: ${nameAt(g.trick.by)} played higher.`;
+}
+
 // ---------- input ----------
 function guard(fn) { return async (...a) => { try { await fn(...a); } catch (err) { $("status").textContent = err.message; } }; }
 $("myHand").addEventListener("click", e => {
-  const el = e.target.closest(".card"); if (!el || !view || !view.game || view.game.finished) return;
+  if (!view || !view.game || view.game.finished) return;
+  const tag = e.target.closest(".grp-tag");
+  if (tag) { selected = new Set(groups[+tag.parentElement.dataset.g] || []); premoveNote = ""; return render(); }
+  const el = e.target.closest(".card"); if (!el) return;
+  premoveNote = "";
   const c = el.dataset.code;
   selected.has(c) ? selected.delete(c) : selected.add(c);
   render();
 });
-$("btnPlay").onclick = guard(async () => { const cards = [...selected]; selected = new Set(); await ctrl.play(cards); });
-$("btnPass").onclick = guard(async () => { selected = new Set(); await ctrl.pass(); });
+$("btnPlay").onclick = guard(async () => {
+  const g = view.game;
+  premoveNote = "";
+  if (g && !g.legal) {                              // not your turn: set or cancel a premove
+    if (premove) premove = null;
+    else if (selected.size && !pickProblem(g, [...selected], frameOf(g))) { premove = { type: "play", cards: [...selected] }; selected = new Set(); }
+    return render();
+  }
+  const cards = [...selected]; selected = new Set(); await ctrl.play(cards);
+});
+$("btnPass").onclick = guard(async () => {
+  const g = view.game;
+  premoveNote = "";
+  if (g && !g.legal) { premove = premove ? null : { type: "pass" }; return render(); }
+  selected = new Set(); await ctrl.pass();
+});
+$("btnGroup").onclick = () => {
+  const sel = [...selected];
+  const inGroup = sel.length && groups.find(gr => sel.every(c => gr.includes(c)));
+  if (inGroup) groups = groups.filter(gr => gr !== inGroup);
+  else if (sel.length >= 2) groups = [...groups.map(gr => gr.filter(c => !sel.includes(c))), sel];
+  selected = new Set();
+  saveGroups(); render();
+};
+$("btnPlayable").onclick = () => { showPlayable = !showPlayable; store.set("cb-playable", showPlayable); render(); };
 $("btnSort").onclick = () => { sortBy = sortBy === "rank" ? "suit" : "rank"; store.set("cb-sort", sortBy); $("myHand").dataset.key = ""; render(); };
 $("btnHint").onclick = () => {
   const g = view.game; if (!g || !g.legal) return;
   // the bots' own judgement, from what you can see
-  const pseudo = { hands: g.counts.map((n, i) => i === view.me ? g.hand : Array(n).fill("x")), turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, finished: null };
-  const m = capsaMove(pseudo, view.me, "hard");
+  const pseudo = { hands: g.counts.map((n, i) => i === view.me ? g.hand : Array(n).fill("x")), turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log, mode: g.mode, out: g.out, finished: null };
+  const m = capsaMove(pseudo, view.me, "expert");
   selected = new Set(m && m.type === "play" ? m.cards : []);
   render();
   if (m && m.type === "pass") $("status").textContent = "Hint: passing keeps your good cards for later.";

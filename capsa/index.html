@@ -42,7 +42,7 @@
         <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
           <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
         <div class="field"><span class="label">Bot skill</span>
-          <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
+          <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button><button type="button" data-v="expert">Expert</button></div></div>
         <div class="field"><span class="label">Game ends</span>
           <div class="seg" id="aiMode" role="group" aria-label="How a game ends"><button type="button" data-v="winner" aria-pressed="true">First one out wins</button><button type="button" data-v="loser">Last one holding loses</button></div></div>
         <div class="field"><label for="aiValue">Pretend dollars per point</label><span class="money-input"><span>$</span><input id="aiValue" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
@@ -78,7 +78,7 @@
             <select id="crTime"><option value="20">20 seconds</option><option value="30" selected>30 seconds</option><option value="60">60 seconds</option></select></div>
         </div>
         <div class="field"><span class="label">Bots for empty seats</span>
-          <div class="seg" id="crSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
+          <div class="seg" id="crSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button><button type="button" data-v="expert">Expert</button></div></div>
         <div class="field"><span class="label">Game ends</span>
           <div class="seg" id="crMode" role="group" aria-label="How a game ends"><button type="button" data-v="winner" aria-pressed="true">First one out wins</button><button type="button" data-v="loser">Last one holding loses</button></div></div>
         <p class="err" id="crErr"></p>
@@ -119,6 +119,7 @@
         <button id="btnPass" class="ghost">Pass</button>
         <button id="btnHint" class="ghost">Hint</button>
         <button id="btnSort" class="ghost">Sort: rank</button>
+        <button id="btnGroup" class="ghost" title="Keep the picked cards together on the left of your hand">Group</button>
         <button id="btnPlay" class="primary">Play</button>
       </div>
       <div class="act-row" id="betweenRow" hidden>
@@ -133,6 +134,7 @@
         <div class="players-list" id="scoreList"></div>
         <div class="table-tools">
           <button class="ghost" id="btnLook">Change look</button>
+          <button class="ghost" id="btnPlayable" title="Dim the cards you can't play right now">Playable cards: shown</button>
           <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
           <button class="ghost" id="btnLedger" hidden>Room ledger</button>
           <button class="ghost" id="btnHostLink" hidden>Copy host link</button>

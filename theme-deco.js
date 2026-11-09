@@ -156,45 +156,36 @@
   const lanternDefs = `<defs><radialGradient id="lg" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".75"/><stop offset=".55" stop-color="#ff7a2e" stop-opacity=".15"/><stop offset="1" stop-color="#5a0508" stop-opacity=".35"/></radialGradient></defs>`;
   const blossom = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-7" rx="5" ry="7" fill="#ffc9d6" transform="rotate(${a})"/>`).join("")}<circle r="3" fill="#ffd36b"/></g>`;
   const cloud = `<g fill="none" stroke="#e0b040" stroke-width="4" stroke-linecap="round" opacity=".75"><path d="M10 60 Q10 30 40 30 Q50 10 75 15 Q100 0 120 25 Q150 22 150 50 Q150 70 125 70 L30 70 Q10 70 10 60Z"/><path d="M40 52 q0 -14 14 -14 q14 0 14 14 q0 9 -9 9"/><path d="M100 50 q0 -12 12 -12 q12 0 12 12"/></g>`;
-  // a friendly, smiling dragon curled on a lucky cloud
+  // a paper-cut dragon (flat red and gold) chasing a glowing pearl over lucky clouds
   const dragon = `
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M210 120 C170 150 140 96 100 128 C64 156 80 196 34 204" stroke="#c9302c" stroke-width="40"/>
-      <path d="M210 120 C170 150 140 96 100 128 C64 156 80 196 34 204" stroke="#f0473f" stroke-width="30"/>
-      <path d="M206 132 C172 160 140 108 104 140 C72 166 84 202 40 214" stroke="#ffd36b" stroke-width="10"/>
+    <g fill="none" stroke="#e0b040" stroke-width="3.5" stroke-linecap="round" opacity=".7">
+      <path d="M20 214 Q20 196 40 196 Q48 182 66 186 Q82 176 96 192 Q114 190 114 206 Q114 216 98 216 L34 216 Q20 216 20 214Z"/>
+      <path d="M190 220 Q190 204 208 204 Q216 192 232 196 Q246 188 258 202 Q274 200 274 214"/>
     </g>
-    ${[[188, 112], [160, 106], [134, 104], [108, 116], [88, 136], [74, 160], [58, 182]].map(([x, y]) => `<path d="M${x - 8} ${y - 14} L${x} ${y - 30} L${x + 8} ${y - 14}Z" fill="#ffb347"/>`).join("")}
-    <path d="M34 204 C18 210 8 196 14 186 C22 196 30 192 34 188" fill="#ffb347"/>
-    <g fill="#c9302c"><path d="M120 150 l-6 18 l6 -4 l4 6 l3 -8Z"/><path d="M70 186 l-6 18 l6 -4 l4 6 l3 -8Z"/></g>
-    <!-- mane -->
-    <g fill="#ff8a3c">${[[196, 58], [184, 74], [182, 96], [196, 112], [214, 120]].map(([x, y], i) => `<path d="M${x} ${y} q-22 ${-6 + i * 3} -26 ${8 + i * 2} q14 -2 26 ${8 - i}Z"/>`).join("")}</g>
-    <!-- head -->
-    <ellipse cx="236" cy="88" rx="46" ry="40" fill="#f0473f"/>
-    <ellipse cx="280" cy="104" rx="34" ry="25" fill="#ff6a5a"/>
-    <ellipse cx="282" cy="112" rx="26" ry="13" fill="#ffd36b"/>
-    <circle cx="296" cy="96" r="3.2" fill="#8a1d1a"/><circle cx="284" cy="94" r="3.2" fill="#8a1d1a"/>
-    <path d="M258 114 Q280 134 306 112" stroke="#8a1d1a" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M276 122 q8 10 16 0" fill="#ff8fa3"/>
-    <!-- big friendly eyes -->
-    <circle cx="226" cy="76" r="15" fill="#fff"/><circle cx="254" cy="70" r="13" fill="#fff"/>
-    <circle cx="230" cy="78" r="8" fill="#2a1410"/><circle cx="257" cy="72" r="7" fill="#2a1410"/>
-    <circle cx="233" cy="74" r="3" fill="#fff"/><circle cx="260" cy="68" r="2.6" fill="#fff"/>
-    <path d="M212 58 Q226 48 240 56 M246 52 Q258 44 268 52" stroke="#8a1d1a" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <ellipse cx="214" cy="98" rx="8" ry="5" fill="#ff8fa3" opacity=".7"/>
-    <!-- horns and whiskers -->
-    <path d="M222 50 C214 30 220 14 234 8 C228 22 230 34 236 46Z" fill="#ffd36b"/>
-    <path d="M250 46 C250 26 262 14 278 12 C268 24 266 36 264 46Z" fill="#ffd36b"/>
-    <path d="M300 104 C322 96 326 80 318 66 M300 112 C326 116 330 134 320 146" stroke="#ffd36b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-    <!-- the pearl it's holding -->
-    <circle cx="300" cy="170" r="16" fill="#fff3c2"/><circle cx="295" cy="165" r="5" fill="#fff" opacity=".8"/>
-    <path d="M276 150 q8 10 14 8 M318 152 q-6 12 -14 8" stroke="#c9302c" stroke-width="6" fill="none" stroke-linecap="round"/>
-    <!-- lucky cloud -->
-    <g fill="none" stroke="#e0b040" stroke-width="4" stroke-linecap="round" opacity=".8" transform="translate(150 186)"><path d="M10 34 Q10 14 30 14 Q38 2 56 6 Q74 -2 88 14 Q108 12 108 30 Q108 42 92 42 L22 42 Q10 42 10 34Z"/><path d="M34 32 q0 -10 10 -10 q10 0 10 10"/></g>`;
+    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#f0b53c" stroke-width="40" stroke-dasharray="7 9"/>
+    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#c8102e" stroke-width="28" stroke-linecap="round"/>
+    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#2a0606" stroke-width="12" stroke-dasharray="3 9" stroke-linecap="round"/>
+    <path d="M30 168 C10 176 4 160 14 150 C10 162 20 162 24 156 C18 146 26 136 34 140 C28 148 34 156 40 158Z" fill="#f0b53c"/>
+    <path d="M84 162 l-8 22 l10 -6 l2 10 l6 -12 l8 4 l-6 -20Z" fill="#c8102e"/>
+    <path d="M180 106 l2 24 l7 -9 l5 9 l3 -13 l9 2 l-12 -16Z" fill="#c8102e"/>
+    <g transform="translate(236 64)">
+      <path d="M-8 -12 C-22 -34 -14 -48 2 -46 C-8 -38 -2 -30 6 -26Z M-18 -2 C-36 -14 -36 -30 -24 -34 C-28 -22 -20 -16 -10 -12Z" fill="#f0b53c"/>
+      <path d="M2 -24 C-4 -40 -16 -46 -26 -44 M10 -24 C10 -42 2 -52 -8 -56" fill="none" stroke="#f0b53c" stroke-width="5" stroke-linecap="round"/>
+      <path d="M-16 6 C-18 -16 -2 -26 16 -22 C28 -20 36 -12 48 -10 C60 -8 64 2 58 10 C52 18 40 16 32 18 C22 24 -2 28 -16 6Z" fill="#c8102e"/>
+      <path d="M30 18 C38 26 50 24 56 16" fill="#f0b53c"/>
+      <circle cx="14" cy="-10" r="7" fill="#fff5d8"/><circle cx="16" cy="-10" r="3.6" fill="#2a0606"/><circle cx="17.4" cy="-11.6" r="1.2" fill="#fff"/>
+      <path d="M6 -19 Q14 -24 24 -18" fill="none" stroke="#2a0606" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="52" cy="-2" r="2.2" fill="#2a0606"/>
+      <path d="M34 8 Q44 14 54 8" fill="none" stroke="#2a0606" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M56 4 C72 8 78 24 70 36 M54 12 C62 28 56 42 44 46" fill="none" stroke="#f0b53c" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <circle cx="300" cy="44" r="12" fill="#ffd36b"/><circle cx="296" cy="40" r="4" fill="#fff8e0"/>
+    <path d="M300 26 C296 18 304 14 302 6 M312 34 C318 28 316 20 320 16" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-linecap="round"/>`;
 
   const lanternNight = () => {
     const spots = [["福", 3, 26], ["喜", 17, 8], ["發", 81, 14], ["春", 94, 30], ["樂", 44, 2], ["吉", 62, 4]];
     return `${spots.map(([ch, x, len], i) => `<svg class="d sway-${i % 2 ? "2" : "1"} glow" viewBox="0 0 100 ${len + 170}" style="left:${x}vw;top:calc(var(--bar-h, 64px) - 4px);height:clamp(88px,${12 + len / 5}vh,${150 + len * 1.5}px);transform-origin:50% 0" preserveAspectRatio="xMidYMin meet" aria-hidden="true">${lanternDefs}${lantern(ch, len)}</svg>`).join("")}
-      ${svg("0 0 330 230", "left:0;bottom:0;width:clamp(150px,22vw,330px)", dragon, "float")}
+      ${svg("0 0 322 230", "left:0;bottom:0;width:clamp(150px,22vw,330px)", dragon, "float")}
       ${svg("0 0 160 80", "right:3vw;bottom:4vh;width:clamp(80px,10.4vw,160px)", cloud)}
       ${svg("0 0 160 80", "right:16vw;bottom:14vh;width:clamp(56px,6.4vw,104px)", cloud, "drift")}`;
   };
@@ -273,11 +264,18 @@
         <polygon points="560,0 880,0 1100,600 340,600" fill="url(#jz)"/>`)}
       ${band("0 0 1456 90", "left:0;bottom:0;width:100%;height:clamp(40px,8vh,80px)", keys.join(""))}
       ${svg("0 0 200 200", "right:3vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(90px,11vw,170px)", `<g class="spin"><circle cx="100" cy="100" r="92" fill="#111"/>${[78, 66, 54, 44].map(rr => `<circle cx="100" cy="100" r="${rr}" fill="none" stroke="#2a2a2a" stroke-width="2"/>`).join("")}<circle cx="100" cy="100" r="28" fill="#a3263a"/><circle cx="100" cy="100" r="4" fill="#111"/><path d="M60 40 A70 70 0 0 1 150 44" stroke="#fff" stroke-opacity=".12" stroke-width="6" fill="none"/></g>`)}
-      ${svg("0 0 140 300", "left:2vw;bottom:9vh;height:clamp(150px,34vh,330px)", `<path d="M70 10 L70 40 Q70 60 60 70 L40 210 Q32 262 66 270 Q104 274 106 232 L108 200" stroke="#d9a441" stroke-width="22" fill="none" stroke-linecap="round"/>
-        <path d="M108 200 Q116 186 126 196 Q132 214 112 222" fill="#d9a441"/><path d="M70 10 L60 2 L54 8" stroke="#3a3a3a" stroke-width="5" fill="none"/>
-        ${[90, 120, 150, 180, 210].map(y => `<circle cx="${52 - (y - 90) * 0.08}" cy="${y}" r="5" fill="#f4d58a" stroke="#8a6420" stroke-width="2"/>`).join("")}`, "sway")}
-      ${svg("0 0 260 90", "right:2vw;bottom:10vh;width:clamp(130px,16vw,240px)", `<rect x="10" y="40" width="140" height="10" rx="5" fill="#d9a441"/><path d="M150 45 Q190 45 210 20 L250 2 L250 88 L210 70 Q190 45 150 45Z" fill="#d9a441"/>
-        <rect x="70" y="28" width="12" height="20" rx="3" fill="#b8862a"/><rect x="90" y="28" width="12" height="20" rx="3" fill="#b8862a"/><rect x="110" y="28" width="12" height="20" rx="3" fill="#b8862a"/><circle cx="12" cy="45" r="8" fill="#b8862a"/>`)}
+      ${svg("0 0 200 240", "left:1.5vw;bottom:calc(clamp(40px,8vh,80px) + 1vh);height:clamp(150px,32vh,300px)", `<g fill="none" stroke="#d9a441" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 104 C34 104 28 120 31 140 C33 152 44 156 44 164 C44 172 24 178 22 200 C20 226 42 236 60 236 C78 236 100 226 98 200 C96 178 76 172 76 164 C76 156 87 152 89 140 C92 120 86 104 60 104Z"/>
+        <path d="M56 104 V22 M64 104 V22"/><path d="M54 22 C50 12 58 4 66 8 C72 12 68 20 62 18"/>
+        <path d="M57 30 V214 M59 30 V214 M61 30 V214 M63 30 V214" stroke-width="1" opacity=".8"/>
+        <path d="M50 196 h20" stroke-width="3"/><path d="M42 176 c-4 6 4 10 0 16 M78 176 c4 6 -4 10 0 16" stroke-width="2"/>
+        <g transform="translate(-60 0)"><path d="M150 24 l10 8 L178 50 Q182 56 182 66 L182 176 Q182 214 214 214 Q244 214 244 184 L244 160 Q246 146 256 140"/>
+        <path d="M196 54 L196 174 Q196 200 214 200 Q230 200 230 184 L230 160 Q228 146 218 140"/>
+        <ellipse cx="237" cy="140" rx="19" ry="4.5"/><path d="M178 50 Q186 46 196 54"/>
+        ${[84, 104, 124, 144, 164].map(y => `<circle cx="189" cy="${y}" r="4"/>`).join("")}</g></g>`, "sway")}
+      ${svg("0 0 60 180", "right:2.5vw;bottom:calc(clamp(40px,8vh,80px) + 1vh);height:clamp(110px,24vh,220px)", `<g fill="none" stroke="#d9a441" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="17" y="6" width="26" height="40" rx="13"/><path d="M17 18 h26 M17 26 h26 M17 34 h26" stroke-width="1.4"/>
+        <path d="M11 30 Q11 58 30 58 Q49 58 49 30"/><path d="M30 58 V172 M13 172 h34"/></g>`)}
       ${notes.join("")}`;
   };
 

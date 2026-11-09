@@ -724,6 +724,22 @@ $("btnDraw").onclick = guard(async () => {
   await ctrl.act({ type: "draw", discard });
 });
 
+// Premoves: picked before your turn, done the moment it comes. They clear on a new street or hand;
+// Check and Call $X also clear if the bet changes before your turn.
+let preAct = null, preNote = "", preFiring = false;
+const PRE_NAMES = { checkfold: "Check/Fold", check: "Check", callany: "Call any" };
+function firePre(legal) {
+  const pa = preAct; preAct = null;
+  let a = null;
+  if (pa.kind === "checkfold") a = legal.check ? { type: "check" } : { type: "fold" };
+  else if (pa.kind === "check") a = legal.check ? { type: "check" } : null;
+  else if (pa.kind === "callany") a = legal.check ? { type: "check" } : { type: "call" };
+  else if (pa.kind === "callx") a = legal.check ? { type: "check" } : legal.call === pa.amount ? { type: "call" } : null;
+  if (!a) { preNote = "Premove cancelled: the bet changed."; return; }
+  preFiring = true;
+  queueMicrotask(guard(async () => { try { await ctrl.act(a); } finally { preFiring = false; } }));
+}
+
 function renderActions() {
   const t = view.table, h = t.hand, me = view.me, legal = h && h.legal;
   const drawing = !!(legal && legal.draw);
@@ -735,6 +751,24 @@ function renderActions() {
   }
   const myTurn = !!(legal && h.street !== "done" && !drawing);
   if (!myTurn) raiseOpen = false;
+  // premoves
+  const myP = h && me >= 0 ? h.players[me] : null;
+  const canPre = !!(h && myP && !myTurn && !drawing && h.street !== "done" && h.street !== "draw" && !myP.folded && !myP.allIn && !h.ritPending && h.toAct >= 0 && !view.paused);
+  const owe = myP && h ? Math.max(0, h.currentBet - myP.bet) : 0;
+  if (preAct && (!h || preAct.hand !== h.no || preAct.street !== h.street)) preAct = null;
+  if (preAct && !myTurn && !canPre) preAct = null;
+  if (preAct && canPre && ((preAct.kind === "check" && owe > 0) || (preAct.kind === "callx" && owe !== preAct.amount))) { preAct = null; preNote = "Premove cancelled: the bet changed."; }
+  if (myTurn && preAct && !preFiring) firePre(legal);
+  $("preRow").hidden = !canPre;
+  if (canPre) {
+    const myStack = t.seats[me] ? t.seats[me].stack : 0;
+    $("preRow").querySelectorAll("button").forEach(b => {
+      const k = b.dataset.pre;
+      b.hidden = (k === "check" && owe > 0) || (k === "callx" && owe === 0);
+      if (k === "callx") b.textContent = owe >= myStack ? `Call ${fmt(myStack)} all in` : `Call ${fmt(owe)}`;
+      b.setAttribute("aria-pressed", String(!!preAct && preAct.kind === k));
+    });
+  }
   $("actRow").hidden = !myTurn;
   // phones: the slider opens only after tapping Raise, so the buttons never move
   const sliderUp = !compact.matches || raiseOpen;
@@ -795,8 +829,19 @@ function renderActions() {
     const allBtn = $("presets").querySelector('[data-p="all"]');
     if (allBtn) allBtn.textContent = (t.game === "omaha") ? "Max (pot)" : "All in";
   }
-  $("status").textContent = statusText();
+  let st = statusText();
+  if (myTurn && preNote) st = preNote + " " + st;
+  else if (canPre && preAct) st = `Premove: ${preAct.kind === "callx" ? "Call " + fmt(preAct.amount) : PRE_NAMES[preAct.kind]}. ` + st;
+  if (!myTurn) preNote = canPre ? "" : preNote;
+  $("status").textContent = st;
 }
+$("preRow").addEventListener("click", e => {
+  const b = e.target.closest("button[data-pre]"); if (!b || !view || !view.table.hand) return;
+  const h = view.table.hand, p = h.players[view.me], k = b.dataset.pre;
+  preNote = "";
+  preAct = preAct && preAct.kind === k ? null : { kind: k, hand: h.no, street: h.street, amount: Math.max(0, h.currentBet - p.bet) };
+  render();
+});
 
 function statusText() {
   const t = view.table, h = t.hand, me = view.me;

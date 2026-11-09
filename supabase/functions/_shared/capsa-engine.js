@@ -131,6 +131,26 @@ export function legal(g, seat) {
   return { leading, canPass: !leading || onlySingleTwo, mustInclude: g.lead3d ? "3d" : null, table: g.trick ? g.trick.combo : null };
 }
 
+// Every legal play from a hand against a table combo (null when leading), checked exhaustively: all 1-5 card
+// subsets (at most 2,379 for 13 cards). mustInclude: "3d" on the game's first play.
+export function legalPlays(hand, table = null, mustInclude = null) {
+  const out = [], n = hand.length;
+  const consider = cards => {
+    if (mustInclude && !cards.includes(mustInclude)) return;
+    const c = classify(cards);
+    if (!c || (table && !beats(c, table))) return;
+    if (cards.length === n && c.type === "single" && rankOf(cards[0]) === 12) return; // can't finish on a single 2
+    out.push({ cards, combo: c });
+  };
+  const go = (start, chosen) => {
+    if (chosen.length) consider(chosen);
+    if (chosen.length === 5) return;
+    for (let i = start; i < n; i++) go(i + 1, [...chosen, hand[i]]);
+  };
+  go(0, []);
+  return out;
+}
+
 // Why a play isn't allowed, or "" if it is.
 export function whyNot(g, seat, cards) {
   const L = legal(g, seat);
