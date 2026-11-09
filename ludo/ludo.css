@@ -1,0 +1,72 @@
+/* Ludo: the square board on the left (on top on phones), the players, the die and the Roll button beside it.
+   Builds on capsa.css for the rail, panels, chat, banners. */
+:root { --ld-red: #e53935; --ld-green: #2e9e4f; --ld-yellow: #f2bd0d; --ld-blue: #1e6fd9; }
+
+.ludo-table { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.lboard { position: relative; width: 100%; max-width: min(660px, 76vh); aspect-ratio: 1; margin: 0 auto; padding: 12px; border-radius: 20px;
+  background: linear-gradient(var(--rail-hi), var(--rail)); box-shadow: 0 0 0 2px var(--rail-hi), 0 18px 40px rgba(0,0,0,.45); }
+#boardSvg { display: block; width: 100%; height: 100%; border-radius: 10px; }
+.tokens { position: absolute; inset: 12px; pointer-events: none; }
+
+/* tokens: a little pawn with a highlight; the ones you can move bob and glow */
+.tokens .token { padding: 0; min-width: 0; min-height: 0; height: auto; font-size: 0; line-height: 0; margin: 0; }
+.token { position: absolute; width: 5.6%; aspect-ratio: 1; transform: translate(-50%, -62%); border-radius: 50% 50% 46% 46%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75) 0 12%, transparent 13%), radial-gradient(circle at 50% 40%, var(--tc) 0 55%, color-mix(in srgb, var(--tc) 70%, #000) 100%);
+  border: 2px solid #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--tc) 60%, #000), 0 5px 8px rgba(0,0,0,.45); z-index: 2; }
+.token.can { pointer-events: auto; cursor: pointer; z-index: 3; animation: ld-bob .9s ease-in-out infinite; box-shadow: 0 0 0 3px var(--gold), 0 0 14px var(--gold), 0 5px 8px rgba(0,0,0,.45); }
+.token.can:hover, .token.can:focus-visible { outline: none; transform: translate(-50%, -72%) scale(1.12); }
+@keyframes ld-bob { 50% { transform: translate(-50%, -80%); } }
+.token.home { width: 4.4%; }
+
+/* the players beside the board */
+.lrail { justify-items: stretch; }
+.lplayers { display: grid; gap: 6px; }
+.lp { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 12px; background: rgba(0,0,0,.25); border: 1.5px solid transparent; position: relative; overflow: hidden; }
+.lp.turn { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(212,173,85,.25); }
+.lp .chip { width: 14px; height: 14px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
+.lp .pic { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; }
+.lp .who { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp .who small { display: block; font-weight: 400; color: var(--muted); font-size: .74rem; }
+.lp .home { font-size: .8rem; color: var(--gold); font-variant-numeric: tabular-nums; }
+.lp .timer { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--gold); width: 0; }
+.lp .bubble { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); max-width: 60%; padding: 4px 8px; border-radius: 10px; background: var(--card); color: var(--card-ink); font-size: .76rem; font-weight: 600; z-index: 2; }
+
+/* the die */
+.dice-row { display: flex; justify-content: center; }
+.ldie { width: 64px; height: 64px; border-radius: 14px; background: #fbf7ee; box-shadow: inset 0 -4px 0 #d9cfb9, 0 4px 10px rgba(0,0,0,.45);
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 9px; box-sizing: border-box; border: 3px solid var(--tc, transparent); }
+.ldie i { width: 11px; height: 11px; border-radius: 50%; background: #1d1a17; place-self: center; visibility: hidden; }
+.ldie i.on { visibility: visible; }
+.ldie.red i.on { background: #c0392b; }
+.ldie.rolling { animation: ld-tumble .3s linear infinite; }
+.ldie.land { animation: ld-land .35s cubic-bezier(.3,1.6,.5,1); }
+.ldie.blank { opacity: .35; }
+@keyframes ld-tumble { 0% { transform: rotate(0) translateY(0); } 25% { transform: rotate(90deg) translateY(-8px); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) translateY(-5px); } 100% { transform: rotate(360deg); } }
+@keyframes ld-land { from { transform: scale(1.35); } to { transform: none; } }
+.lrail #btnRoll { min-width: 160px; font-size: 1.05rem; }
+
+.ld-result { display: grid; gap: 8px; min-width: min(380px, 80vw); }
+.ld-result table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .9rem; }
+.ld-result td { padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.ld-result td:nth-child(n+2) { text-align: right; }
+.rule-checks { display: grid; gap: 6px; }
+.rule-checks .check { display: flex; gap: 8px; align-items: center; cursor: pointer; text-transform: none; letter-spacing: normal; font-size: .92rem; font-weight: 500; color: var(--print); }
+.rule-checks input { accent-color: var(--gold); width: 18px; height: 18px; }
+
+@media (max-width: 900px) {
+  .ludo-table { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  body.at-ludo { padding-bottom: calc(var(--rail-h, 230px) + 12px); }
+  body.at-ludo .wrap { padding-top: 10px; }
+  body.at-ludo .brand-sub { display: none; }
+  .lboard { max-width: min(100%, calc(100dvh - var(--bar-h, 70px) - var(--rail-h, 230px) - 26px)); padding: 6px; border-radius: 14px; }
+  .tokens { inset: 6px; }
+  .lplayers { grid-template-columns: 1fr 1fr; gap: 4px; }
+  .lp { padding: 4px 6px; gap: 5px; grid-template-columns: auto 1fr auto; }
+  .lp .pic { display: none; }
+  .lp .who { font-size: .78rem; }
+  .ldie { width: 48px; height: 48px; padding: 7px; } .ldie i { width: 8px; height: 8px; }
+  .lrail .dice-row { position: absolute; right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+  .lrail #actRow, .lrail #betweenRow { justify-content: flex-start; padding-right: 64px; }
+}
