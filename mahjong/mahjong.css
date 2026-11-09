@@ -1,7 +1,49 @@
 /* Mahjong: a square-ish table with the three opponents around it, each player's discards in front of them,
    the round wind and the wall in the middle, your tiles on the rail below. Builds on capsa.css. */
 
-.mtable { aspect-ratio: 16 / 10; max-height: 64vh; min-height: 380px; border-radius: 34px; }
+.mtable { aspect-ratio: 16 / 10; max-height: 70vh; min-height: 560px; border-radius: 34px; }
+
+/* the wall: 18 stacks of two on each side, in front of each player, broken where the dice say */
+.wallring { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%); z-index: 1; --sw: 17px; --sd: 12px;
+  width: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); height: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); }
+.wallring .side { position: absolute; display: flex; gap: 1px; }
+.wallring .side[data-k="0"] { bottom: 0; left: calc(var(--sd) + 1px); flex-direction: row-reverse; }     /* your wall */
+.wallring .side[data-k="1"] { left: 0; top: calc(var(--sd) + 1px); flex-direction: column-reverse; }     /* the left player's */
+.wallring .side[data-k="2"] { top: 0; left: calc(var(--sd) + 1px); flex-direction: row; }               /* across */
+.wallring .side[data-k="3"] { right: 0; top: calc(var(--sd) + 1px); flex-direction: column; }            /* the right player's */
+.stack { width: var(--sw); height: var(--sd); border-radius: 2px; background: var(--card-back, #2c6e49); flex: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), 0 2px 0 #e9e0cc, 0 3px 0 rgba(0,0,0,.25), 0 5px 0 var(--card-back, #2c6e49), 0 6px 0 #d8ceb8, 0 7px 4px rgba(0,0,0,.35);
+  transition: opacity .3s ease, transform .3s ease, box-shadow .2s; }
+.side[data-k="1"] .stack, .side[data-k="3"] .stack { width: var(--sd); height: var(--sw); }
+.stack.half { box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), 0 2px 0 #e9e0cc, 0 4px 4px rgba(0,0,0,.35); }
+.stack.gone { opacity: 0; transform: scale(.4); }
+.stack.next { outline: 2px solid var(--gold); outline-offset: 1px; }
+.side[data-k="0"] .stack.gone { transform: translateY(10px) scale(.4); }
+.side[data-k="2"] .stack.gone { transform: translateY(-10px) scale(.4); }
+
+/* the dice */
+.dicebox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: grid; justify-items: center; gap: 6px;
+  padding: 12px 16px; border-radius: 14px; background: rgba(0,0,0,.55); box-shadow: 0 8px 24px rgba(0,0,0,.4); transition: opacity .4s; }
+.dicebox.out { opacity: 0; }
+.dice { display: flex; gap: 10px; }
+.die { width: 34px; height: 34px; border-radius: 8px; background: #fbf7ee; box-shadow: inset 0 -3px 0 #d9cfb9, 0 3px 6px rgba(0,0,0,.4);
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 5px; box-sizing: border-box; }
+.die i { width: 6px; height: 6px; border-radius: 50%; background: #1d1a17; place-self: center; visibility: hidden; }
+.die i.on { visibility: visible; }
+.die.red i.on { background: #c0392b; }
+.die.rolling { animation: mj-tumble .32s linear infinite; }
+@keyframes mj-tumble { 0% { transform: rotate(0) translateY(0); } 25% { transform: rotate(90deg) translateY(-6px); } 50% { transform: rotate(180deg) translateY(0); } 75% { transform: rotate(270deg) translateY(-4px); } 100% { transform: rotate(360deg) translateY(0); } }
+.die.land { animation: mj-land .35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes mj-land { from { transform: scale(1.3); } to { transform: none; } }
+.dice-say { font-size: .82rem; color: var(--print); text-align: center; min-height: 1.2em; }
+.dice-say b { color: var(--gold); font-size: 1rem; }
+
+/* the deal: tiles not dealt yet stay hidden */
+.tile.undealt { opacity: 0; transform: translateY(-10px); }
+.mhand .tile, .hidden-tiles .tile { transition: opacity .25s ease, transform .25s ease; }
+.mj-result .hand-show .tile { animation: mj-flip .45s ease both; animation-delay: calc(var(--i, 0) * 55ms); }
+@keyframes mj-flip { from { transform: rotateY(90deg); opacity: .2; } to { transform: none; opacity: 1; } }
+.fly-tile { position: fixed; z-index: 50; pointer-events: none; }
 
 /* tiles: ivory faces with a coloured back edge, so they look like they have thickness */
 .tile { --tw: 24px; width: var(--tw); aspect-ratio: 3 / 4; flex: none; border-radius: calc(var(--tw) * .14); position: relative;
@@ -28,16 +70,16 @@
 .mtable .cseat .dealer, .crail .dealer { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: #1a120b; font-size: .66rem; font-weight: 800; margin-left: 4px; vertical-align: 1px; }
 
 /* each player's discards, in front of them */
-.pond { position: absolute; display: grid; grid-template-columns: repeat(6, var(--pt)); gap: 3px 2px; transform: translate(-50%, -50%); z-index: 1; --pt: clamp(17px, 1.75vw, 25px); }
+.pond { position: absolute; display: grid; grid-template-columns: repeat(5, var(--pt)); gap: 3px 2px; z-index: 2; --pt: 17px; }
 .pond .tile { --tw: var(--pt); }
-.pond[data-pos="0"] { left: 50%; top: 77%; }
-.pond[data-pos="1"] { left: 73%; top: 46%; }
-.pond[data-pos="2"] { left: 50%; top: 36%; }
-.pond[data-pos="3"] { left: 27%; top: 46%; }
+.pond[data-pos="0"] { left: 50%; bottom: calc(var(--sd) + 12px); transform: translateX(-50%); }
+.pond[data-pos="2"] { left: 50%; top: calc(var(--sd) + 12px); transform: translateX(-50%); }
+.pond[data-pos="3"] { left: calc(var(--sd) + 12px); top: 50%; transform: translateY(-50%); }
+.pond[data-pos="1"] { right: calc(var(--sd) + 12px); top: 50%; transform: translateY(-50%); }
 
 /* the middle: round wind and tiles left in the wall */
-.mcenter { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); z-index: 1; display: grid; justify-items: center; gap: 2px;
-  padding: 8px 14px; border-radius: 12px; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); min-width: 92px; }
+.mcenter { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; display: grid; justify-items: center; gap: 2px;
+  padding: 6px 10px; border-radius: 10px; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); min-width: 64px; }
 .mcenter .wind { font-family: 'Noto Serif SC', serif; font-size: 1.7rem; font-weight: 700; color: var(--gold); line-height: 1.1; }
 .mcenter .wall { font-size: .74rem; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
 
@@ -82,7 +124,7 @@
 .faan-tag { color: var(--gold); font-weight: 700; }
 
 @media (max-width: 720px) {
-  .mtable { aspect-ratio: auto; border-radius: 22px; min-height: 0; }
+  .mtable { aspect-ratio: auto; border-radius: 22px; min-height: 0; max-height: none; }
   body.at-mahjong { padding-bottom: calc(var(--rail-h, 230px) + 12px); }
   body.at-mahjong .wrap { padding-top: 10px; }
   body.at-mahjong .brand-sub { display: none; }
@@ -92,10 +134,16 @@
   .mtable .cseat[data-pos="3"] { left: 14%; top: 40%; }
   .mtable .cseat .melds .tile { --tw: 11px; }
   .mtable .cseat .hidden-tiles { display: none; }
-  .pond { --pt: 14px; grid-template-columns: repeat(6, var(--pt)); }
-  .pond[data-pos="0"] { top: 82%; } .pond[data-pos="2"] { top: 32%; }
-  .pond[data-pos="1"] { left: 76%; top: 63%; } .pond[data-pos="3"] { left: 24%; top: 63%; }
-  .mcenter { top: 55%; padding: 4px 8px; min-width: 70px; } .mcenter .wind { font-size: 1.2rem; }
+  .wallring { --sw: 8px; --sd: 6px; top: 54%; }
+  .pond { --pt: 13px; grid-template-columns: repeat(5, var(--pt)); gap: 2px; }
+  .pond[data-pos="0"] { left: 50%; bottom: auto; top: calc(100% + 6px); transform: translateX(-50%); }
+  .pond[data-pos="2"] { left: 50%; top: auto; bottom: calc(100% + 6px); transform: translateX(-50%); }
+  .pond[data-pos="3"] { left: auto; right: calc(100% + 5px); }
+  .pond[data-pos="1"] { right: auto; left: calc(100% + 5px); }
+  .mtable .cseat[data-pos="1"], .mtable .cseat[data-pos="3"] { top: 22%; }
+  .mtable .cseat[data-pos="2"] { top: 8%; }
+  .mcenter { padding: 3px 6px; min-width: 0; } .mcenter .wind { font-size: 1.1rem; } .mcenter .wall { font-size: .62rem; }
+  .die { width: 26px; height: 26px; padding: 4px; } .die i { width: 4px; height: 4px; }
   .mhand { --ht: min(44px, calc((100vw - 52px) / 14.6)); gap: 2px; padding-top: 12px; }
   .mymelds .tile { --tw: 20px; }
   .crail .act-row button { padding: 10px 4px; }

@@ -209,16 +209,26 @@ export function startGame(no, shuffled, { dealer = 0, round = 0, minFaan = 0 } =
   const g = {
     no, dealer, round, minFaan, wall: shuffled(), hands: [[], [], [], []], melds: [[], [], [], []], flowers: [[], [], [], []], discards: [[], [], [], []],
     turn: dealer, phase: "discard", drawn: null, last: null, claims: null, kong: null, log: [], finished: null,
-    fresh: [true, true, true, true], anyClaim: false, afterKong: false, lastTile: false
+    fresh: [true, true, true, true], anyClaim: false, afterKong: false, lastTile: false,
+    dice: rollDice(), front: 0, back: 0     // the dealer's roll (it picks where the wall is broken) and tiles taken from each end
   };
-  for (let r = 0; r < 13; r++) for (let k = 0; k < 4; k++) g.hands[(dealer + k) % 4].push(g.wall.shift());
-  g.hands[dealer].push(g.wall.shift());
+  for (let r = 0; r < 13; r++) for (let k = 0; k < 4; k++) g.hands[(dealer + k) % 4].push(takeFront(g));
+  g.hands[dealer].push(takeFront(g));
   for (let k = 0; k < 4; k++) replaceFlowers(g, (dealer + k) % 4);
   g.hands.forEach(h => h.sort(byTile));
   g.drawn = g.hands[dealer][g.hands[dealer].length - 1];
   g.log.push({ type: "deal", dealer });
   return g;
 }
+
+// Three dice for the dealer, and taking tiles from either end of the wall (counted, so the table can show it).
+function rollDice() {
+  const r = new Uint32Array(3);
+  globalThis.crypto.getRandomValues(r);
+  return [...r].map(x => x % 6 + 1);
+}
+const takeFront = g => { g.front = (g.front || 0) + 1; return g.wall.shift(); };
+const takeBack = g => { g.back = (g.back || 0) + 1; return g.wall.pop(); };
 
 function replaceFlowers(g, seat) {
   let i;
@@ -227,7 +237,7 @@ function replaceFlowers(g, seat) {
     g.flowers[seat].push(f);
     g.log.push({ type: "flower", seat, tile: f });
     if (!g.wall.length) return false;
-    g.hands[seat].push(g.wall.pop());
+    g.hands[seat].push(takeBack(g));
   }
   return true;
 }
@@ -235,12 +245,12 @@ function replaceFlowers(g, seat) {
 // The player draws (from the back after a kong). Returns false if the wall ran out (a drawn game).
 function draw(g, seat, fromBack = false) {
   if (!g.wall.length) { finishDraw(g); return false; }
-  let t = fromBack ? g.wall.pop() : g.wall.shift();
+  let t = fromBack ? takeBack(g) : takeFront(g);
   while (isBonus(t)) {
     g.flowers[seat].push(t);
     g.log.push({ type: "flower", seat, tile: t });
     if (!g.wall.length) { finishDraw(g); return false; }
-    t = g.wall.pop();
+    t = takeBack(g);
   }
   g.hands[seat].push(t);
   g.hands[seat].sort(byTile);
@@ -469,6 +479,7 @@ export function viewFor(g, seat) {
     waiting: g.claims ? Object.keys(g.claims).filter(s => !g.claims[s].decision).map(Number) : [],
     options: seat >= 0 ? options(g, seat) : null,
     log: g.log.slice(-60), logCount: g.log.length, finished: g.finished,
+    dice: g.dice || null, front: g.front ?? (144 - g.wall.length), back: g.back || 0,
     hands: done ? g.hands : null
   };
 }

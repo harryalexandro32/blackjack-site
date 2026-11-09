@@ -72,7 +72,9 @@ function attach(controller) {
   showScreen("scrTable");
   unsub = ctrl.subscribe(v => { view = v; render(); });
 }
+function backToLobbyStop() { try { stopIntro(); } catch {} }
 function backToLobby() {
+  backToLobbyStop();
   if (ctrl && ctrl.destroy) ctrl.destroy();
   if (unsub) unsub();
   ctrl = null; view = null; unsub = null;
@@ -182,9 +184,42 @@ function buildSeats() {
   pondEls = [0, 1, 2, 3].map(pos => {
     const el = document.createElement("div");
     el.className = "pond"; el.dataset.pos = pos; el.setAttribute("aria-label", "Discards");
-    $("ctable").appendChild(el);
+    $("ring").appendChild(el);
     return el;
   });
+  // 72 stacks: ring index i is side i / 18 (0 = your wall, then clockwise: left, across, right), stack i % 18 from its owner's right
+  ringStacks = [];
+  $("ring").querySelectorAll(".side").forEach(side => {
+    side.innerHTML = "";
+    for (let j = 0; j < 18; j++) { const st = document.createElement("div"); st.className = "stack"; side.appendChild(st); ringStacks.push(st); }
+  });
+  introFor = null; animCount = null;
+}
+let ringStacks = [];
+
+// ---------- the wall ----------
+// The dice pick the break: count the players from the dealer, then that many stacks from the right of their wall.
+// Tiles are drawn from the break going clockwise; kong and flower replacements come off the other end.
+function breakIndex(g) {
+  const t = g.dice ? g.dice.reduce((a, b) => a + b, 0) : 3;
+  const owner = (g.dealer + t - 1) % 4, pos = posOf(owner), k = (4 - pos) % 4;
+  return k * 18 + Math.min(17, t);
+}
+const frontStack = (g, d) => ringStacks[(breakIndex(g) + d) % 72];
+const backStack = (g, e) => ringStacks[(breakIndex(g) - 1 - e + 72 * 2) % 72];
+function renderRing(g, front = g ? g.front : 0, back = g ? g.back : 0) {
+  if (!ringStacks.length) return;
+  ringStacks.forEach(st => st.className = "stack");
+  if (!g) return;
+  for (let d = 0; d < 72; d++) {
+    const st = frontStack(g, d);
+    if (d < Math.floor(front / 2)) st.classList.add("gone"); else if (d === Math.floor(front / 2) && front % 2) st.classList.add("half");
+  }
+  for (let e = 0; e < 72; e++) {
+    const st = backStack(g, e);
+    if (e < Math.floor(back / 2)) st.classList.add("gone"); else if (e === Math.floor(back / 2) && back % 2) st.classList.add("half");
+  }
+  if (!g.finished && front + back < 144) frontStack(g, Math.floor(front / 2)).classList.add("next");
 }
 const seatAt = pos => (view.me + pos) % 4;              // pos 0 = you, 1 = next (right), 2 = across, 3 = left
 const posOf = seat => (seat - view.me + 4) % 4;
@@ -227,7 +262,8 @@ function render() {
   $("mMoney").className = netClass(myMoney);
   $("mCodeWrap").hidden = !view.code; $("mCode").textContent = view.code || "";
 
-  // the middle
+  // the middle: the wall, the round wind and the tiles left
+  if (!introRunning) renderRing(g);
   $("cWind").textContent = g ? WIND_CH[g.round] : "";
   $("cWind").title = g ? `${M.WIND_NAMES[g.round]} round` : "";
   $("cWall").textContent = g ? `${g.wallLeft} tiles left` : "";
@@ -336,6 +372,7 @@ function render() {
   if (lastSessionNo !== undefined && lastNo > lastSessionNo) openLedger();
   lastSessionNo = lastNo;
   sounds(g);
+  animate(g);
   tickClock();
 }
 
@@ -434,6 +471,7 @@ function renderBanner(g) {
     const show = document.createElement("div"); show.className = "hand-show";
     g.melds[f.winner].forEach(m => show.appendChild(meldEl(m)));
     const h = document.createElement("div"); h.className = "meld"; const at = f.winHand.lastIndexOf(f.tile); f.winHand.forEach((t, i) => h.appendChild(tileEl(t, i === at ? "last" : ""))); show.appendChild(h);
+    show.querySelectorAll(".tile").forEach((el, i) => el.style.setProperty("--i", i));
     res.appendChild(show);
     const fa = document.createElement("div"); fa.className = "faan";
     f.items.forEach(([name, n]) => { const s = document.createElement("span"); s.innerHTML = "<b></b> "; s.firstChild.textContent = n; s.append(name); fa.appendChild(s); });
@@ -461,6 +499,122 @@ $("winBanner").addEventListener("click", () => { if (bannerFor && !bannerFor.end
 const calm = matchMedia("(prefers-reduced-motion: reduce)");
 let renderedOnce = false;
 const animOk = () => renderedOnce && !calm.matches && !document.hidden;
+let introFor = null, introRunning = false, introTimers = [], animCount = null, animNo = null, prevFront = 0, prevBack = 0, lastDiscardRect = null;
+const sleep = ms => new Promise(r => { introTimers.push(setTimeout(r, ms)); });
+
+// Something moves from one place on screen to where it now sits.
+function flyFrom(el, from, ms = 420) {
+  if (!el || !from) return;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return;
+  const dx = from.left + from.width / 2 - (r.left + r.width / 2), dy = from.top + from.height / 2 - (r.top + r.height / 2);
+  const sc = from.width ? Math.max(.35, Math.min(2.2, from.width / r.width)) : 1;
+  el.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: .5 }, { transform: "none", opacity: 1 }], { duration: ms, easing: "cubic-bezier(.2,.8,.3,1)" });
+}
+// A face-down tile travelling between two places (an opponent drawing from the wall).
+function ghost(from, to, ms = 380) {
+  if (!from || !to) return;
+  const el = tileEl(null, "fly-tile");
+  el.style.setProperty("--tw", "14px");
+  el.style.left = from.left + "px"; el.style.top = from.top + "px";
+  document.body.appendChild(el);
+  const dx = to.left + to.width / 2 - (from.left + 7), dy = to.top + to.height / 2 - (from.top + 9);
+  el.animate([{ transform: "none", opacity: .9 }, { transform: `translate(${dx}px, ${dy}px) scale(.8)`, opacity: 0 }], { duration: ms, easing: "ease-in" }).onfinish = () => el.remove();
+  setTimeout(() => el.remove(), ms + 400);               // in case the animation never finishes (a hidden tab)
+}
+const seatBox = seat => seat === view.me ? $("myHand").getBoundingClientRect() : seatEls[posOf(seat) - 1].querySelector(".pic").getBoundingClientRect();
+const pondOf = seat => pondEls[posOf(seat)];
+
+// New moves since the last picture: discards fly to the pile, draws come off the wall, claims jump into melds.
+function animate(g) {
+  if (!g) { animCount = null; return; }
+  const fresh = animNo === g.no && animCount !== null ? g.logCount - animCount : 0;
+  const pf = prevFront, pb = prevBack;
+  animNo = g.no; animCount = g.logCount; prevFront = g.front; prevBack = g.back;
+  maybeIntro(g);
+  if (!animOk() || introRunning || fresh <= 0 || fresh > 8) { lastDiscardRect = null; return; }
+  let front = pf, back = pb;
+  for (const e of g.log.slice(g.log.length - fresh)) {
+    if (e.type === "discard") {
+      const tile = pondOf(e.seat).lastElementChild;
+      flyFrom(tile, e.seat === view.me && lastDiscardRect ? lastDiscardRect : seatBox(e.seat), 380);
+    } else if (e.type === "draw") {
+      const fromBack = g.back > back && g.front === front;
+      const st = fromBack ? backStack(g, Math.floor(back / 2)) : frontStack(g, Math.floor(front / 2));
+      if (fromBack) back++; else front++;
+      const from = st ? st.getBoundingClientRect() : null;
+      if (e.seat === view.me) flyFrom($("myHand").querySelector(".tile.drawn") || $("myHand").lastElementChild, from, 360);
+      else ghost(from, seatBox(e.seat));
+    } else if (["pung", "kong", "chow"].includes(e.type)) {
+      const src = pondOf(e.from).querySelector(".tile.taken:last-of-type") || pondOf(e.from).lastElementChild;
+      const box = e.seat === view.me ? $("myMelds") : seatEls[posOf(e.seat) - 1].querySelector(".melds");
+      const melds = box.querySelectorAll(".meld:not(.flowers)");
+      const meld = melds[melds.length - 1];
+      if (meld && src) [...meld.children].forEach((t, i) => flyFrom(t, src.getBoundingClientRect(), 420 + i * 40));
+    } else if (e.type === "flower") back++;
+  }
+  lastDiscardRect = null;
+}
+
+// ---------- a new hand: the dealer rolls the dice, the wall is broken, the tiles are dealt ----------
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function dieEl(n) {
+  const d = document.createElement("div"); d.className = "die" + (n === 1 || n === 4 ? " red" : "");
+  for (let i = 0; i < 9; i++) { const p = document.createElement("i"); if (PIPS[n].includes(i)) p.className = "on"; d.appendChild(p); }
+  return d;
+}
+function maybeIntro(g) {
+  if (introFor === g.no) return;
+  const untouched = g.discards.every(d => !d.length) && g.melds.every(m => !m.length) && !g.finished;
+  introFor = g.no;
+  if (!untouched || calm.matches || document.hidden || !g.dice) return;
+  runIntro(g).catch(() => {});
+}
+function stopIntro() {
+  introTimers.forEach(clearTimeout); introTimers = [];
+  introRunning = false;
+  document.querySelectorAll(".tile.undealt").forEach(t => t.classList.remove("undealt"));
+  const box = $("dice"); box.hidden = true; box.classList.remove("out");
+}
+async function runIntro(g) {
+  introRunning = true;
+  const no = g.no;
+  renderRing(g, 0, 0);                                         // the full wall
+  const hidden = seat => seat === view.me ? [...$("myHand").children] : [...seatEls[posOf(seat) - 1].querySelectorAll(".hidden-tiles .tile")];
+  for (let s = 0; s < 4; s++) hidden(s).forEach(t => t.classList.add("undealt"));
+  document.querySelectorAll(".mtable .flowers .tile, #myMelds .flowers .tile").forEach(t => t.classList.add("undealt"));
+  // the dice tumble, then land
+  const box = $("dice"), dice = box.querySelector(".dice"), say = box.querySelector(".dice-say");
+  box.hidden = false; box.classList.remove("out");
+  say.innerHTML = ""; say.append(`${nameAt(g.dealer)} ${verb(g.dealer, "roll")} the dice…`);
+  const spin = setInterval(() => { dice.innerHTML = ""; for (let i = 0; i < 3; i++) { const d = dieEl(1 + Math.floor(Math.random() * 6)); d.classList.add("rolling"); dice.appendChild(d); } }, 90);
+  if (animOk() || !renderedOnce) sound("chips", 0);
+  await sleep(1100);
+  clearInterval(spin);
+  dice.innerHTML = ""; g.dice.forEach(n => { const d = dieEl(n); d.classList.add("land"); dice.appendChild(d); });
+  const total = g.dice.reduce((a, b) => a + b, 0);
+  say.innerHTML = `<b>${total}</b> · `; say.append(`the wall breaks at ${nameAt((g.dealer + total - 1) % 4) === "You" ? "your" : nameAt((g.dealer + total - 1) % 4) + "'s"} wall`);
+  sound("check", 0);
+  await sleep(900);
+  box.classList.add("out");
+  // the deal: four tiles at a time to each player, three times round, then one each and the dealer's extra
+  let front = 0;
+  const shown = [0, 0, 0, 0];
+  const give = async (seat, n) => {
+    front += n; shown[seat] += n;
+    renderRing(g, front, 0);
+    hidden(seat).slice(0, shown[seat]).forEach(t => t.classList.remove("undealt"));
+    if (seat === view.me || shown[seat] <= 4) sound("deal", 0);
+    await sleep(95);
+  };
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) await give((g.dealer + k) % 4, 4);
+  for (let k = 0; k < 4; k++) await give((g.dealer + k) % 4, 1);
+  await give(g.dealer, 1);
+  if (view && view.game && view.game.no === no) renderRing(view.game);   // flowers swapped from the far end
+  await sleep(200);
+  stopIntro();
+  if (view) render();
+}
 function sounds(g) {
   if (!g) return;
   const key = `${g.no}:${g.logCount}`;
@@ -503,10 +657,10 @@ async function sendMove(m) { selected = null; hintTile = null; await ctrl.move(m
 $("myHand").addEventListener("click", guard(async e => {
   const el = e.target.closest(".tile"); if (!el || !view || !view.game || !view.game.options || view.game.options.kind !== "turn") return;
   const i = [...$("myHand").children].indexOf(el);
-  if (selected === i) return sendMove({ type: "discard", tile: el.dataset.t });   // a second tap throws it
+  if (selected === i) { lastDiscardRect = el.getBoundingClientRect(); return sendMove({ type: "discard", tile: el.dataset.t }); }   // a second tap throws it
   selected = i; render();
 }));
-$("btnDiscard").onclick = guard(async () => { const el = $("myHand").children[selected]; if (el) await sendMove({ type: "discard", tile: el.dataset.t }); });
+$("btnDiscard").onclick = guard(async () => { const el = $("myHand").children[selected]; if (el) { lastDiscardRect = el.getBoundingClientRect(); await sendMove({ type: "discard", tile: el.dataset.t }); } });
 $("btnWin").onclick = guard(() => sendMove({ type: "win" }));
 $("kongBtns").addEventListener("click", guard(async e => { const b = e.target.closest("[data-kong]"); if (b) await sendMove({ type: "kong", tile: b.dataset.kong }); }));
 $("btnHint").onclick = () => {

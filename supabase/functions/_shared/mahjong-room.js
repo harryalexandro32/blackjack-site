@@ -9,7 +9,7 @@ import { mahjongMove } from "./mahjong-bot.js";
 import { settle } from "./poker-engine.js";
 import { RoomError, REACTIONS, cleanName, cleanAvatar } from "./poker-room.js";
 
-export const LIMITS = { nextGameMs: 9000, botMs: 900, claimMs: 9000, chatLen: 160, chatKeep: 40, chatBurst: 6, chatWindowMs: 10000, sessionsKeep: 50, nameLen: 16 };
+export const LIMITS = { nextGameMs: 9000, botMs: 900, claimMs: 9000, dealMs: 3600, chatLen: 160, chatKeep: 40, chatBurst: 6, chatWindowMs: 10000, sessionsKeep: 50, nameLen: 16 };
 const fail = msg => { throw new RoomError(msg); };
 const int = v => (Number.isSafeInteger(v) ? v : NaN);
 const dollars = c => "$" + (c / 100).toLocaleString("en-US", { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
@@ -74,6 +74,7 @@ function shuffledWall() {
   return w;
 }
 function deal(state, now) {
+  state.botAt = now + LIMITS.dealMs;        // everyone watches the dice and the deal first
   state.gameNo += 1;
   state.g = C.startGame(state.gameNo, shuffledWall, { ...state.nextDeal, minFaan: state.settings.minFaan });
   state.nextGameAt = null;
@@ -165,7 +166,8 @@ function settleDown(state, ctx) {
   const peopleDeciding = g && !g.finished && (g.phase === "discard" ? (isBotSeat(state, g.turn) ? [] : [g.turn]) : Object.keys(g.claims || {}).map(Number).filter(s => !g.claims[s].decision && !isBotSeat(state, s)));
   if (state.started && peopleDeciding && peopleDeciding.length) {
     const key = `${g.no}:${g.phase}:${g.turn}:${g.log.length}`;
-    const ms = g.phase === "discard" ? state.settings.actSeconds * 1000 : Math.min(LIMITS.claimMs, state.settings.actSeconds * 1000);
+    const fresh = g.discards.every(d => !d.length) && g.melds.every(m => !m.length);
+    const ms = (g.phase === "discard" ? state.settings.actSeconds * 1000 : Math.min(LIMITS.claimMs, state.settings.actSeconds * 1000)) + (fresh ? LIMITS.dealMs : 0);
     if (state.deadlineKey !== key) { state.deadlineKey = key; state.deadline = now + ms; }
   } else { state.deadline = null; state.deadlineKey = null; }
 }

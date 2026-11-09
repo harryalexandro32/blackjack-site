@@ -103,7 +103,11 @@
 
   <section class="screen" id="scrTable" hidden>
     <div class="ctable mtable" id="ctable">
-      <div class="mcenter" id="center"><div class="wind" id="cWind"></div><div class="wall" id="cWall"></div></div>
+      <div class="wallring" id="ring" aria-label="The wall">
+        <div class="side" data-k="0"></div><div class="side" data-k="1"></div><div class="side" data-k="2"></div><div class="side" data-k="3"></div>
+        <div class="mcenter" id="center"><div class="wind" id="cWind"></div><div class="wall" id="cWall"></div></div>
+        <div class="dicebox" id="dice" hidden aria-live="polite"><div class="dice"></div><div class="dice-say"></div></div>
+      </div>
       <button type="button" class="felt-btn sound-btn" id="btnSound" aria-label="Sound" title="Sound">🔊</button>
       <div class="react-wrap" id="reactWrap" hidden>
         <button type="button" class="felt-btn" id="btnReact" aria-label="Send a reaction" aria-expanded="false">😀</button>

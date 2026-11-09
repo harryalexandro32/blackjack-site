@@ -7,6 +7,7 @@ import { PRESETS } from "../poker/avatars.js";
 
 const KEY = "mj-ai";
 const NEXT_GAME_MS = 9000;
+const DEAL_MS = 3600;     // the dice and the deal play out before anyone moves
 const rng = () => crypto.getRandomValues(new Uint32Array(1))[0] / 0x100000000;
 export const shuffled = () => {
   const d = M.newWall();
@@ -60,6 +61,7 @@ export class LocalMahjong {
     this.s.gameNo += 1;
     this.s.game = M.startGame(this.s.gameNo, shuffled, { ...this.s.nextDeal, minFaan: this.s.minFaan });
     this.nextGameAt = null;
+    this.dealtAt = Date.now();
   }
 
   tick() {
@@ -89,7 +91,7 @@ export class LocalMahjong {
         if (g.finished || g.turn !== seat || g.phase !== "discard") return;
         M.act(g, seat, mahjongMove(g, seat, this.s.skill));
         this.tick();
-      }, 650 + Math.floor(rng() * 700));
+      }, Math.max(650 + Math.floor(rng() * 700), (this.dealtAt || 0) + DEAL_MS - Date.now()));
     }
     this.emit();
   }
