@@ -528,6 +528,7 @@ function sounds(g) {
 }
 function drawSoundBtn() { $("btnSound").textContent = soundOn() ? "🔊" : "🔇"; }
 $("btnSound").onclick = () => { setSound(!soundOn()); drawSoundBtn(); sound("flip"); };
+addEventListener("cr-fx", () => queueMicrotask(drawSoundBtn));
 drawSoundBtn();
 
 function tickClock() {

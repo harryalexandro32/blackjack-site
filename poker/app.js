@@ -1050,6 +1050,7 @@ function drawSoundBtn() {
   $("btnSound").setAttribute("aria-label", soundOn() ? "Sound on. Tap to mute" : "Sound off. Tap to turn on");
 }
 $("btnSound").onclick = () => { setSound(!soundOn()); drawSoundBtn(); play("chips"); };
+addEventListener("cr-fx", () => queueMicrotask(drawSoundBtn));
 drawSoundBtn();
 
 // ---------- chat and reactions (tables with friends) ----------

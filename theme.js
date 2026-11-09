@@ -267,7 +267,27 @@
       if (t) t.textContent = musicOn ? "Music on" : "Music off";
     };
     mu.onclick = () => { musicOn = !musicOn; try { localStorage.setItem(KEY_MUSIC, musicOn ? "on" : "off"); } catch {} syncMusic(); drawMusic(); };
-    tools.append(mu, pick, dm);
+    // game sound effects (poker and Capsa have them): the same switch as the 🔊 button on the table
+    const fx = document.createElement("button");
+    fx.type = "button"; fx.className = "theme-btn";
+    let fxOn = true;
+    try { fxOn = localStorage.getItem("pk-sound") !== "off"; } catch {}
+    const drawFx = () => {
+      fx.textContent = fxOn ? "🔊" : "🔇";
+      fx.setAttribute("aria-pressed", String(fxOn));
+      fx.setAttribute("aria-label", fxOn ? "Mute sound effects" : "Turn sound effects on");
+      fx.title = fxOn ? "Sound effects: on" : "Sound effects: off";
+    };
+    fx.onclick = () => {
+      fxOn = !fxOn;
+      try { localStorage.setItem("pk-sound", fxOn ? "on" : "off"); } catch {}
+      drawFx();
+      dispatchEvent(new CustomEvent("cr-fx", { detail: fxOn }));
+    };
+    addEventListener("cr-fx", e => { fxOn = !!e.detail; drawFx(); });
+    drawFx();
+    fx.hidden = !document.getElementById("btnSound");     // only on pages that have sound effects
+    tools.append(mu, fx, pick, dm);
     bar.appendChild(tools);
 
     dlg = document.createElement("dialog");

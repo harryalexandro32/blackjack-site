@@ -5,10 +5,14 @@ let on = (() => { try { return localStorage.getItem(KEY) !== "off"; } catch { re
 
 export const soundOn = () => on;
 export function setSound(v) {
+  const was = on;
   on = !!v;
   try { localStorage.setItem(KEY, on ? "on" : "off"); } catch {}
   if (on) unlock();
+  if (was !== on) dispatchEvent(new CustomEvent("cr-fx", { detail: on }));   // keeps the header button in step
 }
+// the header button (theme.js) flips the same switch
+addEventListener("cr-fx", e => { on = !!e.detail; if (on) unlock(); });
 
 // Browsers only allow audio after the player has tapped or clicked something.
 function unlock() {
