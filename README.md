@@ -15,6 +15,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 - **Board games** (`boardgames/`): a page of its own on the menu.
   - **Ludo** (`ludo/`): 4 colours, bots in empty seats, classic rules (6 to come out, a 6 rolls again, three 6s lose the turn, captures except on safe squares, exact roll home) with house options (1 also comes out, capture rolls again, blocks, must capture). The others pay the winner 1 point per token not home.
   - **Werewolf** (`werewolf/`): 5 to 12 friends in a room, Werewolves (1/2/3 by table size), Seer, Doctor and Villagers; timed night, day and vote; roles revealed on death; village, wolves and graveyard chats; optional bots that never talk; a tally of wins, no money.
+  - **Undercover** (`undercover/`): 4 to 12 friends in a room. Civilians share a word, the undercover (1/2/3 by table size) has a close one and isn't told, optional Mr. White has none. Clues in turn (typed, or "said it out loud" at a table), talk, vote, runoff on a tie; Mr. White's guess when voted out. About 200 built-in pairs in Bahasa Indonesia and English (each player picks), plus the host's own pairs. Points: civilian win 2, Mr. White 6, undercover 10. No bots.
 
 ## Files
 
@@ -31,9 +32,10 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `supabase/functions/_shared/capsa-engine.js`, `capsa-bot.js`, `capsa-expert.js`, `capsa-room.js` | Capsa rules, bots and online rooms (used by the browser and the server) |
 | `mahjong/` | Mahjong page, tile art (`tiles.js`), bots mode (`local.js`) and online rooms (`online.js`) |
 | `supabase/functions/_shared/mahjong-engine.js`, `mahjong-bot.js`, `mahjong-room.js` | Mahjong rules and scoring, bots, and online rooms |
-| `boardgames/`, `ludo/`, `werewolf/` | Board games page, the Ludo page, the Werewolf page |
+| `boardgames/`, `ludo/`, `werewolf/`, `undercover/` | Board games page, the Ludo, Werewolf and Undercover pages |
 | `supabase/functions/_shared/ludo-engine.js`, `ludo-bot.js`, `ludo-room.js` | Ludo rules, bots and online rooms |
 | `supabase/functions/_shared/werewolf-engine.js`, `werewolf-room.js` | Werewolf rules, rooms, bots and chat channels |
+| `supabase/functions/_shared/undercover-engine.js`, `undercover-room.js`, `undercover-words.js` | Undercover rules, rooms and the bilingual word list |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
 | `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
 | `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪) |

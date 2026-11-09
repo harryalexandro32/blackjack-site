@@ -1,0 +1,141 @@
+/* Undercover: a smoky room under one lamp. The phase banner on top, your word card and the players (with their
+   clues) below, the clue box when it's your turn, then the room, the clues so far and the chat.
+   Shares its building blocks with the Werewolf page. */
+.ww-stage { position: relative; border-radius: 22px; padding: 16px; display: grid; gap: 14px; overflow: hidden;
+  background: radial-gradient(90% 70% at 50% -10%, #3c6e71, #13262c 62%, #0b1519); border: 1px solid rgba(255,255,255,.08); box-shadow: 0 18px 40px rgba(0,0,0,.45); transition: background .8s ease; }
+.ww-stage::before { content: ""; position: absolute; left: 50%; top: -60px; width: 70%; height: 180px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(255,236,179,.22), transparent); pointer-events: none; transition: all .8s ease; }
+body.uc-talk .ww-stage { background: radial-gradient(90% 70% at 50% -10%, #4f7f6a, #182b25 62%, #0d1814); }
+body.uc-vote .ww-stage { background: radial-gradient(90% 70% at 50% -10%, #8a4b3c, #2b1714 62%, #170c0b); }
+body.uc-guess .ww-stage { background: radial-gradient(90% 70% at 50% -10%, #6c7a89, #1f252c 62%, #101317); }
+.ww-stage > * { position: relative; }
+
+.phase-banner { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+.phase-banner h2 { margin: 0; font-family: var(--font-display); color: #fdf3d8; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: .04em; }
+.phase-banner p { margin: 2px 0 0; color: rgba(255,255,255,.82); }
+.phase-icon { width: 54px; height: 54px; }
+.phase-icon svg { width: 100%; height: 100%; }
+.phase-timer { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+.phase-timer div { height: 100%; width: 0; background: #fdf3d8; transition: width .25s linear; }
+
+.ww-main { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+.ww-main.no-role { grid-template-columns: 1fr; }
+
+/* your role, face down until you look */
+.role-card { width: 170px; aspect-ratio: 3 / 4.2; perspective: 900px; cursor: pointer; outline: none; }
+.rc-inner { position: relative; width: 100%; height: 100%; transition: transform .6s cubic-bezier(.3,.7,.3,1); transform-style: preserve-3d; }
+.role-card.open .rc-inner { transform: rotateY(180deg); }
+.rc-back, .rc-front { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; display: grid; place-items: center; text-align: center; padding: 12px; box-sizing: border-box; }
+.rc-back { background: repeating-linear-gradient(45deg, #3a2d55 0 10px, #33284b 10px 20px); border: 3px solid #c9a96a; color: #fdf3d8; box-shadow: 0 8px 18px rgba(0,0,0,.45); }
+.rc-back span { font-family: var(--font-display); font-size: 1.4rem; display: block; }
+.rc-back small { display: block; opacity: .75; }
+.rc-front { transform: rotateY(180deg); background: #fbf5e6; color: #2b2420; border: 3px solid var(--rc, #c9a96a); box-shadow: 0 8px 18px rgba(0,0,0,.45); align-content: center; gap: 4px; }
+.rc-front svg { width: 72px; height: 72px; margin: 0 auto; }
+.rc-front b { font-family: var(--font-display); font-size: 1.35rem; color: var(--rc, #2b2420); }
+.rc-front p { margin: 0; font-size: .74rem; line-height: 1.3; }
+.role-card:focus-visible { box-shadow: 0 0 0 3px var(--gold); border-radius: 14px; }
+
+/* the players */
+.ww-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.wp { position: relative; display: grid; justify-items: center; gap: 4px; padding: 10px 6px 8px; border-radius: 14px; background: rgba(10,10,20,.55); border: 1.5px solid rgba(255,255,255,.08);
+  color: #fdf3d8; text-align: center; min-width: 0; font: inherit; transition: transform .15s, border-color .15s, opacity .3s; }
+button.wp { cursor: pointer; }
+button.wp:hover, button.wp:focus-visible { transform: translateY(-3px); border-color: var(--gold); outline: none; }
+.wp.picked { border-color: #ff6b6b; box-shadow: 0 0 0 2px rgba(255,107,107,.45), 0 0 18px rgba(255,107,107,.35); }
+.wp.saved { border-color: #6be4a8; box-shadow: 0 0 0 2px rgba(107,228,168,.45); }
+.wp.dead { opacity: .5; filter: grayscale(.8); }
+.wp .pic { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
+.wp .nm { font-weight: 600; font-size: .86rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp .tag { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; min-height: 1em; color: rgba(255,255,255,.75); }
+.wp .tag.undercover { color: #ff8a80; } .wp .tag.white { color: #eceff1; } .wp .tag.civilian { color: #80cbc4; }
+.wp .marks { position: absolute; top: 6px; right: 6px; display: flex; gap: 3px; }
+.wp .votes { position: absolute; top: -8px; left: -6px; min-width: 24px; height: 24px; border-radius: 12px; background: #ff6b6b; color: #fff; font-weight: 800; font-size: .8rem; display: grid; place-items: center; padding: 0 6px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.wp .ready { position: absolute; top: 6px; left: 6px; color: #6be4a8; font-weight: 800; }
+.wp .skull { position: absolute; top: 38px; font-size: 1.6rem; }
+.wp.me { border-color: rgba(253,243,216,.5); }
+
+.ww-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; min-height: 44px; }
+.ww-actions .hint { color: rgba(255,255,255,.85); font-size: .92rem; text-align: center; width: 100%; }
+.ww-settings { display: grid; gap: 6px; margin: 8px 0; }
+.wins-h { margin: 14px 0 4px; font-size: .95rem; }
+
+.chat-tabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.chat-tabs button { min-width: 0; padding: 6px 12px; font-size: .82rem; }
+.chat-tabs button[aria-selected="true"] { background: var(--gold); color: var(--btn-ink); }
+.chat-line.grave b { color: #b0bec5; }
+
+/* the big announcements: dawn, the vote, the end */
+.reveal { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(6,6,14,.78); backdrop-filter: blur(3px); animation: ww-fade .35s ease; cursor: pointer; padding: 16px; }
+.reveal-in { text-align: center; max-width: 520px; color: #fdf3d8; animation: ww-rise .6s cubic-bezier(.2,.8,.3,1); }
+.reveal-icon { width: 110px; height: 110px; margin: 0 auto 8px; }
+.reveal-icon svg { width: 100%; height: 100%; }
+.reveal h2 { font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0 0 6px; color: #fdf3d8; }
+.reveal p { margin: 0; font-size: 1.05rem; opacity: .9; }
+@keyframes ww-fade { from { opacity: 0; } }
+@keyframes ww-rise { from { transform: translateY(18px) scale(.94); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .reveal, .reveal-in, .rc-inner { animation: none; transition: none; } }
+
+@media (max-width: 720px) {
+  .ww-stage { padding: 12px; border-radius: 16px; }
+  .ww-main { grid-template-columns: 1fr; justify-items: center; }
+  .role-card { width: 132px; }
+  .ww-players { grid-template-columns: repeat(3, 1fr); width: 100%; gap: 8px; }
+  .wp .pic { width: 42px; height: 42px; }
+  .wp .skull { top: 30px; }
+}
+
+/* the chat panel here has channel tabs, so it stacks as a simple column */
+#chatPanel { display: flex; flex-direction: column; gap: 8px; }
+#chatPanel .chat-log { flex: 1 1 auto; min-height: 200px; max-height: 340px; overflow: auto; }
+.chat-tabs { align-items: center; }
+.chat-tabs button, #chatForm button { height: auto; align-self: center; }
+#chatForm { align-items: center; }
+.wp { min-width: 0; }
+@media (max-width: 720px) {
+  .ww-players { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wp .nm { font-size: .76rem; }
+  .ww-stage, .ww-main { min-width: 0; max-width: 100%; }
+}
+
+/* your word */
+.word-side { display: grid; gap: 10px; justify-items: center; }
+.lang-seg { justify-content: center; }
+.lang-seg button { padding: 5px 12px; font-size: .8rem; }
+.rc-back { background: repeating-linear-gradient(45deg, #1d3a40 0 10px, #183136 10px 20px); }
+.rc-front small { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: #6d625a; }
+.rc-front .the-word { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.1; color: #1d2b2f; overflow-wrap: anywhere; }
+
+/* players and their clues */
+.wp { padding-bottom: 10px; }
+.wp.speaking { border-color: #ffe082; box-shadow: 0 0 0 2px rgba(255,224,130,.4), 0 0 22px rgba(255,224,130,.3); animation: uc-pulse 1.6s ease-in-out infinite; }
+.wp.speaking .tag { color: #ffe082; }
+.wp.dim { opacity: .45; }
+.wp.winner { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,169,106,.5); }
+.wp .bubble { position: relative; margin-top: 4px; max-width: 100%; padding: 5px 9px; border-radius: 10px; background: #fdf6e3; color: #22312f; font-size: .8rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; animation: uc-pop .35s cubic-bezier(.2,.9,.3,1.3); }
+.wp .bubble::before { content: ""; position: absolute; top: -6px; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top: 0; border-bottom-color: #fdf6e3; }
+.wp .bubble.quiet { background: rgba(255,255,255,.14); color: rgba(255,255,255,.8); font-weight: 500; }
+.wp .bubble.quiet::before { border-bottom-color: rgba(255,255,255,.14); }
+.wp .skull { color: #ff8a80; }
+@keyframes uc-pulse { 50% { box-shadow: 0 0 0 3px rgba(255,224,130,.55), 0 0 30px rgba(255,224,130,.45); } }
+@keyframes uc-pop { from { transform: scale(.6); opacity: 0; } }
+
+/* giving a clue / Mr. White's guess */
+.clue-form { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; padding: 12px; border-radius: 14px; background: rgba(255,236,179,.1); border: 1px solid rgba(255,236,179,.35); animation: uc-pop .35s ease; }
+.clue-form .text-input { flex: 1 1 220px; max-width: 360px; }
+.ww-actions .hint.bad { color: #ffab91; }
+
+/* every clue so far */
+.clue-table { overflow-x: auto; }
+.clue-table table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+.clue-table th, .clue-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line, rgba(255,255,255,.1)); vertical-align: top; }
+.clue-table tr:first-child th { font-size: .72rem; letter-spacing: .08em; opacity: .7; }
+.clue-table th { white-space: nowrap; font-weight: 600; }
+.clue-table td { min-width: 70px; }
+.clue-table td.quiet { opacity: .6; }
+.clue-table tr.out th { text-decoration: line-through; opacity: .6; }
+
+.pairs-text { width: 100%; min-height: 180px; resize: vertical; font: inherit; box-sizing: border-box; }
+.pairs-dlg .look-body { padding-top: 18px; }
+@media (prefers-reduced-motion: reduce) { .wp.speaking, .wp .bubble, .clue-form { animation: none; } }
+
+/* panels hold their content at the top rather than spreading it down a tall column */
+.lower > .panel { align-content: start; }
