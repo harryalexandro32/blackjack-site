@@ -1,10 +1,11 @@
-// Table server for every online game (poker tables and Capsa Banting rooms). Every request: load the room,
+// Table server for every online game (poker tables, Capsa Banting and Mahjong rooms). Every request: load the room,
 // check who's asking, apply the move with the shared rules, save both the secret and the public copy in one
 // transaction (retrying if someone else saved first).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as E from "../_shared/poker-engine.js";
 import * as R from "../_shared/poker-room.js";
 import * as CR from "../_shared/capsa-room.js";
+import * as MR from "../_shared/mahjong-room.js";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -25,7 +26,10 @@ async function sha256(s: string) {
   return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, "0")).join("");
 }
 // Which game's rules a room follows.
-const rulesFor = (state: any): any => state && state.game === "capsa" ? CR : R;
+const ROOMS: any = { capsa: CR, mahjong: MR };
+const rulesFor = (state: any): any => (state && ROOMS[state.game]) || R;
+const GAME_NAMES: any = { capsa: "a Capsa room", mahjong: "a Mahjong room", poker: "a poker table" };
+const PAGES: any = { capsa: "the Capsa page", mahjong: "the Mahjong page", poker: "the poker page" };
 
 async function load(by: { id?: string; code?: string }) {
   let q = db.from("poker_rooms").select("id, code, version, status");
@@ -54,7 +58,7 @@ async function createRoom(body: any) {
   const now = Date.now(), token = newToken(), id = crypto.randomUUID();
   // the host's private key: the host link carries it so the room can be opened as host from any device
   const hostKey = newToken(), hostKeyHash = await sha256(hostKey);
-  const M: any = body.game === "capsa" ? CR : R;
+  const M: any = ROOMS[body.game] || R;
   const settings = M.validateSettings(body.settings || {});
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = newCode();
@@ -98,6 +102,7 @@ Deno.serve(async req => {
       if (!loaded || loaded.state.closed) return json({ table: null, serverNow: now });
       const s = loaded.state;
       if (s.game === "capsa") return json({ table: { game: "capsa", mode: s.settings.mode || "winner", pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
+      if (s.game === "mahjong") return json({ table: { game: "mahjong", minFaan: s.settings.minFaan || 0, pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       return json({ table: {
         sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length,
         game: s.table.game || "holdem", odds: s.settings.odds || {}, step: s.table.step || 1, ante: s.table.ante || 0, straddle: !!s.table.straddle, runTwice: !!s.table.runTwice
@@ -122,7 +127,8 @@ Deno.serve(async req => {
       const token = newToken(), id = crypto.randomUUID(), tokenHash = await sha256(token);
       const result = await mutate({ code: body.code }, state => {
         const M = rulesFor(state);
-        if (body.game && body.game !== (state.game === "capsa" ? "capsa" : "poker")) throw new R.RoomError(state.game === "capsa" ? "That code is a Capsa room. Join it from the Capsa page." : "That code is a poker table. Join it from the poker page.");
+        const kind = ROOMS[state.game] ? state.game : "poker";
+        if (body.game && body.game !== kind) throw new R.RoomError(`That code is ${GAME_NAMES[kind]}. Join it from ${PAGES[kind]}.`);
         M.applyAction(state, { type, name: body.name, buyIn: body.buyIn, avatar: body.avatar, show: body.show }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
         return { result: { roomId: null, playerId: id, token, state: M.personalState(state, id) } };
       });

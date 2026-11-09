@@ -150,7 +150,7 @@ $("jnCode").addEventListener("change", async () => {
   try {
     const { peekRoom } = await online();
     const r = await peekRoom(code);
-    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? "That code is a poker table. Join it from the poker page." : `${r.mode === "loser" ? "Loser mode · " : ""}${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
+    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? (r.game === "mahjong" ? "That code is a Mahjong room. Join it from the Mahjong page." : "That code is a poker table. Join it from the poker page.") : `${r.mode === "loser" ? "Loser mode · " : ""}${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
   } catch {}
 });
 $("btnRejoin").addEventListener("click", async () => {

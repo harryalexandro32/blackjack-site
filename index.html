@@ -16,7 +16,7 @@
   .hero { max-width: 1080px; margin: 0 auto; padding-block: 28px 8px; display: grid; gap: 6px; }
   .hero h1 { font-family: var(--font-display); color: var(--gold); font-size: clamp(2.2rem, 7vw, 3.6rem); letter-spacing: .06em; margin: 0; line-height: 1; text-wrap: balance; }
   .hero p { margin: 0; max-width: 56ch; color: var(--print); font-size: 1.02rem; }
-  .games { max-width: 1080px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .games { max-width: 1080px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 18px; }
   .game {
     position: relative; overflow: hidden; display: grid; gap: 14px; align-content: start;
     background: radial-gradient(ellipse at 50% 0%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-deep) 100%);
@@ -48,14 +48,14 @@
 </head>
 <body>
 <header class="bar"><div class="bar-in">
-  <a class="brand-link" href="./"><img class="logo" src="logo.svg" alt="" width="44" height="44"><span class="brand-text"><span class="brand">The Card Room</span><span class="brand-sub">Blackjack · Poker · Capsa</span></span></a>
+  <a class="brand-link" href="./"><img class="logo" src="logo.svg" alt="" width="44" height="44"><span class="brand-text"><span class="brand">The Card Room</span><span class="brand-sub">Blackjack · Poker · Capsa · Mahjong</span></span></a>
   <span class="tagline">Pretend money only</span>
 </div></header>
 
 <div class="wrap">
   <section class="hero">
     <h1>Pick a table</h1>
-    <p>Real rules, pretend dollars. Play blackjack on your own, or deal poker or Capsa Banting against bots or with friends.</p>
+    <p>Real rules, pretend dollars. Play blackjack on your own, or deal poker, Capsa Banting or Mahjong against bots or with friends.</p>
   </section>
 
   <section class="games">
@@ -114,9 +114,34 @@
         <a class="pill" href="capsa/#online">Play with friends</a>
       </div>
     </div>
+
+    <div class="game">
+      <div class="art mj-art" aria-hidden="true" data-tiles="1z 5z 6z 7z"></div>
+      <h2>Mahjong</h2>
+      <p>Hong Kong rules with flowers: build four sets and a pair, claim the right discards, and score faan.</p>
+      <ul class="facts">
+        <li>4 players: friends, with bots in empty seats</li>
+        <li>Chow, pung, kong, flowers and seasons</li>
+        <li>Win with any hand, or play to a 3-faan minimum</li>
+      </ul>
+      <div class="modes">
+        <a class="pill gold" href="mahjong/#ai">Play vs bots</a>
+        <a class="pill" href="mahjong/#online">Play with friends</a>
+      </div>
+    </div>
   </section>
 
   <p class="foot">No real money is used or stored. Poker results are shown so friends can settle up between themselves.</p>
 </div>
+<style>
+  .mj-art { display: flex; gap: 6px; }
+  .mj-art .tile { width: 46px; aspect-ratio: 3 / 4; border-radius: 6px; background: #f7f1e3; box-shadow: 0 3px 0 var(--card-back, #2c6e49), 0 5px 8px rgba(0,0,0,.35); }
+  .mj-art .tile:nth-child(odd) { transform: rotate(-4deg); } .mj-art .tile:nth-child(even) { transform: rotate(3deg) translateY(4px); }
+  .mj-art .tile svg { display: block; width: 100%; height: 100%; }
+</style>
+<script type="module">
+  import { tileSvg } from "./mahjong/tiles.js";
+  for (const box of document.querySelectorAll("[data-tiles]")) box.innerHTML = box.dataset.tiles.split(" ").map(t => `<div class="tile">${tileSvg(t)}</div>`).join("");
+</script>
 </body>
 </html>

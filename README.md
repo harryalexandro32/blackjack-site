@@ -11,6 +11,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
   - **At every table**: cards are dealt round the table from the dealer. You pick an avatar: 21 ready-made characters, or build your own from skin, eyes, hair, facial hair, hat, glasses, shirt and background. An odds helper shows your chance to win, your chance of a strong hand (three of a kind or better) on the next card and by the river, and your chance of each hand. Each part can be switched off by the player, and the host of an online table decides which parts are allowed. A switch decides whether you show or muck when the rules let you choose. Winning at showdown and all-in hands always show. In bots mode you also set how the bots behave.
 
 - **Capsa Banting** (`capsa/`): 4 players with house rules: 2 highest, suits ♠ ♥ ♣ ♦, 3♦ starts the first game, bombs (four of a kind, straight flush) beat any package or a single 2, a bomb on a single 2 ends the game, no finishing on a single 2. Points per card left (2s count double, ×2 at 10+ cards, ×3 at 13) at a $ value per point. Online rooms fill empty seats with bots; points won or lost against bots don't count as money. **Loser mode** (a host option): play goes on until one player is left holding cards; places score +3, +1, −1, −3. Playable cards are highlighted (a personal toggle), cards can be grouped in your hand, plays and passes can be premoved, and bots come in Easy, Normal, Hard and Expert (plans its whole hand and remembers played cards; `capsa-expert.js`).
+- **Mahjong** (`mahjong/`): Hong Kong rules with 144 tiles (flowers and seasons included): chow, pung, kong (robbing a kong allowed), seven pairs and thirteen orphans, faan scoring capped at 10 with limit hands. The table chooses whether a hand needs 3 faan to win or any complete hand wins. Self-drawn wins are paid by all three others; off a discard the discarder pays double. Bots plan towards a scoring hand; online rooms fill empty seats with bots like Capsa.
 
 ## Files
 
@@ -25,6 +26,8 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `poker/sound.js`, `poker/replay.js` | Table sounds (made in the browser, with mute) and hand replay |
 | `capsa/` | Capsa Banting page, bots mode (`local.js`) and online rooms (`online.js`) |
 | `supabase/functions/_shared/capsa-engine.js`, `capsa-bot.js`, `capsa-expert.js`, `capsa-room.js` | Capsa rules, bots and online rooms (used by the browser and the server) |
+| `mahjong/` | Mahjong page, tile art (`tiles.js`), bots mode (`local.js`) and online rooms (`online.js`) |
+| `supabase/functions/_shared/mahjong-engine.js`, `mahjong-bot.js`, `mahjong-room.js` | Mahjong rules and scoring, bots, and online rooms |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
 | `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
 | `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪) |
