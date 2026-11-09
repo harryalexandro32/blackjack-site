@@ -1,10 +1,10 @@
 /* Mahjong: a square-ish table with the three opponents around it, each player's discards in front of them,
    the round wind and the wall in the middle, your tiles on the rail below. Builds on capsa.css. */
 
-.mtable { aspect-ratio: 16 / 10; max-height: 70vh; min-height: 560px; border-radius: 34px; }
+.mtable { aspect-ratio: 16 / 10; max-height: 78vh; min-height: 680px; border-radius: 34px; }
 
 /* the wall: 18 stacks of two on each side, in front of each player, broken where the dice say */
-.wallring { position: absolute; left: 50%; top: 55%; transform: translate(-50%, -50%); z-index: 1; --sw: 17px; --sd: 12px;
+.wallring { position: absolute; left: 50%; top: 57%; transform: translate(-50%, -50%); z-index: 1; --sw: 20px; --sd: 14px;
   width: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); height: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); }
 .wallring .side { position: absolute; display: flex; gap: 1px; }
 .wallring .side[data-k="0"] { bottom: 0; left: calc(var(--sd) + 1px); flex-direction: row-reverse; }     /* your wall */
@@ -61,16 +61,16 @@
 /* opponents */
 .mtable .cseat { width: 176px; }
 .mtable .cseat[data-pos="1"] { left: 91%; top: 46%; }
-.mtable .cseat[data-pos="2"] { left: 50%; top: 13%; }
+.mtable .cseat[data-pos="2"] { left: 50%; top: 12%; }
 .mtable .cseat[data-pos="3"] { left: 9%; top: 46%; }
 .mtable .cseat .hidden-tiles { display: flex; gap: 1px; justify-content: center; }
-.mtable .cseat .hidden-tiles .tile { --tw: 9px; box-shadow: 0 1px 0 #e9e0cc; }
-.mtable .cseat .melds .tile { --tw: 15px; }
-.mtable .cseat .flowers .tile { --tw: 12px; }
+.mtable .cseat .hidden-tiles .tile { --tw: 11px; box-shadow: 0 1px 0 #e9e0cc; }
+.mtable .cseat .melds .tile { --tw: 21px; }
+.mtable .cseat .flowers .tile { --tw: 18px; }
 .mtable .cseat .dealer, .crail .dealer { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: #1a120b; font-size: .66rem; font-weight: 800; margin-left: 4px; vertical-align: 1px; }
 
 /* each player's discards, in front of them */
-.pond { position: absolute; display: grid; grid-template-columns: repeat(5, var(--pt)); gap: 3px 2px; z-index: 2; --pt: 17px; }
+.pond { position: absolute; display: grid; grid-template-columns: repeat(5, var(--pt)); gap: 3px 2px; z-index: 2; --pt: 22px; }
 .pond .tile { --tw: var(--pt); }
 .pond[data-pos="0"] { left: 50%; bottom: calc(var(--sd) + 12px); transform: translateX(-50%); }
 .pond[data-pos="2"] { left: 50%; top: calc(var(--sd) + 12px); transform: translateX(-50%); }
@@ -87,15 +87,15 @@
 .hand-wrap { display: grid; justify-items: center; gap: 8px; max-width: 100%; }
 .mymelds { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: flex-end; }
 .mymelds:empty { display: none; }
-.mymelds .tile { --tw: 28px; }
+.mymelds .tile { --tw: 36px; }
 .mymelds .flowers { display: flex; gap: 2px; padding: 2px 6px; }
-.mymelds .flowers .tile { --tw: 22px; }
-.mhand { display: flex; gap: 3px; align-items: flex-end; padding-top: 14px; min-height: calc(var(--ht, 46px) * 1.33 + 16px); }
-.mhand .tile { --tw: var(--ht, 46px); cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.mymelds .flowers .tile { --tw: 28px; }
+.mhand { display: flex; gap: 3px; align-items: flex-end; padding-top: 14px; min-height: calc(var(--ht, 56px) * 1.33 + 16px); }
+.mhand .tile { --tw: var(--ht, 56px); cursor: pointer; transition: transform .12s, box-shadow .12s; }
 .mhand .tile + .tile { margin-left: 0; }
 .mhand .tile:hover { transform: translateY(-4px); }
 .mhand .tile.sel { transform: translateY(-14px); outline: 3px solid var(--gold); outline-offset: 1px; }
-.mhand .tile.drawn { margin-left: calc(var(--ht, 46px) * .35); }
+.mhand .tile.drawn { margin-left: calc(var(--ht, 56px) * .35); }
 .mhand .tile.hint { box-shadow: 0 0 0 3px #7dd3fc, 0 0 14px #7dd3fc; }
 .mhand.off .tile { cursor: default; }
 .mhand.off .tile:hover { transform: none; }
@@ -104,16 +104,16 @@
 /* claiming someone's discard */
 .claim-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
 .claim-row .what { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
-.claim-row .what .tile { --tw: 30px; }
+.claim-row .what .tile { --tw: 42px; }
 .claim-row button { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.claim-row button .tile { --tw: 18px; box-shadow: none; }
+.claim-row button .tile { --tw: 24px; box-shadow: none; }
 .win-btn { background: linear-gradient(#ffd36b, #e8a92e); color: #2a1a05; font-weight: 800; letter-spacing: .02em; }
 .kong-btns { display: contents; }
 
 /* the end of a hand */
 .mj-result { display: grid; gap: 10px; min-width: min(460px, 86vw); }
 .mj-result .hand-show { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.mj-result .hand-show .tile { --tw: 26px; }
+.mj-result .hand-show .tile { --tw: 34px; }
 .mj-result .faan { display: flex; flex-wrap: wrap; gap: 4px 6px; justify-content: center; font-size: .82rem; }
 .mj-result .faan span { background: rgba(255,255,255,.08); border-radius: 999px; padding: 2px 9px; }
 .mj-result .faan b { color: var(--gold); }
@@ -132,10 +132,11 @@
   .mtable .cseat[data-pos="1"] { left: 86%; top: 40%; }
   .mtable .cseat[data-pos="2"] { left: 50%; top: 10%; }
   .mtable .cseat[data-pos="3"] { left: 14%; top: 40%; }
-  .mtable .cseat .melds .tile { --tw: 11px; }
+  .mtable .cseat .melds .tile { --tw: 13px; }
+  .mtable .cseat .flowers .tile { --tw: 12px; }
   .mtable .cseat .hidden-tiles { display: none; }
-  .wallring { --sw: 8px; --sd: 6px; top: 54%; }
-  .pond { --pt: 13px; grid-template-columns: repeat(5, var(--pt)); gap: 2px; }
+  .wallring { --sw: 7px; --sd: 5px; top: 54%; }
+  .pond { --pt: 15px; grid-template-columns: repeat(5, var(--pt)); gap: 2px; }
   .pond[data-pos="0"] { left: 50%; bottom: auto; top: calc(100% + 6px); transform: translateX(-50%); }
   .pond[data-pos="2"] { left: 50%; top: auto; bottom: calc(100% + 6px); transform: translateX(-50%); }
   .pond[data-pos="3"] { left: auto; right: calc(100% + 5px); }
@@ -145,6 +146,8 @@
   .mcenter { padding: 3px 6px; min-width: 0; } .mcenter .wind { font-size: 1.1rem; } .mcenter .wall { font-size: .62rem; }
   .die { width: 26px; height: 26px; padding: 4px; } .die i { width: 4px; height: 4px; }
   .mhand { --ht: min(44px, calc((100vw - 52px) / 14.6)); gap: 2px; padding-top: 12px; }
-  .mymelds .tile { --tw: 20px; }
+  .mymelds .tile { --tw: 24px; }
+  .mymelds .flowers .tile { --tw: 20px; }
+  .claim-row .what .tile { --tw: 32px; }
   .crail .act-row button { padding: 10px 4px; }
 }
