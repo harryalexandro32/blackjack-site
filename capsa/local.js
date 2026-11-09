@@ -20,13 +20,13 @@ export function savedCapsaGame() {
 }
 
 export class LocalCapsa {
-  // opts: { name, avatar, skill, pointValue (cents), mode: "winner" | "loser" }
+  // opts: { name, avatar, skill, pointValue (cents), mode: "winner" | "loser", doublePair: "off" | "spare" | "nospare" }
   static create(opts) {
     const names = BOT_NAMES.filter(n => n.toLowerCase() !== opts.name.toLowerCase()).sort(() => rng() - 0.5).slice(0, 3);
     const looks = BOT_LOOKS.slice().sort(() => rng() - 0.5);
     const seats = [{ name: opts.name, avatar: opts.avatar || "", bot: false }];
     for (let i = 0; i < 3; i++) seats.push({ name: names[i], avatar: PRESETS.find(p => p.name === looks[i])?.code || "", bot: true });
-    return new LocalCapsa({ seats, me: 0, skill: opts.skill || "normal", gameMode: opts.mode === "loser" ? "loser" : "winner", pointValue: opts.pointValue, scores: [0, 0, 0, 0], games: [], gameNo: 0, game: null, lastWinner: -1, ended: false });
+    return new LocalCapsa({ seats, me: 0, skill: opts.skill || "normal", gameMode: opts.mode === "loser" ? "loser" : "winner", doublePair: ["spare", "nospare"].includes(opts.doublePair) ? opts.doublePair : "off", pointValue: opts.pointValue, scores: [0, 0, 0, 0], games: [], gameNo: 0, game: null, lastWinner: -1, ended: false });
   }
 
   constructor(state) {
@@ -49,14 +49,14 @@ export class LocalCapsa {
     const s = this.s;
     return {
       mode: "ai", me: s.me, isHost: true, seats: s.seats.map((x, i) => ({ ...x, points: s.scores[i] })),
-      game: C.viewFor(s.game, s.me), gameNo: s.gameNo, gameMode: s.gameMode || "winner", pointValue: s.pointValue, scores: s.scores, games: s.games,
+      game: C.viewFor(s.game, s.me), gameNo: s.gameNo, gameMode: s.gameMode || "winner", doublePair: s.doublePair || "off", pointValue: s.pointValue, scores: s.scores, games: s.games,
       nextGameAt: this.nextGameAt, deadline: null, started: true, ended: s.ended, summary: s.summary || null
     };
   }
 
   deal() {
     this.s.gameNo += 1;
-    this.s.game = C.startGame(this.s.gameNo, shuffled, this.s.lastWinner, this.s.gameMode);
+    this.s.game = C.startGame(this.s.gameNo, shuffled, this.s.lastWinner, this.s.gameMode, this.s.doublePair);
     this.nextGameAt = null;
   }
 

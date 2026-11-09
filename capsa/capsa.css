@@ -64,6 +64,10 @@
 .crail .act-row button { min-width: 92px; }
 .lower .log { max-height: 240px; }
 .players-list .pl .pts { font-variant-numeric: tabular-nums; }
+.dp-field .check { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; cursor: pointer; font-weight: 600; text-transform: none; letter-spacing: normal; font-size: .95rem; color: var(--print); }
+.dp-field .check input { accent-color: var(--gold); width: 18px; height: 18px; align-self: center; }
+.dp-field .check .note { font-weight: 400; }
+.dp-field .dp-note { margin: 4px 0 0; font-size: .82rem; }
 .rules-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .9rem; }
 .rules-panel b { color: var(--gold); }
 

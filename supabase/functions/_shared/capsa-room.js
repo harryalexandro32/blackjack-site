@@ -20,7 +20,8 @@ export function validateSettings(s) {
   if (![20, 30, 60].includes(actSeconds)) fail("Pick a time to play from the list.");
   const skill = ["easy", "normal", "hard", "expert"].includes(s.skill) ? s.skill : "normal";
   const mode = s.mode === "loser" ? "loser" : "winner";
-  return { pointValue, actSeconds, skill, mode };
+  const doublePair = ["spare", "nospare"].includes(s.doublePair) ? s.doublePair : "off";
+  return { pointValue, actSeconds, skill, mode, doublePair };
 }
 
 export function newRoom({ code, settings, host, now }) {
@@ -67,7 +68,7 @@ const isBotSeat = (state, seat) => !!(state.seats[seat] && state.seats[seat].bot
 
 function deal(state, now, shuffled) {
   state.gameNo += 1;
-  state.g = C.startGame(state.gameNo, shuffled, state.lastWinner, state.settings.mode);
+  state.g = C.startGame(state.gameNo, shuffled, state.lastWinner, state.settings.mode, state.settings.doublePair);
   state.nextGameAt = null;
 }
 

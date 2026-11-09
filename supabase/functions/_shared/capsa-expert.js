@@ -7,7 +7,7 @@
 // Like the other bots it only sees its own cards, the cards already played, and how many cards everyone has.
 import { classify, isBomb, rankOf, valueOf, byValue, legal, legalPlays, newDeck } from "./capsa-engine.js";
 
-const PACKAGES = ["straight", "flush", "fullhouse", "quads", "straightflush"];
+const PACKAGES = ["pairs2s", "straight", "flush", "fullhouse", "quads", "straightflush"];
 
 // What this player knows: cards nobody has played yet (not counting its own) and how many cards the others hold.
 function knowledge(g, seat) {
@@ -37,6 +37,10 @@ function isBoss(play, K) {
       return !Object.values(byRank).some(cs => cs.length >= 2 && valueOf(cs[cs.length - 1]) > combo.key);
     case "triple":
       return !Object.entries(byRank).some(([r, cs]) => cs.length >= 3 && +r > combo.key);
+    case "pairs2": case "pairs2s": {   // a higher neighbouring pair of pairs still out there?
+      const ranks = Object.keys(byRank).map(Number);
+      return !ranks.some(r => byRank[r].length >= 2 && byRank[r - 1] && byRank[r - 1].length >= 2 && Math.max(...byRank[r].map(valueOf)) > combo.key) && (combo.type === "pairs2" || !bombPossible(-1));
+    }
     case "straightflush": return true;
     case "quads": return !bombPossible(combo.key);
     case "fullhouse":
@@ -47,10 +51,10 @@ function isBoss(play, K) {
 
 // Split a hand into plays: up to two 5-card packages, then the rest by rank (quads, triples, pairs, singles).
 // Lower score is better: fewer plays, and above all fewer plays that someone can beat.
-function bestSplit(hand, K, cache) {
+function bestSplit(hand, K, cache, dp = "off") {
   const key = hand.slice().sort(byValue).join("");
   if (cache.has(key)) return cache.get(key);
-  const packs = legalPlays(hand).filter(p => p.cards.length === 5);
+  const packs = legalPlays(hand, null, null, dp).filter(p => p.cards.length === 5 || p.combo.type === "pairs2");
   const options = [[]];
   for (let i = 0; i < packs.length; i++) {
     options.push([packs[i]]);
@@ -93,7 +97,7 @@ export function expertMove(g, seat) {
   if (!L) return null;
   const hand = g.hands[seat];
   const K = knowledge(g, seat), cache = new Map();
-  const options = legalPlays(hand, L.table, L.mustInclude);
+  const options = legalPlays(hand, L.table, L.mustInclude, g.dp);
   if (!options.length) return { type: "pass" };
   const finisher = options.find(p => p.cards.length === hand.length);
   if (finisher) return { type: "play", cards: finisher.cards };
@@ -106,12 +110,12 @@ export function expertMove(g, seat) {
   const loser = g.mode === "loser";
 
   if (L.leading) {
-    const split = bestSplit(hand, K, cache);
+    const split = bestSplit(hand, K, cache, g.dp);
     let pool = split.plays.filter(p => options.some(o => o.cards.length === p.cards.length && o.cards.every(c => p.cards.includes(c))));
     if (L.mustInclude) {                                              // first play: the 3♦ play that leaves the best hand
       const withIt = options.filter(o => o.cards.includes(L.mustInclude)).sort((a, b) => b.cards.length - a.cards.length).slice(0, 40);
       let pick = null, pickVal = Infinity;
-      for (const o of withIt) { const v = bestSplit(hand.filter(c => !o.cards.includes(c)), K, cache).score; if (v < pickVal) { pickVal = v; pick = o; } }
+      for (const o of withIt) { const v = bestSplit(hand.filter(c => !o.cards.includes(c)), K, cache, g.dp).score; if (v < pickVal) { pickVal = v; pick = o; } }
       return { type: "play", cards: pick.cards };
     }
     if (!pool.length) pool = options;
@@ -133,7 +137,7 @@ export function expertMove(g, seat) {
   }
 
   // following: compare every answer with passing
-  const now = bestSplit(hand, K, cache);
+  const now = bestSplit(hand, K, cache, g.dp);
   const tableBy = g.trick ? g.trick.by : -1;
   const threat = tableBy >= 0 ? g.hands[tableBy].length : 99;
   let passCost = 3;
@@ -142,7 +146,7 @@ export function expertMove(g, seat) {
   let best = { type: "pass" }, bestVal = now.score + passCost;
   for (const o of options) {
     const rest = hand.filter(c => !o.cards.includes(c));
-    const after = bestSplit(rest, K, cache);
+    const after = bestSplit(rest, K, cache, g.dp);
     let val = after.score;
     const control = isBoss(o, K);
     const weakLeft = after.plays.filter(p => !p.boss).length;

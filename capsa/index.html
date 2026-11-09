@@ -45,6 +45,9 @@
           <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button><button type="button" data-v="expert">Expert</button></div></div>
         <div class="field"><span class="label">Game ends</span>
           <div class="seg" id="aiMode" role="group" aria-label="How a game ends"><button type="button" data-v="winner" aria-pressed="true">First one out wins</button><button type="button" data-v="loser">Last one holding loses</button></div></div>
+        <div class="field dp-field"><label class="check"><input type="checkbox" id="aiDpOn"> Allow double pairs <span class="note">(neighbouring pairs, like 3-3-4-4 or 10-10-J-J)</span></label>
+          <div class="seg" id="aiDp" role="group" aria-label="Double pair rule" hidden><button type="button" data-v="spare" aria-pressed="true">With a spare card</button><button type="button" data-v="nospare">No spare</button></div>
+          <p class="note dp-note" id="aiDpNote" hidden></p></div>
         <div class="field"><label for="aiValue">Pretend dollars per point</label><span class="money-input"><span>$</span><input id="aiValue" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
         <p class="err" id="aiErr"></p>
         <button class="primary" type="submit">Deal</button>
@@ -61,6 +64,7 @@
           <li>Straights: 2-3-4-5-6 is the lowest, J-Q-K-A-2 the highest. A-2-3-4-5 doesn't count.</li>
           <li>A bomb beats any package or a single 2. Bombing a single 2 ends the game: the bombed player loses.</li>
           <li>You can't finish on a single 2.</li>
+          <li><b>Double pairs</b> (pick it when you deal): two pairs of neighbouring ranks, like 3-3-4-4 or 10-10-J-J (3-3-J-J doesn't count). <b>With a spare card</b> it's a 5-card package, the weakest one, below a straight. <b>With no spare</b> it's just the 4 cards, and only a higher double pair beats it. The higher pair's top card decides.</li>
           <li>Points: losers pay 1 per card left (each 2 counts 2), ×2 with 10+ cards, ×3 with all 13. Bombed on a 2: that player pays the bomber double.</li>
           <li><b>Loser mode</b> (pick it when you deal): going out doesn't end the game. Play goes on until one player is left holding cards. Places pay: 1st +3, 2nd +1, 3rd −1, last −3. A bomb on a single 2 still ends it: the bomber takes the best open place, the rest go by fewest cards, the bombed player is last.</li>
         </ul>
@@ -81,6 +85,9 @@
           <div class="seg" id="crSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button><button type="button" data-v="expert">Expert</button></div></div>
         <div class="field"><span class="label">Game ends</span>
           <div class="seg" id="crMode" role="group" aria-label="How a game ends"><button type="button" data-v="winner" aria-pressed="true">First one out wins</button><button type="button" data-v="loser">Last one holding loses</button></div></div>
+        <div class="field dp-field"><label class="check"><input type="checkbox" id="crDpOn"> Allow double pairs <span class="note">(neighbouring pairs, like 3-3-4-4 or 10-10-J-J)</span></label>
+          <div class="seg" id="crDp" role="group" aria-label="Double pair rule" hidden><button type="button" data-v="spare" aria-pressed="true">With a spare card</button><button type="button" data-v="nospare">No spare</button></div>
+          <p class="note dp-note" id="crDpNote" hidden></p></div>
         <p class="err" id="crErr"></p>
         <button class="primary" type="submit" id="btnCreate">Open room</button>
       </form>

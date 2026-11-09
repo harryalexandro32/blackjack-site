@@ -101,7 +101,7 @@ Deno.serve(async req => {
       const loaded = await load({ code: body.code });
       if (!loaded || loaded.state.closed) return json({ table: null, serverNow: now });
       const s = loaded.state;
-      if (s.game === "capsa") return json({ table: { game: "capsa", mode: s.settings.mode || "winner", pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
+      if (s.game === "capsa") return json({ table: { game: "capsa", mode: s.settings.mode || "winner", doublePair: s.settings.doublePair || "off", pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       if (s.game === "mahjong") return json({ table: { game: "mahjong", minFaan: s.settings.minFaan || 0, pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       return json({ table: {
         sb: s.settings.sb, bb: s.settings.bb, minBuyIn: s.settings.minBuyIn, maxSeats: s.settings.maxSeats, seated: s.table.seats.filter(Boolean).length,

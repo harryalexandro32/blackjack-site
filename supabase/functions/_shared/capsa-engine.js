@@ -5,6 +5,10 @@
 // Bombs: four of a kind (just the 4 cards) and straight flush. A bomb beats any package or a single 2, and a
 // higher bomb beats a lower one. A bomb on a single 2 ends the game: the bomber wins, the bombed player loses.
 // Straights: 2-3-4-5-6 is the lowest, J-Q-K-A-2 the highest; A-2-3-4-5 and wrap-arounds aren't straights.
+// Double pairs (a table option): two pairs of neighbouring ranks, like 3-3-4-4 or 10-10-J-J (not 3-3-J-J).
+//   "spare": with one more card of any kind it's a 5-card package, the weakest one (below a straight).
+//   "nospare": just the 4 cards, beaten only by a higher double pair (not even by a bomb).
+//   Compared by the higher pair's top card (rank, then suit); the spare card doesn't count.
 // The first game starts with the 3♦ (any play containing it); later games start with the last winner.
 // You can't finish on a single 2. Once you pass you're out until the round ends.
 // Scoring: losers pay the winner 1 point per card left, each 2 counting 2; ×2 with 10–12 cards, ×3 with 13.
@@ -32,8 +36,8 @@ export function newDeck() {
 }
 
 // Package strength, low to high; bombs are quads and straight flushes.
-export const PACKAGES = ["straight", "flush", "fullhouse", "quads", "straightflush"];
-export const NAMES = { single: "Single", pair: "Pair", triple: "Three of a kind", straight: "Straight", flush: "Flush", fullhouse: "Full house", quads: "Bomb: four of a kind", straightflush: "Bomb: straight flush" };
+export const PACKAGES = ["pairs2s", "straight", "flush", "fullhouse", "quads", "straightflush"];
+export const NAMES = { single: "Single", pair: "Pair", triple: "Three of a kind", pairs2: "Double pair", pairs2s: "Double pair + spare", straight: "Straight", flush: "Flush", fullhouse: "Full house", quads: "Bomb: four of a kind", straightflush: "Bomb: straight flush" };
 export const isBomb = c => c && (c.type === "quads" || c.type === "straightflush");
 const isPackage = c => c && PACKAGES.includes(c.type);
 
@@ -50,8 +54,18 @@ function straightInfo(cards) {
   return { seq: nat[0] - 2, top: cards.find(c => NATURAL[c[0]] === topNat) }; // 2-6 is seq 0, 10-A is seq 8
 }
 
+// Two pairs of neighbouring ranks among these cards: the key of the higher pair's top card, or -1.
+function doublePairKey(cards) {
+  const byRank = {};
+  for (const c of cards) (byRank[rankOf(c)] = byRank[rankOf(c)] || []).push(c);
+  const pairs = Object.entries(byRank).filter(([, cs]) => cs.length === 2).map(([r]) => +r).sort((a, b) => a - b);
+  if (pairs.length !== 2 || pairs[1] - pairs[0] !== 1) return -1;
+  return Math.max(...byRank[pairs[1]].map(valueOf));
+}
+
 // What a set of cards is, or null if it isn't a legal play. key: higher beats lower within the same type.
-export function classify(cards) {
+// dp: the table's double-pair rule ("off", "spare" or "nospare").
+export function classify(cards, dp = "off") {
   const n = cards.length;
   if (!n || new Set(cards).size !== n) return null;
   const ranks = cards.map(rankOf), same = ranks.every(r => r === ranks[0]);
@@ -59,7 +73,11 @@ export function classify(cards) {
   if (n === 1) return { type: "single", size: 1, key: valueOf(cards[0]) };
   if (n === 2) return same ? { type: "pair", size: 2, key: valueOf(top) } : null;
   if (n === 3) return same ? { type: "triple", size: 3, key: ranks[0] } : null;
-  if (n === 4) return same ? { type: "quads", size: 4, key: ranks[0] } : null;
+  if (n === 4) {
+    if (same) return { type: "quads", size: 4, key: ranks[0] };
+    const k = dp === "nospare" ? doublePairKey(cards) : -1;
+    return k >= 0 ? { type: "pairs2", size: 4, key: k } : null;
+  }
   if (n !== 5) return null;
   const flush = cards.every(c => c[1] === cards[0][1]);
   const st = straightInfo(cards);
@@ -70,6 +88,7 @@ export function classify(cards) {
   if (groups[0][1] === 3 && groups[1][1] === 2) return { type: "fullhouse", size: 5, key: +groups[0][0] };
   if (flush) return { type: "flush", size: 5, key: valueOf(top) };
   if (st) return { type: "straight", size: 5, key: st.seq * 4 + suitOf(st.top) };
+  if (dp === "spare") { const k = doublePairKey(cards); if (k >= 0) return { type: "pairs2s", size: 5, key: k }; }
   return null;
 }
 
@@ -99,7 +118,7 @@ const hasAllTwos = hand => hand.filter(c => c[0] === "2").length === 4;
 
 // Deals a new game. shuffled() must return a freshly shuffled 52-card deck; it's called again if someone
 // gets all four 2s. leader: the last winner, or -1 for the first game (the 3♦ starts).
-export function startGame(no, shuffled, leader = -1, mode = "winner") {
+export function startGame(no, shuffled, leader = -1, mode = "winner", doublePair = "off") {
   let hands;
   for (let tries = 0; tries < 50; tries++) {
     const deck = shuffled();
@@ -108,7 +127,7 @@ export function startGame(no, shuffled, leader = -1, mode = "winner") {
   }
   const first = leader < 0;
   const turn = first ? hands.findIndex(h => h.includes("3d")) : leader;
-  return { no, mode: mode === "loser" ? "loser" : "winner", out: [], hands, turn, trick: null, passed: [false, false, false, false], lead3d: first, log: [], finished: null };
+  return { no, mode: mode === "loser" ? "loser" : "winner", dp: ["spare", "nospare"].includes(doublePair) ? doublePair : "off", out: [], hands, turn, trick: null, passed: [false, false, false, false], lead3d: first, log: [], finished: null };
 }
 
 const holding = (g, i) => g.hands[i].length > 0;
@@ -133,11 +152,11 @@ export function legal(g, seat) {
 
 // Every legal play from a hand against a table combo (null when leading), checked exhaustively: all 1-5 card
 // subsets (at most 2,379 for 13 cards). mustInclude: "3d" on the game's first play.
-export function legalPlays(hand, table = null, mustInclude = null) {
+export function legalPlays(hand, table = null, mustInclude = null, dp = "off") {
   const out = [], n = hand.length;
   const consider = cards => {
     if (mustInclude && !cards.includes(mustInclude)) return;
-    const c = classify(cards);
+    const c = classify(cards, dp);
     if (!c || (table && !beats(c, table))) return;
     if (cards.length === n && c.type === "single" && rankOf(cards[0]) === 12) return; // can't finish on a single 2
     out.push({ cards, combo: c });
@@ -158,7 +177,7 @@ export function whyNot(g, seat, cards) {
   const hand = g.hands[seat];
   if (!cards.length) return "Pick some cards first.";
   if (!cards.every(c => hand.includes(c))) return "You can only play cards you hold.";
-  const combo = classify(cards);
+  const combo = classify(cards, g.dp);
   if (!combo) return "That isn't a combination you can play.";
   if (L.mustInclude && !cards.includes(L.mustInclude)) return "The first play of the game has to include the 3♦.";
   if (L.table && !beats(combo, L.table)) {
@@ -173,7 +192,7 @@ export function whyNot(g, seat, cards) {
 export function play(g, seat, cards) {
   const err = whyNot(g, seat, cards);
   if (err) throw new Error(err);
-  const combo = classify(cards), prev = g.trick;
+  const combo = classify(cards, g.dp), prev = g.trick;
   g.hands[seat] = g.hands[seat].filter(c => !cards.includes(c));
   g.lead3d = false;
   g.log.push({ seat, type: "play", cards: cards.slice().sort(byValue), combo: combo.type });
@@ -294,7 +313,7 @@ export function autoMove(g) {
 export function viewFor(g, seat) {
   if (!g) return null;
   return {
-    no: g.no, mode: g.mode || "winner", out: g.out || [], turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log,
+    no: g.no, mode: g.mode || "winner", dp: g.dp || "off", out: g.out || [], turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log,
     counts: g.hands.map(h => h.length),
     hand: seat >= 0 ? g.hands[seat] : null,
     legal: seat >= 0 ? legal(g, seat) : null,

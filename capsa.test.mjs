@@ -343,3 +343,37 @@ test("expert bot: only legal moves, whole games finish, in both modes", () => {
   const s = R.newRoom({ code: "CAP234", settings: { ...settingsC, skill: "expert" }, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
   assert.strictEqual(s.settings.skill, "expert");
 });
+
+// ---------- double pairs ----------
+test("double pairs: neighbouring pairs only; with a spare it's the weakest package, without one only a higher double pair beats it", () => {
+  const k = (s, dp) => { const c = C.classify(s.split(" "), dp); return c && c.type; };
+  const bt = (a, b, dp) => C.beats(C.classify(a.split(" "), dp), C.classify(b.split(" "), dp));
+  assert.strictEqual(k("3d 3c 4h 4s", "off"), null);                       // off by default
+  assert.strictEqual(k("3d 3c 4h 4s", "nospare"), "pairs2");
+  assert.strictEqual(k("3d 3c Jh Js", "nospare"), null);                   // not neighbours
+  assert.strictEqual(k("3d 3c 4h 4s", "spare"), null);                     // needs the spare
+  assert.strictEqual(k("3d 3c 4h 4s 9d", "spare"), "pairs2s");
+  assert.strictEqual(k("3d 3c 4h 4s 4d", "spare"), "fullhouse");           // still a full house
+  assert.ok(bt("Td Tc Jh Js", "3d 3c 4h 4s", "nospare"));
+  assert.ok(bt("3d 3c 4d 4s", "3h 3s 4c 4h", "nospare"));                  // same pairs: the top card's suit
+  assert.ok(!bt("5d 5c 5h 5s", "3d 3c 4h 4s", "nospare"));                 // no bomb on a no-spare double pair
+  assert.ok(bt("3d 4c 5h 6s 7d", "Td Tc Jh Js 3d", "spare"));              // a straight beats it
+  assert.ok(bt("5d 5c 5h 5s", "Td Tc Jh Js 3d", "spare"));                 // so does a bomb
+  assert.ok(bt("Jd Jc Qh Qs 3d", "Td Tc Jh Js 9c", "spare"));
+});
+
+test("double pairs: the table's rule reaches the game, bots play whole games with it", () => {
+  for (const dp of ["spare", "nospare"]) for (let n = 0; n < 15; n++) {
+    const g = C.startGame(1, shuffled, -1, "winner", dp);
+    assert.strictEqual(g.dp, dp);
+    for (let i = 0; i < 800 && !g.finished; i++) {
+      const m = awaitBot.capsaMove(g, g.turn, ["normal", "expert"][n % 2]);
+      if (m.type === "pass") C.pass(g, g.turn); else C.play(g, g.turn, m.cards);
+    }
+    assert.ok(g.finished);
+  }
+  const s = R.newRoom({ code: "CAP234", settings: { ...settingsC, doublePair: "nospare" }, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.strictEqual(s.g.dp, "nospare");
+  assert.strictEqual(R.validateSettings({ ...settingsC, doublePair: "nonsense" }).doublePair, "off");
+});

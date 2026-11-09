@@ -17,12 +17,12 @@ function pick(list, k) {
 }
 
 // Every sensible play from a hand (all singles, pairs, triples, bombs; a good spread of 5-card packages).
-export function combos(hand) {
+export function combos(hand, dp = "off") {
   const out = [], seen = new Set();
   const add = cards => {
     const key = cards.slice().sort(byValue).join(" ");
     if (seen.has(key)) return;
-    const c = classify(cards);
+    const c = classify(cards, dp);
     if (c) { seen.add(key); out.push({ cards: cards.slice().sort(byValue), combo: c }); }
   };
   const byRank = {};
@@ -47,6 +47,18 @@ export function combos(hand) {
     for (const s of "dchs") {
       const sf = seq.map(n => hand.find(c => NATURAL[c[0]] === n && c[1] === s));
       if (sf.every(Boolean)) add(sf);
+    }
+  }
+  // double pairs: neighbouring pairs, alone or with the cheapest spare card
+  if (dp !== "off") {
+    const ranks = Object.keys(byRank).map(Number).sort((a, b) => a - b);
+    for (const r of ranks) {
+      const lo = byRank[r], hi = byRank[r + 1];
+      if (!lo || !hi || lo.length < 2 || hi.length < 2) continue;
+      for (const p of pick(lo, 2)) for (const q of pick(hi, 2)) {
+        if (dp === "nospare") add([...p, ...q]);
+        else { const spare = hand.filter(c => rankOf(c) !== r && rankOf(c) !== r + 1).sort(byValue)[0]; if (spare) add([...p, ...q, spare]); }
+      }
     }
   }
   // flushes: per suit, the lowest four under each possible top card
@@ -80,7 +92,7 @@ export function capsaMove(g, seat, skill = "normal") {
   const hand = g.hands[seat];
   const rnd = Math.random;
   const opponentsMin = Math.min(...g.hands.map((h, i) => i === seat || !h.length ? 99 : h.length));
-  const options = combos(hand).filter(p => !whyNot(g, seat, p.cards));
+  const options = combos(hand, g.dp).filter(p => !whyNot(g, seat, p.cards));
   if (!options.length) return { type: "pass" };
 
   // a bomb on a single 2 wins the game on the spot
@@ -102,7 +114,7 @@ export function capsaMove(g, seat, skill = "normal") {
     }
     // lead low: a cheap package, then a low pair or triple, then the lowest single
     const lowPackages = options.filter(p => p.combo.size === 5 && !isBomb(p.combo) && !p.cards.some(isTwo) && Math.max(...p.cards.map(rankOf)) <= 9);
-    const lowGroups = options.filter(p => (p.combo.type === "pair" || p.combo.type === "triple") && rankOf(p.cards[0]) <= 7);
+    const lowGroups = options.filter(p => (p.combo.type === "pair" || p.combo.type === "triple" || p.combo.type === "pairs2") && rankOf(p.cards[0]) <= 7);
     const pool = lowPackages.length ? lowPackages : lowGroups.length ? lowGroups : options.filter(p => p.combo.type === "single");
     const best = (pool.length ? pool : options).slice().sort((a, b) => cost(a, hand) - cost(b, hand))[0];
     return { type: "play", cards: best.cards };

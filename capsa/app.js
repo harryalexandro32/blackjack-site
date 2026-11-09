@@ -103,6 +103,17 @@ document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e
   seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
 }));
 const segValue = id => $(id).querySelector('[aria-pressed="true"]').dataset.v;
+// double pairs: the tick box shows the spare / no spare choice, with a line explaining it
+const DP_NOTES = { spare: "Two neighbouring pairs plus any card: a 5-card package, the weakest one (below a straight).", nospare: "Just the two pairs: only a higher double pair beats them, not even a bomb." };
+for (const id of ["aiDp", "crDp"]) {
+  const box = $(id + "On"), seg = $(id), note = $(id + "Note");
+  const draw = () => { seg.hidden = note.hidden = !box.checked; note.textContent = DP_NOTES[segValue(id)]; store.set("cb-dp", box.checked ? segValue(id) : "off"); };
+  const saved = store.get("cb-dp", "off");
+  if (saved !== "off") { box.checked = true; seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === saved)); }
+  box.addEventListener("change", draw); seg.addEventListener("click", () => setTimeout(draw));
+  draw();
+}
+const dpValue = id => $(id + "On").checked ? segValue(id) : "off";
 const nameOf = id => $(id).value.trim().replace(/\s+/g, " ").slice(0, 16);
 
 $("formAi").addEventListener("submit", e => {
@@ -111,7 +122,7 @@ $("formAi").addEventListener("submit", e => {
   if (!(pointValue >= 1)) return $("aiErr").textContent = "Enter how many dollars a point is worth.";
   $("aiErr").textContent = "";
   store.set("pk-name", name);
-  attach(LocalCapsa.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), mode: segValue("aiMode"), pointValue }));
+  attach(LocalCapsa.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), mode: segValue("aiMode"), doublePair: dpValue("aiDp"), pointValue }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedCapsaGame(); if (s) attach(new LocalCapsa(s)); });
 
@@ -126,7 +137,7 @@ $("formCreate").addEventListener("submit", async e => {
   try {
     store.set("pk-name", name);
     const { OnlineCapsa } = await online();
-    attach(await OnlineCapsa.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill"), mode: segValue("crMode") }));
+    attach(await OnlineCapsa.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill"), mode: segValue("crMode"), doublePair: dpValue("crDp") }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -150,7 +161,7 @@ $("jnCode").addEventListener("change", async () => {
   try {
     const { peekRoom } = await online();
     const r = await peekRoom(code);
-    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? (r.game === "mahjong" ? "That code is a Mahjong room. Join it from the Mahjong page." : "That code is a poker table. Join it from the poker page.") : `${r.mode === "loser" ? "Loser mode · " : ""}${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
+    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? (r.game === "mahjong" ? "That code is a Mahjong room. Join it from the Mahjong page." : "That code is a poker table. Join it from the poker page.") : `${r.mode === "loser" ? "Loser mode · " : ""}${r.doublePair === "spare" ? "Double pairs + spare · " : r.doublePair === "nospare" ? "Double pairs, no spare · " : ""}${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
   } catch {}
 });
 $("btnRejoin").addEventListener("click", async () => {
@@ -218,7 +229,7 @@ function sortedHand(hand) {
 const frameOf = g => g.legal || { table: g.trick ? g.trick.combo : null, mustInclude: g.lead3d ? "3d" : null };
 function pickProblem(g, cards = [...selected], L = g.legal) {
   if (!cards.length) return "";
-  const combo = C.classify(cards);
+  const combo = C.classify(cards, g.dp);
   if (!combo) return "Those cards aren't a combination you can play.";
   if (!L) return "";
   if (L.mustInclude && !cards.includes(L.mustInclude)) return "The first play of the game has to include the 3♦.";
@@ -294,7 +305,7 @@ function render() {
       const w = document.createElement("div"); w.className = "grp"; w.dataset.g = i;
       gr.forEach(c => w.appendChild(cardEl(c)));
       const tag = document.createElement("button"); tag.type = "button"; tag.className = "grp-tag";
-      const gc = C.classify(gr);
+      const gc = C.classify(gr, g && g.dp);
       tag.textContent = gc ? C.NAMES[gc.type].replace("Bomb: ", "") : `${gr.length} cards`;
       tag.title = "Pick this group";
       w.appendChild(tag); hb.appendChild(w);
@@ -325,7 +336,7 @@ function render() {
 
   // buttons
   const problem = g ? pickProblem(g, [...selected], live ? frameOf(g) : null) : "";
-  const combo = selected.size ? C.classify([...selected]) : null;
+  const combo = selected.size ? C.classify([...selected], g && g.dp) : null;
   const stuck = myTurn && plays && !plays.length;  // nothing you hold can be played: only Pass
   const comboName = c => C.NAMES[c.type].replace("Bomb: ", "bomb ").toLowerCase();
   $("actRow").hidden = !g || !!g.finished;
@@ -437,7 +448,7 @@ function renderScores() {
   });
   const note = document.createElement("div");
   note.className = "pl watchers";
-  note.textContent = (view.gameMode === "loser" ? "Loser mode · " : "") + `${fmt(view.pointValue)} a point · ${view.games ? view.games.length : 0} games played` + (view.mode === "online" && view.seats.some(x => x && x.bot) ? " · points won or lost against bots don't count as money" : "");
+  note.textContent = (view.gameMode === "loser" ? "Loser mode · " : "") + (view.doublePair === "spare" ? "Double pairs + spare · " : view.doublePair === "nospare" ? "Double pairs, no spare · " : "") + `${fmt(view.pointValue)} a point · ${view.games ? view.games.length : 0} games played` + (view.mode === "online" && view.seats.some(x => x && x.bot) ? " · points won or lost against bots don't count as money" : "");
   box.appendChild(note);
 }
 
@@ -563,7 +574,7 @@ function playsFor(g) {
   if (!g || !g.hand || g.finished) return null;
   const F = frameOf(g);
   const key = g.hand.join() + "|" + (g.trick ? g.trick.cards.join() : "") + "|" + F.mustInclude;
-  if (playCache.key !== key) playCache = { key, plays: C.legalPlays(g.hand, F.table, F.mustInclude) };
+  if (playCache.key !== key) playCache = { key, plays: C.legalPlays(g.hand, F.table, F.mustInclude, g.dp) };
   return playCache.plays;
 }
 
@@ -618,7 +629,7 @@ $("btnSort").onclick = () => { sortBy = sortBy === "rank" ? "suit" : "rank"; sto
 $("btnHint").onclick = () => {
   const g = view.game; if (!g || !g.legal) return;
   // the bots' own judgement, from what you can see
-  const pseudo = { hands: g.counts.map((n, i) => i === view.me ? g.hand : Array(n).fill("x")), turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log, mode: g.mode, out: g.out, finished: null };
+  const pseudo = { hands: g.counts.map((n, i) => i === view.me ? g.hand : Array(n).fill("x")), turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log, mode: g.mode, out: g.out, dp: g.dp, finished: null };
   const m = capsaMove(pseudo, view.me, "expert");
   selected = new Set(m && m.type === "play" ? m.cards : []);
   render();
