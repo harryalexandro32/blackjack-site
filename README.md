@@ -26,6 +26,8 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `capsa/` | Capsa Banting page, bots mode (`local.js`) and online rooms (`online.js`) |
 | `supabase/functions/_shared/capsa-engine.js`, `capsa-bot.js`, `capsa-expert.js`, `capsa-room.js` | Capsa rules, bots and online rooms (used by the browser and the server) |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
+| `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
+| `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪) |
 | `poker/odds.js` | Odds helper: simulates the rest of the hand from what you can see |
 | `poker/online.js` | Online mode client (talks to the edge function, listens for table updates) |
 | `poker/config.js` | Supabase URL and anon key for online mode (empty = online mode switched off) |

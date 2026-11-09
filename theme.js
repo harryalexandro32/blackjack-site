@@ -1,9 +1,10 @@
 // Themes and dark mode, remembered on this device. Two separate switches in the header:
 // the palette button picks a theme, the moon/sun button turns dark mode on or off for whichever theme you're on.
 // Loaded in <head> so the page never flashes the wrong colours.
+// Also: the loading screen (theme-loader.js) and background music (theme-music.js, off until you turn it on).
 (function () {
   const root = document.documentElement;
-  const KEY_THEME = "cr-theme-name", KEY_MODE = "cr-mode";
+  const KEY_THEME = "cr-theme-name", KEY_MODE = "cr-mode", KEY_MUSIC = "cr-music", KEY_VOL = "cr-music-vol";
 
   // Each theme: felt (table), deep (page), hi (felt highlight), rail (wood edge, header), railHi,
   // text, accent (buttons, money, headings), muted text, card back, button colour, display font, page background.
@@ -96,10 +97,29 @@
     if (draw) root.dataset.deco = ""; else delete root.dataset.deco;
   }
   window.CR_DECO_READY = renderDeco;
+  const sibling = name => { const sc = document.createElement("script"); sc.src = new URL(name, here).href; document.head.appendChild(sc); return sc; };
   if (here) {
-    const sc = document.createElement("script");
-    sc.src = new URL("theme-deco.js", here).href; sc.defer = true; // sits next to theme.js
-    document.head.appendChild(sc);
+    sibling("theme-deco.js").defer = true; // sits next to theme.js
+    // the loading screen: hide the page until the loader is drawn over it (never longer than a moment)
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      root.classList.add("cr-loading");
+      sibling("theme-loader.js");
+      setTimeout(() => root.classList.remove("cr-loading"), 3500);
+    }
+  }
+
+  // ---------- music ----------
+  let musicOn = false, musicVol = 0.6, musicLoading = null;
+  try { musicOn = localStorage.getItem(KEY_MUSIC) === "on"; musicVol = +(localStorage.getItem(KEY_VOL) ?? 0.6); if (!(musicVol >= 0 && musicVol <= 1)) musicVol = 0.6; } catch {}
+  function withMusic(fn) {
+    if (window.CR_MUSIC) return fn(window.CR_MUSIC);
+    if (!here) return;
+    if (!musicLoading) { musicLoading = []; window.CR_MUSIC_READY = () => { const q = musicLoading; musicLoading = null; q.forEach(g => g(window.CR_MUSIC)); }; sibling("theme-music.js"); }
+    if (musicLoading) musicLoading.push(fn);
+  }
+  function syncMusic() {
+    if (musicOn) withMusic(M => { M.setVolume(musicVol); M.start(themeId); });
+    else if (window.CR_MUSIC) window.CR_MUSIC.stop();
   }
 
   function apply() {
@@ -131,6 +151,11 @@
     body { background: var(--page-bg, var(--felt-deep)) !important; background-size: var(--page-size, auto) !important; background-attachment: fixed !important; }
     .brand { text-shadow: var(--brand-glow, none); }
     .look-dlg { background: var(--dialog, #1b130d) !important; }
+    :root.cr-loading body { visibility: hidden; }
+    .theme-btn.on { box-shadow: inset 0 0 0 2px var(--gold); color: var(--gold); }
+    .theme-dlg .music-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid var(--line); }
+    .theme-dlg .music-row b { font-size: .95rem; }
+    .theme-dlg .music-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--gold); }
     :root[data-theme-name="aurora"] body { animation: cr-aurora 70s ease-in-out infinite alternate; }
     @keyframes cr-aurora { from { background-position: 0% 0%, 100% 0%, 50% 0%, 0 0; } to { background-position: 100% 30%, 0% 40%, 30% 20%, 0 0; } }
     :root[data-theme-name="vegas"] .felt, :root[data-theme-name="vegas"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.5), 0 0 0 2px var(--rail-hi), 0 0 28px rgba(255,79,180,.35); }
@@ -221,6 +246,7 @@
     const pick = document.createElement("button");
     pick.type = "button"; pick.className = "theme-btn"; pick.textContent = "🎨";
     pick.setAttribute("aria-label", "Choose a theme"); pick.title = "Theme";
+    let dlg = null;
     const dm = document.createElement("button");
     dm.type = "button"; dm.className = "theme-btn";
     const drawMode = () => {
@@ -230,15 +256,37 @@
     };
     dm.onclick = () => { mode = mode === "dark" ? "light" : "dark"; save(); apply(); drawMode(); drawGrid(); };
     drawMode();
-    tools.append(pick, dm);
+    const mu = document.createElement("button");
+    mu.type = "button"; mu.className = "theme-btn"; mu.textContent = "♪";
+    const drawMusic = () => {
+      mu.classList.toggle("on", musicOn);
+      mu.setAttribute("aria-pressed", String(musicOn));
+      mu.setAttribute("aria-label", musicOn ? "Turn music off" : "Turn music on");
+      mu.title = musicOn ? "Music: on" : "Music: off";
+      const t = dlg && dlg.querySelector(".music-toggle");
+      if (t) t.textContent = musicOn ? "Music on" : "Music off";
+    };
+    mu.onclick = () => { musicOn = !musicOn; try { localStorage.setItem(KEY_MUSIC, musicOn ? "on" : "off"); } catch {} syncMusic(); drawMusic(); };
+    tools.append(mu, pick, dm);
     bar.appendChild(tools);
 
-    const dlg = document.createElement("dialog");
+    dlg = document.createElement("dialog");
     dlg.className = "theme-dlg";
     dlg.setAttribute("aria-label", "Themes");
     dlg.innerHTML = `<form method="dialog"><div class="row"><h2>Themes</h2><span class="note"></span></div><div class="theme-grid"></div>
-      <div class="row"><small class="note">Dark mode works with every theme: use the ☾ button.</small><button class="primary" value="close">Done</button></div></form>`;
+      <div class="music-row"><b>Music</b><button type="button" class="ghost music-toggle"></button><label class="note" for="crMusicVol">Volume</label><input type="range" id="crMusicVol" min="0" max="100" step="1"></div>
+      <div class="row"><small class="note">Each theme has its own tune. Dark mode works with every theme: use the ☾ button.</small><button class="primary" value="close">Done</button></div></form>`;
     document.body.appendChild(dlg);
+    dlg.querySelector(".music-toggle").onclick = () => mu.click();
+    const volIn = dlg.querySelector("#crMusicVol");
+    volIn.value = Math.round(musicVol * 100);
+    volIn.oninput = () => {
+      musicVol = volIn.value / 100;
+      try { localStorage.setItem(KEY_VOL, String(musicVol)); } catch {}
+      if (window.CR_MUSIC) window.CR_MUSIC.setVolume(musicVol);
+    };
+    drawMusic();
+    syncMusic();
     const grid = dlg.querySelector(".theme-grid");
     function drawGrid() {
       grid.innerHTML = "";
@@ -251,7 +299,7 @@
         b.querySelector("b").textContent = t.name;
         b.querySelector("small").textContent = t.tag;
         if (t.font) { loadFont(t); b.querySelector("b").style.fontFamily = t.font[1]; }
-        b.onclick = () => { themeId = t.id; save(); apply(); drawGrid(); };
+        b.onclick = () => { themeId = t.id; save(); apply(); drawGrid(); if (musicOn) syncMusic(); };
         grid.appendChild(b);
       }
     }
