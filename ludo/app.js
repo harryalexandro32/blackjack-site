@@ -441,9 +441,21 @@ const pct = ([c, r]) => [c / 15 * 100 + "%", (r + 0.12) / 15 * 100 + "%"];
 // the squares a token passes through going from one progress to another
 function pathCells(seat, from, to, i) {
   const cells = [];
-  if (from < 0) return [L.cellOf(seat, -1, i), L.cellOf(seat, 0)];
-  for (let p = from; p <= to; p++) cells.push(L.cellOf(seat, p));
-  return cells;
+  if (from < 0) cells.push(L.cellOf(seat, -1, i), L.cellOf(seat, 0));
+  else for (let p = from; p <= to; p++) cells.push(L.cellOf(seat, p));
+  return straighten(cells);
+}
+function straighten(cells) {
+  const out = [cells[0]];
+  for (let k = 1; k < cells.length; k++) {
+    const [ax, ay] = out[out.length - 1], [bx, by] = cells[k];
+    if (Math.abs(ax - bx) > 0.01 && Math.abs(ay - by) > 0.01) {
+      const c1 = [bx, ay], c2 = [ax, by], d = ([x, y]) => (x - 7.5) ** 2 + (y - 7.5) ** 2;
+      out.push(d(c1) <= d(c2) ? c1 : c2);
+    }
+    out.push(cells[k]);
+  }
+  return out;
 }
 function motion(g) {
   if (!g) return;
@@ -457,7 +469,7 @@ function motion(g) {
         const el = tokenEls[e.seat][e.token], cells = pathCells(e.seat, e.from, e.to, e.token);
         const frames = cells.map(c => { const [left, top] = pct(c); return { left, top }; });
         frames.push({ left: el.style.left, top: el.style.top });
-        el.animate(frames, { duration: Math.min(1400, 130 * frames.length), easing: "linear" });
+        el.animate(frames, { duration: Math.min(1600, 120 * frames.length), easing: "linear" });
         sound(e.captures.length ? "allin" : "flip", 0);
         e.captures.forEach(([s, i]) => {
           const t = tokenEls[s][i], [cl, ct] = pct(cells[cells.length - 1]);

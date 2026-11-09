@@ -300,6 +300,94 @@
       ${flies.join("")}`;
   };
 
-  window.CR_DECO = { ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest };
+
+  // ---------- Garage: a muscle car, a tyre stack, a checkered flag, tools on the wall ----------
+  const garage = () => {
+    const wheel = x => `<g transform="translate(${x} 134)"><circle r="33" fill="#141416"/><circle r="31" fill="none" stroke="#2a2a2e" stroke-width="5"/><circle r="19" fill="#c9ccd2"/><circle r="19" fill="none" stroke="#7d828a" stroke-width="2"/>${[0, 72, 144, 216, 288].map(a => `<path d="M0 0 L0 -16" stroke="#7d828a" stroke-width="4" stroke-linecap="round" transform="rotate(${a})"/>`).join("")}<circle r="5" fill="#5a5e65"/></g>`;
+    const car = `
+      <path d="M14 92 L44 89 L46 95 L22 99Z M30 96 L34 104" stroke="#7a0b10" stroke-width="3" fill="#a31015"/>
+      <path d="M16 120 L22 99 Q32 91 62 89 L124 85 Q152 56 194 52 L262 52 Q288 54 316 83 L482 89 Q508 91 512 105 L514 125 Q514 135 500 135 L16 135 Q6 135 9 127Z" fill="#c4161c"/>
+      <path d="M124 85 Q152 56 194 52 L262 52 Q288 54 316 83Z" fill="#a31015"/>
+      <path d="M138 83 Q158 61 194 58 L224 58 L224 83Z M234 58 L262 58 Q282 62 302 83 L234 83Z" fill="#1b2026"/>
+      <path d="M148 79 Q162 64 184 61 L172 79Z M244 61 L258 61 L250 79 L238 79Z" fill="#fff" opacity=".18"/>
+      <path d="M356 86 L392 79 L418 86Z" fill="#1b2026"/>
+      <path d="M20 106 L510 106 L512 113 L18 113Z" fill="#fff" opacity=".92"/><path d="M20 116 L512 116 L513 120 L18 120Z" fill="#fff" opacity=".6"/>
+      <path d="M4 127 L34 127 L34 133 L4 133Z M488 129 L518 129 L518 134 L488 134Z" fill="#d7dade"/>
+      <path d="M500 97 L513 99 L513 107 L498 106Z" fill="#ffe9a3"/><path d="M12 104 L22 102 L22 110 L12 110Z" fill="#ff4d3d"/>
+      <path d="M40 137 L80 137 L80 142 L40 142Z" fill="#9aa0a8"/>
+      ${wheel(112)}${wheel(420)}
+      <path d="M170 94 h22 M262 94 h22" stroke="#7a0b10" stroke-width="3" stroke-linecap="round"/>`;
+    const tyre = y => `<g transform="translate(0 ${y})"><ellipse cx="60" cy="0" rx="56" ry="16" fill="#1a1a1c"/><ellipse cx="60" cy="-6" rx="56" ry="16" fill="#26262a"/><ellipse cx="60" cy="-6" rx="28" ry="7" fill="#0c0c0e"/></g>`;
+    const checker = Array.from({ length: 12 }, (_, i) => { const r = Math.floor(i / 4), c = i % 4; return `<rect x="${c * 22}" y="${r * 18}" width="22" height="18" fill="${(r + c) % 2 ? "#111" : "#f4f4f0"}"/>`; }).join("");
+    return `
+      ${band("0 0 1440 80", "left:0;bottom:0;width:100%;height:clamp(28px,6vh,60px)", `<rect width="1440" height="80" fill="#1d1e21"/><path d="M0 6 H1440" stroke="#f4c430" stroke-width="10" stroke-dasharray="60 40"/><ellipse cx="900" cy="50" rx="90" ry="10" fill="#000" opacity=".35"/>`)}
+      ${svg("0 0 520 180", "right:2vw;bottom:clamp(14px,3vh,34px);width:clamp(230px,36vw,520px)", car)}
+      ${svg("0 0 120 130", "left:2vw;bottom:clamp(18px,4vh,40px);width:clamp(70px,9vw,120px)", tyre(126) + tyre(96) + tyre(66) + tyre(36))}
+      ${svg("0 0 120 130", "left:clamp(64px,9vw,128px);bottom:clamp(18px,4vh,40px);width:clamp(52px,6.5vw,90px)", tyre(126) + tyre(96))}
+      ${svg("0 0 110 160", "left:3vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(64px,8vw,110px)", `<rect x="4" y="0" width="5" height="160" rx="2" fill="#c9ccd2"/><g class="wave" transform="translate(9 6)">${checker}</g>`)}
+      ${svg("0 0 200 120", "right:3vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(110px,15vw,210px)", `<rect x="0" y="0" width="200" height="120" rx="6" fill="#4a3a2a"/>${Array.from({ length: 40 }, (_, i) => `<circle cx="${12 + (i % 10) * 20}" cy="${12 + Math.floor(i / 10) * 30}" r="2" fill="#2b2016"/>`).join("")}
+        <g class="sway-1" style="transform-origin:40px 10px"><path d="M40 10 V80" stroke="#c9ccd2" stroke-width="8" stroke-linecap="round"/><path d="M28 80 a12 12 0 1 0 24 0 l-6 0 l0 8 l-12 0 l0 -8Z" fill="#c9ccd2"/></g>
+        <g class="sway-2" style="transform-origin:100px 10px"><path d="M100 10 V96" stroke="#ff6a1f" stroke-width="7" stroke-linecap="round"/><rect x="88" y="10" width="24" height="12" rx="3" fill="#ff6a1f"/></g>
+        <path d="M150 14 L150 70 M140 70 L160 70 L156 104 L144 104Z" stroke="#c9ccd2" stroke-width="6" stroke-linecap="round" fill="#9aa0a8"/></svg>`.replace(/<\/svg>$/, ""))}`;
+  };
+
+  // ---------- Space Fight: a ringed planet, two starfighters trading laser fire, a cruiser far off ----------
+  const space = () => {
+    const r = rnd(77), stars = [];
+    for (let i = 0; i < 60; i++) stars.push(`<circle cx="${(r() * 1440).toFixed(0)}" cy="${(r() * 900).toFixed(0)}" r="${(0.6 + r() * 1.4).toFixed(1)}" fill="#fff"/>`);
+    const bolts = [];
+    for (let i = 0; i < 7; i++) {
+      const green = i % 2 === 0, top = (22 + r() * 56).toFixed(0);
+      bolts.push(`<svg class="d laser" viewBox="0 0 120 8" style="top:${top}vh;left:0;width:clamp(50px,7vw,110px);--delay:${(-r() * 6).toFixed(1)}s;--dur:${(2.4 + r() * 2).toFixed(1)}s;--from:${green ? "-10vw" : "105vw"};--to:${green ? "110vw" : "-15vw"};filter:drop-shadow(0 0 6px ${green ? "#5dff9a" : "#ff4a4a"})"><rect x="0" y="2" width="120" height="4" rx="2" fill="${green ? "#c8ffd9" : "#ffd0d0"}"/><rect x="0" y="0" width="120" height="8" rx="4" fill="${green ? "#2bdc6c" : "#ff2b2b"}" opacity=".55"/></svg>`);
+    }
+    const fighter = `<path d="M8 40 L118 31 L156 40 L118 49Z" fill="#d5dbe8"/><path d="M118 31 L156 40 L118 49 L126 40Z" fill="#aab3c7"/>
+      <path d="M58 34 L88 4 L102 6 L84 34Z M58 46 L88 76 L102 74 L84 46Z" fill="#8f9bb6"/><path d="M88 4 L102 6 L100 12 L90 10Z M88 76 L102 74 L100 68 L90 70Z" fill="#ff8a2a"/>
+      <path d="M98 36 L122 38 L122 42 L98 44 Q92 40 98 36Z" fill="#2a3a5c"/><path d="M100 37 L112 38 L104 40Z" fill="#9fd4ff"/>
+      <circle cx="10" cy="40" r="7" fill="#7fd0ff" class="blink"/><circle cx="10" cy="40" r="13" fill="#7fd0ff" opacity=".25"/>`;
+    const raider = `<path d="M8 40 L66 12 L150 30 L150 50 L66 68Z" fill="#4b4f5e"/><path d="M66 12 L150 30 L150 34 L70 24Z M66 68 L150 50 L150 46 L70 56Z" fill="#c62828"/>
+      <path d="M40 40 L70 32 L84 40 L70 48Z" fill="#1c1f29"/><path d="M48 40 L68 35 L74 40 L68 45Z" fill="#ff6b6b"/>
+      <rect x="146" y="34" width="10" height="5" fill="#ffb14a" class="blink"/><rect x="146" y="42" width="10" height="5" fill="#ffb14a" class="blink"/>`;
+    return `
+      ${band("0 0 1440 900", "left:0;top:0;width:100%;height:100%", `<g class="twinkle">${stars.join("")}</g>`)}
+      ${svg("0 0 400 300", "left:-6vw;bottom:-8vh;width:clamp(240px,38vw,560px)", `<defs><radialGradient id="pl" cx="35%" cy="35%"><stop offset="0" stop-color="#e48a5a"/><stop offset=".6" stop-color="#9c3f3a"/><stop offset="1" stop-color="#3a1424"/></radialGradient></defs>
+        <clipPath id="ringfront"><rect x="0" y="170" width="400" height="140"/></clipPath>
+        <g transform="rotate(-14 200 170)"><ellipse cx="200" cy="170" rx="190" ry="40" fill="none" stroke="#e9c48a" stroke-width="10" opacity=".5"/></g>
+        <circle cx="200" cy="170" r="110" fill="url(#pl)"/><path d="M110 140 Q200 120 300 150 M100 180 Q200 165 305 195" stroke="#f1a87a" stroke-width="7" fill="none" opacity=".35"/>
+        <g transform="rotate(-14 200 170)"><ellipse cx="200" cy="170" rx="190" ry="40" fill="none" stroke="#f3d19a" stroke-width="10" opacity=".85" clip-path="url(#ringfront)"/></g>`)}
+      ${svg("0 0 300 70", "right:4vw;top:calc(var(--bar-h, 64px) + 4vh);width:clamp(140px,22vw,320px)", `<path d="M10 40 Q30 18 120 16 L280 22 Q292 30 280 40 L120 52 Q30 56 10 40Z" fill="#2a2f45"/><path d="M60 30 L250 26 M60 44 L250 40" stroke="#3d4566" stroke-width="3"/>${Array.from({ length: 14 }, (_, i) => `<circle cx="${70 + i * 13}" cy="${33 + (i % 2) * 6}" r="1.4" fill="#ffd27a" class="blink"/>`).join("")}<circle cx="284" cy="31" r="5" fill="#7fd0ff" opacity=".8"/>`, "drift")}
+      ${svg("0 0 164 80", "left:6vw;top:34vh;width:clamp(90px,13vw,190px)", fighter, "float")}
+      ${svg("0 0 164 80", "right:7vw;top:54vh;width:clamp(80px,11vw,170px)", raider, "float-2")}
+      ${svg("0 0 164 80", "right:22vw;top:20vh;width:clamp(50px,6vw,90px);opacity:.75", raider, "float")}
+      ${bolts.join("")}`;
+  };
+
+  // ---------- Feeling Deezy?: a lava lamp, a sleepy moon, soft clouds, floating pastel orbs ----------
+  const deezy = () => {
+    const r = rnd(23), orbs = [];
+    const cols = ["#ff9ad5", "#9ff3e0", "#c9a8ff", "#ffe39a", "#a8d8ff"];
+    for (let i = 0; i < 16; i++) {
+      const size = 10 + r() * 34;
+      orbs.push(`<svg class="d orb" viewBox="0 0 40 40" style="left:${(r() * 96).toFixed(0)}vw;top:${(14 + r() * 76).toFixed(0)}vh;width:${size.toFixed(0)}px;--delay:${(-r() * 12).toFixed(1)}s;--dur:${(12 + r() * 10).toFixed(0)}s;--dx:${((r() - 0.5) * 8).toFixed(1)}vw;--dy:${(-4 - r() * 8).toFixed(1)}vh"><circle cx="20" cy="20" r="18" fill="${cols[i % 5]}" opacity=".55"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".45"/></svg>`);
+    }
+    const blobs = [[70, 300, 26, 0, 14, -170], [58, 250, 18, -5, 18, -120], [84, 340, 20, -9, 16, -210], [66, 200, 14, -3, 11, -90]]
+      .map(([x, y, rad, d, dur, rise]) => `<ellipse class="lava" cx="${x}" cy="${y}" rx="${rad}" ry="${rad * 1.2}" fill="#ff7ac8" style="--delay:${d}s;--dur:${dur}s;--rise:${rise}px;transform-box:fill-box;transform-origin:center"/>`).join("");
+    const cloud = (c, o) => `<g fill="${c}" opacity="${o}"><ellipse cx="80" cy="60" rx="60" ry="26"/><ellipse cx="130" cy="44" rx="46" ry="30"/><ellipse cx="180" cy="62" rx="54" ry="22"/><ellipse cx="40" cy="70" rx="34" ry="16"/></g>`;
+    return `
+      ${svg("0 0 240 110", "left:4vw;top:calc(var(--bar-h, 64px) + 4vh);width:clamp(140px,20vw,280px)", cloud("#ffd6f0", .55), "drift")}
+      ${svg("0 0 240 110", "left:38vw;top:calc(var(--bar-h, 64px) + 10vh);width:clamp(100px,14vw,200px)", cloud("#d6fff5", .4), "drift")}
+      ${svg("0 0 160 160", "right:5vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(80px,11vw,150px)", `<circle cx="80" cy="80" r="64" fill="#fff4c8" opacity=".25"/><path d="M98 22 A58 58 0 1 0 136 110 A46 46 0 1 1 98 22Z" fill="#fff0b8"/>
+        <path d="M60 78 q8 6 16 0 M86 92 q6 5 12 0" stroke="#8a6bb0" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M66 104 q10 8 22 0" stroke="#8a6bb0" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="62" cy="96" r="6" fill="#ffb3d1" opacity=".6"/>`, "float")}
+      ${svg("0 0 40 40", "right:16vw;top:calc(var(--bar-h, 64px) + 6vh);width:22px;--delay:0s", `<text x="6" y="30" font-size="28" fill="#e9dcff" font-family="Shrikhand, cursive">z</text>`, "zz")}
+      ${svg("0 0 40 40", "right:14vw;top:calc(var(--bar-h, 64px) + 3vh);width:16px;--delay:-3s", `<text x="6" y="30" font-size="28" fill="#e9dcff" font-family="Shrikhand, cursive">z</text>`, "zz")}
+      ${svg("0 0 160 420", "right:3vw;bottom:0;height:clamp(200px,48vh,440px)", `<defs><clipPath id="lamp"><path d="M50 60 L110 60 L130 330 L30 330Z"/></clipPath><linearGradient id="lampg" x1="0" x2="1"><stop offset="0" stop-color="#7a4fc4"/><stop offset=".5" stop-color="#b58cf0"/><stop offset="1" stop-color="#6a3fb0"/></linearGradient></defs>
+        <path d="M58 20 L102 20 L110 60 L50 60Z" fill="#c9ccd8"/><path d="M50 60 L110 60 L130 330 L30 330Z" fill="url(#lampg)" opacity=".9"/>
+        <g clip-path="url(#lamp)">${blobs}<ellipse cx="80" cy="335" rx="60" ry="22" fill="#ff7ac8"/></g>
+        <path d="M60 64 L66 320" stroke="#fff" stroke-width="5" opacity=".18" stroke-linecap="round"/>
+        <path d="M30 330 L130 330 L144 410 L16 410Z" fill="#c9ccd8"/><path d="M30 330 L130 330 L132 342 L28 342Z" fill="#a7abb9"/>`)}
+      ${band("0 0 1440 160", "left:0;bottom:0;width:100%;height:clamp(50px,11vh,110px)", `<path class="wave" d="M0 60 C180 20 360 100 540 60 C720 20 900 100 1080 60 C1260 20 1350 70 1440 50 L1440 160 L0 160Z" fill="#c9a8ff" opacity=".35"/><path d="M0 100 C200 70 400 130 640 100 C880 70 1100 130 1440 96 L1440 160 L0 160Z" fill="#ff9ad5" opacity=".3"/>`)}
+      ${orbs.join("")}`;
+  };
+
+  window.CR_DECO = { ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest, garage, space, deezy };
   if (window.CR_DECO_READY) window.CR_DECO_READY();
 })();

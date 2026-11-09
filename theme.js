@@ -49,7 +49,19 @@
       page: "radial-gradient(70% 50% at 50% 0%, rgba(120,140,200,.18), transparent 70%), linear-gradient(#141c33, #070a14 75%)" },
     { id: "forest", name: "Enchanted Forest", tag: "Moss, glowing mushrooms and fireflies", font: ["Uncial Antiqua", "'Uncial Antiqua', serif"],
       c: { felt: "#2f5a2e", deep: "#0c160d", hi: "#4a7d3e", rail: "#1e140c", railHi: "#3a2a18", text: "#f0f7e6", accent: "#f5e07a", muted: "#b8cfa8", back: "#4a6b2a", btn: "#eef6d8" },
-      page: "radial-gradient(50% 40% at 30% 70%, rgba(150,220,120,.12), transparent 70%), radial-gradient(40% 30% at 75% 30%, rgba(245,224,122,.1), transparent 70%), linear-gradient(#142414, #070d08 75%)" }
+      page: "radial-gradient(50% 40% at 30% 70%, rgba(150,220,120,.12), transparent 70%), radial-gradient(40% 30% at 75% 30%, rgba(245,224,122,.1), transparent 70%), linear-gradient(#142414, #070d08 75%)" },
+    { id: "garage", name: "Garage", tag: "Muscle cars, chrome and a checkered flag", font: ["Racing Sans One", "'Racing Sans One', sans-serif"],
+      c: { felt: "#3a3d42", deep: "#121315", hi: "#575b62", rail: "#0d0d0f", railHi: "#2b2c30", text: "#f3f2ee", accent: "#ff6a1f", muted: "#b7babf", back: "#b3121b", btn: "#f1f0ea" },
+      page: "repeating-conic-gradient(rgba(255,255,255,.03) 0 25%, transparent 0 50%), radial-gradient(80% 45% at 50% 0%, rgba(255,150,70,.16), transparent 70%), linear-gradient(#27282c, #0f1012 75%)",
+      pageSize: "64px 64px, 100% 100%, 100% 100%" },
+    { id: "space", name: "Space Fight", tag: "Starfighters, laser fire and a ringed planet", font: ["Audiowide", "'Audiowide', sans-serif"],
+      c: { felt: "#1b2040", deep: "#05060f", hi: "#2d3568", rail: "#04050b", railHi: "#1b1e35", text: "#e9edff", accent: "#ffcc33", muted: "#9ba4c8", back: "#7a1f2b", btn: "#e9edff" },
+      page: "radial-gradient(circle at 12% 20%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 70% 35%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 40% 75%, rgba(255,255,255,.8) 0 1px, transparent 1.5px), radial-gradient(circle at 88% 82%, rgba(255,255,255,.7) 0 1.2px, transparent 2px), radial-gradient(60% 40% at 80% 20%, rgba(120,80,220,.22), transparent 70%), radial-gradient(50% 40% at 15% 85%, rgba(40,140,220,.18), transparent 70%), linear-gradient(#0a0c1e, #03040a 80%)",
+      pageSize: "170px 170px, 230px 230px, 260px 260px, 310px 310px, 100% 100%, 100% 100%, 100% 100%", glow: "0 0 8px rgba(255,204,51,.55)" },
+    { id: "deezy", name: "Feeling Deezy?", tag: "Hazy pastels, lava lamps and slow clouds", font: ["Shrikhand", "'Shrikhand', cursive"],
+      c: { felt: "#5b3f8c", deep: "#1c1233", hi: "#7a5bb0", rail: "#150c26", railHi: "#352352", text: "#fcf0ff", accent: "#7ff0d0", muted: "#d4c2ea", back: "#e06aa8", btn: "#fde9ff" },
+      page: "radial-gradient(55% 45% at 20% 20%, rgba(255,140,200,.30), transparent 70%), radial-gradient(50% 45% at 85% 30%, rgba(120,240,210,.24), transparent 70%), radial-gradient(60% 50% at 50% 90%, rgba(160,120,255,.30), transparent 75%), linear-gradient(#2a1a4a, #140b26 80%)",
+      pageSize: "200% 200%, 200% 200%, 200% 200%, 100% 100%" }
   ];
 
   // ---------- colour helpers ----------
@@ -161,7 +173,11 @@
     :root[data-theme-name="vegas"] .felt, :root[data-theme-name="vegas"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.5), 0 0 0 2px var(--rail-hi), 0 0 28px rgba(255,79,180,.35); }
     :root[data-theme-name="future"] .felt, :root[data-theme-name="future"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 2px #9aa8b4, 0 0 22px rgba(121,227,255,.25); }
     :root[data-theme-name="lantern"] .felt, :root[data-theme-name="lantern"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 2px #c8962e, 0 0 30px rgba(255,160,60,.25); }
-    @media (prefers-reduced-motion: reduce) { :root[data-theme-name="aurora"] body { animation: none; } }
+    :root[data-theme-name="deezy"] body { animation: cr-aurora 50s ease-in-out infinite alternate; }
+    :root[data-theme-name="garage"] .felt, :root[data-theme-name="garage"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.45), 0 0 0 3px #c9ccd2, 0 0 0 5px #6d7178, 0 10px 30px rgba(0,0,0,.5); }
+    :root[data-theme-name="space"] .felt, :root[data-theme-name="space"] .table { box-shadow: inset 0 0 60px rgba(0,0,0,.5), 0 0 0 2px #3a4378, 0 0 26px rgba(90,120,255,.3); }
+    :root[data-theme-name="deezy"] .felt, :root[data-theme-name="deezy"] .table { box-shadow: inset 0 0 60px rgba(40,10,60,.45), 0 0 0 2px #b79be0, 0 0 34px rgba(255,150,220,.3); }
+    @media (prefers-reduced-motion: reduce) { :root[data-theme-name="aurora"] body, :root[data-theme-name="deezy"] body { animation: none; } }
     .theme-tools { display: flex; gap: 6px; align-items: center; flex: none; }
     .theme-btn { min-width: 0; width: 34px; height: 34px; padding: 0; border-radius: 50%; flex: none; background: transparent; color: var(--print);
       font-size: 1rem; line-height: 1; box-shadow: inset 0 0 0 1.5px var(--line); }
@@ -226,7 +242,15 @@
     @keyframes cr-spin { to { rotate: 360deg; } }
     .theme-deco .glow-green { filter: drop-shadow(0 0 8px rgba(190,255,150,.45)); }
     .theme-deco .twinkle-dot { filter: drop-shadow(0 0 4px #ffe680); }
-    @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } .theme-deco .petal { display: none; } }
+    /* Space Fight: laser bolts streak across; Garage: the flag ripples; Feeling Deezy: lava blobs rise and sink, orbs float */
+    .theme-deco .laser { animation: cr-laser var(--dur, 3.2s) linear var(--delay, 0s) infinite; opacity: 0; }
+    @keyframes cr-laser { 0% { translate: var(--from, -20vw) 0; opacity: 0; } 8% { opacity: 1; } 60% { opacity: 1; } 70%, 100% { translate: var(--to, 120vw) 0; opacity: 0; } }
+    .theme-deco .lava { animation: cr-lava var(--dur, 14s) ease-in-out var(--delay, 0s) infinite alternate; }
+    @keyframes cr-lava { from { translate: 0 0; scale: 1 1; } 50% { scale: .85 1.15; } to { translate: 0 var(--rise, -150px); scale: 1.1 .9; } }
+    .theme-deco .orb { animation: cr-orb var(--dur, 16s) ease-in-out var(--delay, 0s) infinite alternate; filter: blur(.5px); }
+    @keyframes cr-orb { from { translate: 0 0; opacity: .35; } to { translate: var(--dx, 3vw) var(--dy, -8vh); opacity: .85; } }
+    .theme-deco .zz { animation: cr-note 7s ease-in-out var(--delay, 0s) infinite; }
+    @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } .theme-deco .petal { display: none; } .theme-deco .laser { opacity: .8; } }
     @media (max-width: 720px) { .theme-deco { opacity: .65; } }
   `;
   const style = document.createElement("style");

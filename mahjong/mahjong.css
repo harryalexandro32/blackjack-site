@@ -4,7 +4,7 @@
 .mtable { aspect-ratio: 16 / 10; max-height: 78vh; min-height: 680px; border-radius: 34px; }
 
 /* the wall: 18 stacks of two on each side, in front of each player, broken where the dice say */
-.wallring { position: absolute; left: 50%; top: 57%; transform: translate(-50%, -50%); z-index: 1; --sw: 20px; --sd: 14px;
+.wallring { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); z-index: 1; --sw: 24px; --sd: 16px;
   width: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); height: calc(var(--sw) * 18 + var(--sd) * 2 + 18px); }
 .wallring .side { position: absolute; display: flex; gap: 1px; }
 .wallring .side[data-k="0"] { bottom: 0; left: calc(var(--sd) + 1px); flex-direction: row-reverse; }     /* your wall */
@@ -61,7 +61,7 @@
 /* opponents */
 .mtable .cseat { width: 176px; }
 .mtable .cseat[data-pos="1"] { left: 91%; top: 46%; }
-.mtable .cseat[data-pos="2"] { left: 50%; top: 12%; }
+.mtable .cseat[data-pos="2"] { left: 50%; top: 9%; }
 .mtable .cseat[data-pos="3"] { left: 9%; top: 46%; }
 .mtable .cseat .hidden-tiles { display: flex; gap: 1px; justify-content: center; }
 .mtable .cseat .hidden-tiles .tile { --tw: 11px; box-shadow: 0 1px 0 #e9e0cc; }
@@ -70,12 +70,12 @@
 .mtable .cseat .dealer, .crail .dealer { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: #1a120b; font-size: .66rem; font-weight: 800; margin-left: 4px; vertical-align: 1px; }
 
 /* each player's discards, in front of them */
-.pond { position: absolute; display: grid; grid-template-columns: repeat(5, var(--pt)); gap: 3px 2px; z-index: 2; --pt: 22px; }
+.pond { position: absolute; display: grid; grid-template-columns: repeat(5, var(--pt)); gap: 3px 2px; z-index: 2; --pt: 28px; }
 .pond .tile { --tw: var(--pt); }
-.pond[data-pos="0"] { left: 50%; bottom: calc(var(--sd) + 12px); transform: translateX(-50%); }
-.pond[data-pos="2"] { left: 50%; top: calc(var(--sd) + 12px); transform: translateX(-50%); }
-.pond[data-pos="3"] { left: calc(var(--sd) + 12px); top: 50%; transform: translateY(-50%); }
-.pond[data-pos="1"] { right: calc(var(--sd) + 12px); top: 50%; transform: translateY(-50%); }
+.pond[data-pos="0"] { left: 50%; bottom: calc(var(--sd) + 8px); transform: translateX(-50%); }
+.pond[data-pos="2"] { left: 50%; top: calc(var(--sd) + 8px); transform: translateX(-50%); }
+.pond[data-pos="3"] { left: calc(var(--sd) + 8px); top: 50%; transform: translateY(-50%); }
+.pond[data-pos="1"] { right: calc(var(--sd) + 8px); top: 50%; transform: translateY(-50%); }
 
 /* the middle: round wind and tiles left in the wall */
 .mcenter { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; display: grid; justify-items: center; gap: 2px;
@@ -136,7 +136,7 @@
   .mtable .cseat .flowers .tile { --tw: 12px; }
   .mtable .cseat .hidden-tiles { display: none; }
   .wallring { --sw: 7px; --sd: 5px; top: 54%; }
-  .pond { --pt: 15px; grid-template-columns: repeat(5, var(--pt)); gap: 2px; }
+  .pond { --pt: 16px; grid-template-columns: repeat(5, var(--pt)); gap: 2px; }
   .pond[data-pos="0"] { left: 50%; bottom: auto; top: calc(100% + 6px); transform: translateX(-50%); }
   .pond[data-pos="2"] { left: 50%; top: auto; bottom: calc(100% + 6px); transform: translateX(-50%); }
   .pond[data-pos="3"] { left: auto; right: calc(100% + 5px); }

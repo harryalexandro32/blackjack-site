@@ -1,6 +1,6 @@
 # The Card Room
 
-Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaScript, so there's no build step. Two header buttons: 🎨 picks one of eight themes (Classic, Cards by the Ocean, Feeling Pretty, Wild West, Vegas, Into the Future, Northern Lights, Lantern Night) and ☾/☀ turns dark mode on or off for any theme. Fonts load from Google Fonts.
+Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaScript, so there's no build step. Two header buttons: 🎨 picks one of fifteen themes (Classic, Cards by the Ocean, Feeling Pretty, Wild West, Vegas, Into the Future, Northern Lights, Lantern Night, Emperor's House, Pirate's Cove, Midnight Jazz Club, Enchanted Forest, Garage, Space Fight, Feeling Deezy?) and ☾/☀ turns dark mode on or off for any theme. Fonts load from Google Fonts.
 
 - **Blackjack** (`blackjack/`): single player. Buy in for any amount, bet each hand, double, split, surrender, insurance. Resetting the session wipes the bankroll.
 - **Poker** (`poker/`): cash games in three flavours the host picks: **Texas Hold'em** (no-limit), **Omaha** (4 cards, use exactly 2 + 3 from the board, pot-limit) and **Five Card Draw** (swap up to 3, or 4 when keeping an ace; up to 6 players). Premoves before your turn: Check/Fold, Check, Call $X, Call any.

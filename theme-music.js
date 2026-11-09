@@ -380,8 +380,65 @@
     }
   };
 
+  // Garage: a driving surf-rock groove. Gritty power chords, a pumping bass, a backbeat, a twangy lead.
+  T.garage = {
+    bpm: 136, beats: 4,
+    chords: [[40, [52, 59, 64]], [40, [52, 59, 64]], [45, [57, 64, 69]], [43, [55, 62, 67]]],   // E5, E5, A5, G5
+    scale: [64, 67, 69, 71, 74, 76, 79],
+    init() { this.mo = motif(this.scale, 16, 7); },
+    bar(n, t, b) {
+      const [root, ch] = this.chords[n % 4], s = b / 4;
+      [0, 2].forEach(k => kick(t + k * b, 0.55)); kick(t + 2.5 * b, 0.35);
+      [1, 3].forEach(k => snare(t + k * b, 0.14));
+      for (let i = 0; i < 8; i++) hat(t + i * 2 * s, i % 2 ? 0.02 : 0.035);
+      for (let i = 0; i < 8; i++) bass(root + (i === 7 ? 2 : 0), t + i * 2 * s, s * 1.7, 0.26, "sawtooth", 700);
+      [0, 1.5, 3].forEach(k => ch.forEach(m => synth(m, t + k * b, k === 3 ? b * 0.9 : b * 0.4, 0.022, 1700, 500, [-14, 14], 0.15, "sawtooth")));
+      if (n % 8 >= 4) for (const [p, i] of this.mo) pluck(this.scale[i], t + p * s, 0.16, true, 0.55, 3200);
+    }
+  };
+
+  // Space Fight: a heroic march. Low strings, timpani, brass fanfares, a snare roll into each phrase.
+  T.space = {
+    bpm: 100, beats: 4,
+    chords: [[43, [55, 59, 62]], [41, [53, 57, 60]], [48, [55, 60, 64]], [43, [55, 59, 62, 65]]],   // G, F, C, G7
+    tune: [[67, 1], [67, 0.5], [67, 0.5], [72, 2]], tune2: [[74, 1], [72, 0.5], [71, 0.5], [69, 1], [67, 1]],
+    bar(n, t, b) {
+      const [root, ch] = this.chords[n % 4];
+      pad(ch.map(m => m - 12), t, b * 4.1, 0.022, "sawtooth");
+      [0, 2].forEach(k => thump(t + k * b, 90, 55, 0.5, 0.6));          // timpani
+      thump(t + 3.5 * b, 90, 55, 0.3, 0.4);
+      for (let i = 0; i < 4; i++) snare(t + i * b + b * 0.5, 0.05);
+      if (n % 4 === 3) for (let i = 0; i < 6; i++) snare(t + 3 * b + i * b / 6, 0.03 + i * 0.01);
+      bass(root - 12, t, b * 1.8, 0.3, "triangle", 500); bass(root - 12, t + 2 * b, b * 1.8, 0.28, "triangle", 500);
+      if (n % 8 < 4) {
+        let at = 0;
+        for (const [m, len] of (n % 2 ? this.tune2 : this.tune)) { ch.slice(0, 1).forEach(() => synth(m, t + at * b, len * b * 0.95, 0.05, 2600, 900, [-9, 9], 0.45)); synth(m - 12, t + at * b, len * b * 0.95, 0.03, 1800, 700, [-9, 9], 0.4); at += len; }
+      } else ch.forEach(m => synth(m + 12, t, 0.25, 0.03, 3000, 900, [-12, 12], 0.5));
+    }
+  };
+
+  // Feeling Deezy?: slow lo-fi. Warm electric piano, a lazy beat, vinyl crackle, a dreamy bell melody.
+  T.deezy = {
+    bpm: 72, beats: 4,
+    chords: [[41, [57, 60, 64, 67]], [40, [55, 59, 62, 65]], [38, [57, 60, 64, 65]], [43, [53, 57, 59, 62]]],   // Fmaj9, Em7, Dm9, G9
+    scale: [69, 72, 74, 76, 79, 81, 84],
+    init() { this.mo = motif(this.scale, 16, 5); this.mo2 = motif(this.scale, 16, 4); },
+    bar(n, t, b) {
+      const [root, ch] = this.chords[n % 4], s = b / 4;
+      ch.forEach((m, i) => epiano(m, t + i * 0.03, b * 3.6, 0.045));
+      ch.forEach((m, i) => epiano(m, t + 2.5 * b + i * 0.03, b * 1.2, 0.03));
+      bass(root - 12, t, b * 1.6, 0.26, "sine", 500); bass(root - 12 + 7, t + 2.5 * b, b * 1.2, 0.2, "sine", 500);
+      kick(t, 0.38); kick(t + 1.75 * b, 0.22); kick(t + 2.5 * b, 0.3);
+      [1, 3].forEach(k => noiseHit(t + k * b + 0.02, { dur: 0.2, v: 0.06, type: "bandpass", freq: 1500, q: 0.7, send: 0.5 }));
+      for (let i = 0; i < 8; i++) hat(t + i * 2 * s + (i % 2 ? s * 0.33 : 0), 0.014);
+      for (let i = 0; i < 6; i++) noiseHit(t + Math.random() * 4 * b, { dur: 0.01, v: 0.012, freq: 3000, send: 0 });   // crackle
+      const mo = n % 4 < 2 ? this.mo : this.mo2;
+      if (n % 8 >= 2) for (const [p, i] of mo) bell(this.scale[i], t + p * s * 1.02, 0.05, [[1, 1, 1.6], [2.0, 0.3, 0.6], [3.0, 0.1, 0.3]], 0.8);
+    }
+  };
+
   // evens out how loud the tunes feel
-  const LEVEL = { aurora: 1.9, forest: 1.6, future: 1.3, emperor: 1.25, jazz: 0.8, classic: 0.9 };
+  const LEVEL = { aurora: 1.9, forest: 1.6, future: 1.3, emperor: 1.25, jazz: 0.8, classic: 0.9, garage: 0.85, space: 1.0, deezy: 1.35 };
 
   // ---------- control ----------
   let pending = null;

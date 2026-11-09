@@ -108,6 +108,31 @@
       ${[[38, 3.2, 0], [52, 4.4, -1.5], [30, 5.6, -3], [46, 3.8, -2.2]].map(([r, dur, d]) => `<g class="ld-orbit" style="animation-duration:${dur}s;animation-delay:${d}s;transform-origin:100px 80px"><circle cx="${100 + r}" cy="80" r="2.6" fill="#f5e07a"/><circle cx="${100 + r}" cy="80" r="7" fill="#f5e07a" opacity=".25"/></g>`).join("")}` }
   };
 
+  // Garage: a rev counter; the needle kicks up, holds, drops back, with exhaust puffs
+  LOADERS.garage = { text: "Revving the engine…", font: "'Racing Sans One', sans-serif", svg: () => `
+      <path d="M40 110 A60 60 0 1 1 160 110" fill="none" stroke="#2b2c30" stroke-width="16" stroke-linecap="round"/>
+      <path d="M40 110 A60 60 0 0 1 136 62" fill="none" stroke="#c9ccd2" stroke-width="4"/>
+      <path d="M136 62 A60 60 0 0 1 160 110" fill="none" stroke="#ff3b2b" stroke-width="5"/>
+      ${Array.from({ length: 7 }, (_, i) => `<path d="M100 50 V58" stroke="#f3f2ee" stroke-width="3" transform="rotate(${-90 + i * 30} 100 110)"/>`).join("")}
+      <g class="ld-rev" style="transform-origin:100px 110px"><path d="M100 110 L100 58" stroke="#ff6a1f" stroke-width="4" stroke-linecap="round"/></g>
+      <circle cx="100" cy="110" r="8" fill="#c9ccd2"/>
+      <g class="ld-puff" style="animation-delay:0s"><circle cx="30" cy="124" r="6" fill="#9aa0a8"/></g>
+      <g class="ld-puff" style="animation-delay:.35s"><circle cx="26" cy="128" r="5" fill="#b7babf"/></g>` };
+  // Space Fight: a starfighter holding still while the stars streak past
+  LOADERS.space = { text: "Engaging thrusters…", font: "'Audiowide', sans-serif", svg: () => {
+    let s = "";
+    for (let i = 0; i < 14; i++) s += `<rect class="ld-streak" style="animation-delay:${(-i * 0.13).toFixed(2)}s" x="${200 + (i * 37) % 60}" y="${10 + (i * 53) % 120}" width="${18 + (i % 4) * 8}" height="1.6" fill="#fff"/>`;
+    return s + `<g transform="translate(36 30)"><path d="M8 40 L118 31 L156 40 L118 49Z" fill="#d5dbe8"/><path d="M58 34 L88 4 L102 6 L84 34Z M58 46 L88 76 L102 74 L84 46Z" fill="#8f9bb6"/>
+      <path d="M98 36 L122 38 L122 42 L98 44 Q92 40 98 36Z" fill="#2a3a5c"/><g class="ld-glowpulse"><circle cx="6" cy="40" r="9" fill="#7fd0ff"/><circle cx="-2" cy="40" r="14" fill="#7fd0ff" opacity=".3"/></g></g>`;
+  } };
+  // Feeling Deezy?: a lava lamp, blobs drifting up and down
+  LOADERS.deezy = { text: "Drifting off…", font: "'Shrikhand', cursive", svg: () => `
+      <defs><clipPath id="ldlamp"><path d="M86 30 L114 30 L126 112 L74 112Z"/></clipPath></defs>
+      <path d="M90 14 L110 14 L114 30 L86 30Z" fill="#c9ccd8"/><path d="M86 30 L114 30 L126 112 L74 112Z" fill="#8a5fd0"/>
+      <g clip-path="url(#ldlamp)"><ellipse class="ld-lava" cx="100" cy="100" rx="11" ry="13" fill="#ff7ac8"/><ellipse class="ld-lava" style="animation-delay:-1.6s" cx="94" cy="96" rx="8" ry="10" fill="#ff9ad5"/><ellipse class="ld-lava" style="animation-delay:-.8s" cx="108" cy="104" rx="7" ry="8" fill="#ff7ac8"/><ellipse cx="100" cy="114" rx="30" ry="9" fill="#ff7ac8"/></g>
+      <path d="M74 112 L126 112 L132 132 L68 132Z" fill="#c9ccd8"/>
+      <circle class="ld-twinkle" cx="50" cy="40" r="4" fill="#9ff3e0"/><circle class="ld-twinkle" style="animation-delay:-.7s" cx="150" cy="56" r="3" fill="#ffe39a"/><circle class="ld-twinkle" style="animation-delay:-1.3s" cx="40" cy="96" r="3" fill="#ff9ad5"/>` };
+
   const LOADER_CSS = `
   .ld-riffle-l { animation: ld-riffle-l 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * 0.11s); }
   .ld-riffle-r { animation: ld-riffle-r 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * 0.11s + 0.055s); }
@@ -148,6 +173,10 @@
   .ld-noteup { animation: ld-noteup 2.7s ease-out infinite; opacity: 0; } @keyframes ld-noteup { 0% { transform: translateY(10px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(8px, -30px); opacity: 0; } }
   .ld-glowpulse { animation: ld-glow 2.4s ease-in-out infinite; } @keyframes ld-glow { 50% { opacity: .7; } }
   .ld-orbit { animation: ld-spin 4s linear infinite; }
+  .ld-rev { animation: ld-rev 1.8s cubic-bezier(.3,1.4,.5,1) infinite; } @keyframes ld-rev { 0% { transform: rotate(-88deg); } 35%, 55% { transform: rotate(80deg); } 60% { transform: rotate(66deg); } 65% { transform: rotate(80deg); } 100% { transform: rotate(-88deg); } }
+  .ld-puff { animation: ld-puff 1.8s ease-out infinite; opacity: 0; } @keyframes ld-puff { 0%, 30% { opacity: 0; transform: translate(0, 0) scale(.5); } 45% { opacity: .9; } 100% { opacity: 0; transform: translate(-24px, -10px) scale(2); } }
+  .ld-streak { animation: ld-streak .9s linear infinite; } @keyframes ld-streak { from { transform: translateX(0); } to { transform: translateX(-260px); } }
+  .ld-lava { animation: ld-lava 3.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; } @keyframes ld-lava { from { transform: translateY(0) scale(1, 1); } to { transform: translateY(-58px) scale(1.15, .85); } }
   @media (prefers-reduced-motion: reduce) { [class^="ld-"], [class*=" ld-"] { animation-duration: 0s !important; animation-iteration-count: 1 !important; } }
   `;
 
