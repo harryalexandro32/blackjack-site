@@ -5,6 +5,8 @@ import * as U from "../supabase/functions/_shared/undercover-engine.js";
 import { PAIRS } from "../supabase/functions/_shared/undercover-words.js";
 import { ICONS, ROLE_NAME, ROLE_A } from "./icons.js";
 import { play as sound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -94,6 +96,7 @@ const nameAt = s => S.names[s];
 function render() {
   const g = S.g, phase = g.finished ? "done" : g.phase;
   document.body.className = "uc-" + (phase === "done" ? "lobby" : phase === "guess" ? "guess" : S.step === "deal" ? "lobby" : phase);
+  cue.level(phase === "done" || S.step === "deal" ? 0 : phase === "talk" || phase === "vote" || phase === "guess" ? 2 : 1);
   const passing = S.step === "deal" || S.peek !== null || phase === "guess";
   $("lPass").hidden = !passing;
   $("lPlayers").hidden = passing;
@@ -242,6 +245,9 @@ function renderScores() {
 let rq = [], rTimer = 0;
 function announce(g) {
   for (const e of g.log.slice(S.seenLog)) {
+    if ((e.type === "voted" && e.out !== null) || (e.type === "guess" && e.right)) cue.sting("big");
+    else if (e.type === "win") cue.sting("win");
+    else if (e.type === "round") cue.sting("turn");
     if (e.type === "voted") rq.push(e.out !== null ? [e.role === "civilian" ? "out" : e.role, `${nameAt(e.out)} is out`, `…and was ${ROLE_A[e.role]}${e.role === "white" ? ", who now gets one guess." : "."}`] : ["tie", "Nobody is out", "On to the next round."]);
     else if (e.type === "guess") rq.push(["guess", e.right ? "Mr. White got it!" : "Wrong guess", `"${e.text || "…"}"`]);
     else if (e.type === "round" && e.round > 1) rq.push(["clue", `Round ${e.round}`, "Another clue each, out loud."]);

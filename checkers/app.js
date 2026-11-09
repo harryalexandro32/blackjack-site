@@ -5,6 +5,8 @@ import { avatarSvg, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound, soundOn, setSound } from "../poker/sound.js";
 import { LocalCheckers } from "./local.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -108,6 +110,7 @@ function initSetup() {
 }
 
 // ---------- the table ----------
+let lastTurnCue = false;
 let ctrl = null, unsub = null, view = null, picked = null, lastKey = null, prevBoard = null, bannerFor = null;
 function attach(c) {
   if (unsub) unsub();
@@ -162,6 +165,11 @@ function render() {
     prevBoard = g.board;
   } else { $("pieces").innerHTML = ""; [...$("cells").children].forEach(c => c.className = "ck-cell" + ((+c.dataset.sr + +c.dataset.sc) % 2 ? " dark" : "")); }
   $("status").textContent = statusText(g);
+  // the music: calm between games, intense once the board thins out; a cue when it becomes your move
+  cue.level(!g || g.finished ? 0 : g.counts[0] + g.counts[1] <= 10 ? 2 : 1);
+  const turnNow = myTurn();
+  if (turnNow && !lastTurnCue && g && g.moves > 0) cue.sting("turn");
+  lastTurnCue = turnNow;
   renderButtons(g);
   renderBanner(g);
   renderLobby(g);
@@ -232,6 +240,7 @@ function animateLast(g) {
   });
   sound(L.caps.length ? "allin" : "check", 0);
   if (L.crowned) sound("pot", 0.25);
+  if (L.caps.length >= 2 || L.crowned) cue.sting("big");
 }
 
 function statusText(g) {
@@ -269,6 +278,7 @@ function renderBanner(g) {
   b.querySelector(".wb-title").textContent = f.winner === -1 ? "Draw" : view.mode !== "local" && f.winner === view.me ? "You win!" : `${w ? w.name : "?"} wins!`;
   b.hidden = false;
   sound(f.winner === view.me || view.mode === "local" ? "win" : "fold", 0.2);
+  cue.sting(f.winner === -1 ? "turn" : view.mode === "local" || f.winner === view.me ? "win" : "lose");
 }
 $("winBanner").addEventListener("click", () => $("winBanner").hidden = true);
 

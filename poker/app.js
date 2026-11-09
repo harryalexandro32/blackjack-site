@@ -7,6 +7,8 @@ import { CATEGORY, evaluate, settle, GAMES, evaluateFor, drawAllowed } from "../
 import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { play, soundOn, setSound } from "./sound.js";
 import { useTable, saveHand, hasReplay, openReplay, setupReplay } from "./replay.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -401,7 +403,7 @@ function updateHistory() {
     const e = h.log[seen.log++];
     if (cardsFor[e.street]) showBoardTo(cardsFor[e.street]);
     history.push({ text: describe(e) });
-    if (animOk) play(actionSound(e.type), 0.12 * k++);
+    if (animOk) { play(actionSound(e.type), 0.12 * k++); if (actionSound(e.type) === "allin") cue.sting("big"); }
   }
   if (h.street !== "preflop") showBoardTo(h.street === "done" ? 5 : cardsFor[h.street]);
   if (h.results && !seen.results) {
@@ -525,6 +527,9 @@ function render() {
   $("myPos").textContent = me < 0 ? "Watching" : !h ? "" : positionName(me);
 
   renderWinner();
+  // the music: calm between hands, intense with someone all in, on the river, or a pot over 25 big blinds
+  const hh = view.table.hand, bbig = view.table.bb || 1;
+  cue.level(!hh || hh.street === "done" ? 0 : (hh.players || []).some(p => p && p.allIn && !p.folded) || hh.street === "river" || (hh.pot || 0) >= 25 * bbig ? 2 : 1);
 
   // card movement: hole cards round the table on a new hand, then each street's board cards
   let after = 0;
@@ -563,6 +568,7 @@ function renderWinner() {
   bannerHand = h.no;
   box.innerHTML = "";
   if (animOk) play(h.results.some(r => r.seat === view.me) ? "win" : "pot", 0.6);
+  if (animOk) { const mineP = h.players[view.me]; if (h.results.some(r => r.seat === view.me)) cue.sting("win"); else if (mineP && !mineP.folded) cue.sting("lose"); }
   const groups = h.runs ? h.runs.map((run, i) => ({ label: `Run ${i + 1}`, results: run.results })) : [{ label: "", results: h.results }];
   let rows = 0;
   for (const g of groups) {
@@ -810,7 +816,7 @@ function renderActions() {
 
   if (myTurn) {
     const turnKey = `${h.no}:${h.log.length}`;
-    if (turnKey !== lastTurnKey) { lastTurnKey = turnKey; if (animOk) play("turn"); }
+    if (turnKey !== lastTurnKey) { lastTurnKey = turnKey; if (animOk) { play("turn"); cue.sting("turn"); } }
     const toCall = legal.call;
     $("btnCall").firstChild.textContent = legal.check ? "Check" : toCall >= mine.stack ? `Call ${fmt(toCall)} all in` : `Call ${fmt(toCall)}`;
     $("btnFold").firstChild.textContent = legal.check ? "Fold" : "Fold";

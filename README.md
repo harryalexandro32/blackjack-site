@@ -42,7 +42,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `supabase/functions/_shared/undercover-engine.js`, `undercover-room.js`, `undercover-words.js` | Undercover rules, rooms and the bilingual word list |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
 | `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
-| `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪) |
+| `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪). It follows the game: each page reports how heated the table is (calm, normal, intense: layers come in and drop out) and plays short cues in the theme's own sound for your turn, a win, a loss and big moments (`window.CR_CUE` in theme.js). |
 | `poker/odds.js` | Odds helper: simulates the rest of the hand from what you can see |
 | `poker/online.js` | Online mode client (talks to the edge function, listens for table updates) |
 | `poker/config.js` | Supabase URL and anon key for online mode (empty = online mode switched off) |

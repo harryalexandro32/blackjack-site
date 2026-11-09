@@ -5,6 +5,8 @@ import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound } from "../poker/sound.js";
 import { ICONS, ROLE_NAME, ROLE_A } from "./icons.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -118,6 +120,7 @@ function render() {
   const inGame = !!v && me >= 0;
   const alive = inGame && v.alive[me];
   document.body.className = "uc-" + (phase === "done" ? "lobby" : phase);
+  cue.level(phase === "lobby" || phase === "done" ? 0 : phase === "vote" || phase === "guess" ? 2 : 1);
   $("mGame").textContent = view.gameNo || "–";
   $("mPhase").textContent = !v ? "–" : v.finished ? "Over" : v.round;
   $("mAlive").textContent = v ? `${v.alive.filter(Boolean).length} of ${v.n}` : "–";
@@ -241,7 +244,7 @@ function renderActions(v, phase, inGame, alive) {
     $("clueInput").setAttribute("aria-label", myGuess ? "Your guess" : "Your clue");
   }
   const nowMine = myTurn || myGuess;
-  if (nowMine && !wasMyTurn) { $("clueInput").value = ""; sound("turn", 0); setTimeout(() => $("clueInput").focus({ preventScroll: true }), 50); }
+  if (nowMine && !wasMyTurn) { $("clueInput").value = ""; sound("turn", 0); cue.sting("turn"); setTimeout(() => $("clueInput").focus({ preventScroll: true }), 50); }
   wasMyTurn = nowMine;
 
   if (phase === "lobby" || phase === "done") {
@@ -371,6 +374,8 @@ function announce(v) {
     if (fresh) queueReveal(view.me >= 0 && v.iAmWhite ? "white" : "clue", "Round 1", view.me < 0 ? "The game has begun." : v.iAmWhite ? "You're Mr. White: no word for you. Bluff!" : `Your word: ${v.myWord}`, view.me >= 0 && !v.iAmWhite ? v.myWord : null);
   }
   for (const e of v.log.slice(lastSeen.n)) {
+    if ((e.type === "voted" && e.out !== null) || (e.type === "guess" && e.right)) cue.sting("big");
+    else if (e.type === "win" && view.me >= 0) cue.sting(v.finished && v.finished.winners.includes(view.me) ? "win" : "lose");
     if (e.type === "voted") queueReveal(e.out !== null ? (e.role === "civilian" ? "out" : e.role) : "tie", e.out !== null ? `${nameAt(e.out)} ${isAre(e.out)} out` : "Nobody is out", e.out !== null ? `…${e.out === view.me ? "you were" : "and was"} ${ROLE_A[e.role]}${e.role === "white" ? ", who now gets one guess." : "."}` : "The runoff was tied too.");
     else if (e.type === "runoff") queueReveal("tie", "It's a tie", `Runoff between ${e.between.map(nameAt).join(" and ")}.`);
     else if (e.type === "guess") queueReveal("guess", e.right ? "Mr. White got it!" : "Wrong guess", `"${e.text || "…"}"`);

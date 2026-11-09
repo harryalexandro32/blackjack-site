@@ -7,6 +7,8 @@ import { LocalCapsa, savedCapsaGame } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound, soundOn, setSound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -505,6 +507,7 @@ function renderBanner(g) {
   box.hidden = false;
   if (f.mode === "loser") table.append(...[...table.children].sort((a, b) => a.dataset.place - b.dataset.place));
   if (animOk()) sound(f.winner === view.me || (f.mode === "loser" && loserSeat !== view.me) ? "win" : f.reason === "bomb" ? "allin" : "pot", 0.2);
+  if (renderedOnce) cue.sting(f.winner === view.me || (f.mode === "loser" && loserSeat !== view.me) ? "win" : "lose");
 }
 $("winBanner").addEventListener("click", () => { if (bannerFor && !bannerFor.endsWith("hidden")) bannerFor += "-hidden"; $("winBanner").hidden = true; });
 
@@ -527,13 +530,15 @@ function sounds(g) {
     const [no] = lastLog.split(":");
     const fromIdx = +no === g.no ? +lastLog.split(":")[1] : 0;
     g.log.slice(fromIdx).forEach((e, k) => {
-      if (e.type === "play") sound(C.isBomb({ type: e.combo }) ? "allin" : e.cards.length >= 5 ? "chips" : "flip", k * 0.1);
+      if (e.type === "play") { sound(C.isBomb({ type: e.combo }) ? "allin" : e.cards.length >= 5 ? "chips" : "flip", k * 0.1); if (C.isBomb({ type: e.combo })) cue.sting("big"); }
       else if (e.type === "pass") sound("check", k * 0.1);
     });
   }
   if (lastGame !== null && g.no !== lastGame && renderedOnce) for (let i = 0; i < 6; i++) sound("deal", i * 0.07);
   const myTurnNow = !!(g.legal && !g.finished);
-  if (myTurnNow && lastTurn === false && renderedOnce) sound("turn");
+  if (myTurnNow && lastTurn === false && renderedOnce) { sound("turn"); cue.sting("turn"); }
+  // the music: calm between games, intense once anyone is down to their last 3 cards
+  cue.level(g.finished ? 0 : Math.min(...g.counts.filter(n => n > 0)) <= 3 ? 2 : 1);
   lastLog = key; lastGame = g.no; lastTurn = myTurnNow;
   renderedOnce = true;
 }

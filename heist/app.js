@@ -4,6 +4,8 @@ import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -126,6 +128,7 @@ function initSetup() {
 }
 
 // ---------- the room ----------
+let lastTurnCue = null;
 let roleOpen = false, chatTab = "all", lastChatN = null, choosing = [], chooseKey = null;
 const nameAt = s => s === view.me ? "You" : (view.players[s] && view.players[s].name) || "Someone";
 const g = () => view && view.view;
@@ -138,6 +141,13 @@ function render() {
   const phase = !v ? "lobby" : v.finished ? "done" : v.phase;
   const inGame = !!v && me >= 0;
   document.body.className = "hs-" + (phase === "done" ? "lobby" : phase);
+  cue.level(phase === "lobby" || phase === "done" ? 0 : phase === "heist" || phase === "snipe" || (v && v.rejects >= 3) ? 2 : 1);
+  if (v && view.me >= 0 && !v.finished) {
+    const mine = (phase === "pick" && v.leader === view.me) || (phase === "vote" && v.myVote === null) || (phase === "heist" && v.team.includes(view.me) && !v.myPlay) || (phase === "snipe" && v.sniper === view.me);
+    const k = mine ? `${v.no}:${v.heist}:${v.rejects}:${phase}` : null;
+    if (k && k !== lastTurnCue) cue.sting("turn");
+    lastTurnCue = k;
+  }
   $("mGame").textContent = view.gameNo || "–";
   $("mPhase").textContent = v ? (v.finished ? "Over" : `${v.heist + 1} of 5`) : "–";
   $("mAlive").textContent = v ? `${score(v)[0]} – ${score(v)[1]}` : "–";
@@ -345,6 +355,8 @@ function announce(v) {
     if (fresh && view.me >= 0) queueReveal(v.myRole, `You're ${v.myRole === "crew" ? "crew" : v.myRole === "cop" ? "an undercover cop" : "the " + ROLE_NAME[v.myRole]}`, ROLE_HELP[v.myRole]);
   }
   for (const e of v.log.slice(lastSeen.n)) {
+    if (e.type === "result" || e.type === "snipe") cue.sting("big");
+    else if (e.type === "win" && view.me >= 0) cue.sting(v.finished && v.finished.winners.includes(view.me) ? "win" : "lose");
     if (e.type === "vote") queueReveal(e.ok ? "vote" : "reject", e.ok ? "Team approved" : "Team turned down", `${e.votes.filter(Boolean).length} of ${e.votes.length} for it.${e.ok ? "" : ` ${5 - Math.min(5, countRejects(v, e))} more and the cops win.`}`);
     else if (e.type === "result") queueReveal(e.ok ? "ok" : "fail", e.ok ? "The heist came off!" : "The heist failed!", e.fails ? `${e.fails} sabotage card${e.fails > 1 ? "s" : ""} in the pile.` : "Every card was a Success.");
     else if (e.type === "snipe") queueReveal("sniper", e.hit ? "Got the Mastermind" : "Missed!", `${nameAt(e.target)} was ${e.hit ? "the Mastermind" : "not the Mastermind"}.`);

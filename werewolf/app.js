@@ -3,6 +3,8 @@ import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -135,6 +137,7 @@ function render() {
   const inGame = !!v && me >= 0;
   const alive = inGame && v.alive[me];
   document.body.className = "ww-" + (phase === "done" ? "lobby" : phase);
+  cue.level(phase === "lobby" || phase === "done" ? 0 : phase === "vote" ? 2 : 1);
   $("mGame").textContent = view.gameNo || "–";
   $("mPhase").textContent = phase === "lobby" ? "Lobby" : phase === "done" ? "Game over" : `${phase === "night" ? "Night" : phase === "day" ? "Day" : "Vote"} ${v.round}`;
   $("mAlive").textContent = v ? `${v.alive.filter(Boolean).length} of ${v.n}` : "–";
@@ -307,6 +310,10 @@ function announce(v) {
     if (fresh || (lastSeen && v.log.length <= 1)) queueReveal("night", `Night ${v.round}`, view.me >= 0 ? `You are ${v.myRole === "wolf" ? "a Werewolf" : v.myRole === "villager" ? "a Villager" : "the " + ROLE_NAME[v.myRole]}. Tap your card to check it later.` : "The game has begun.");
   }
   for (const e of v.log.slice(lastSeen.n)) {
+    const meAlive = view.me >= 0 && v.alive[view.me];
+    if ((e.type === "dawn" && e.killed !== null) || (e.type === "voted" && e.out !== null)) cue.sting("big");
+    else if (e.type === "win" && view.me >= 0) cue.sting(v.finished && v.finished.winners.includes(view.me) ? "win" : "lose");
+    else if (meAlive && (e.type === "vote open" || (e.type === "night" && v.myRole && v.myRole !== "villager"))) cue.sting("turn");
     if (e.type === "dawn") queueReveal(e.killed !== null ? "dead" : e.saved ? "saved" : "day", e.killed !== null ? `${nameAt(e.killed)} ${e.killed === view.me ? "were" : "was"} killed` : e.saved ? "Saved!" : "Nobody died", e.killed !== null ? `${e.killed === view.me ? "You were" : "They were"} ${ROLE_NAME[e.role] === "Werewolf" ? "a Werewolf" : ROLE_NAME[e.role] === "Villager" ? "a Villager" : "the " + ROLE_NAME[e.role]}.` : e.saved ? "The Doctor stopped the wolves tonight." : "The village wakes up, all present.");
     else if (e.type === "voted") queueReveal(e.out !== null ? (e.role === "wolf" ? "wolf" : "dead") : "vote", e.out !== null ? `${nameAt(e.out)} ${e.out === view.me ? "are" : "is"} voted out` : "No one is voted out", e.out !== null ? (e.role === "wolf" ? "…and was a Werewolf!" : `…and was ${e.role === "villager" ? "a Villager" : "the " + ROLE_NAME[e.role]}.`) : "The vote was split.");
     else if (e.type === "night" && e.round > 1) queueReveal("night", `Night ${e.round}`, "Close your eyes…");

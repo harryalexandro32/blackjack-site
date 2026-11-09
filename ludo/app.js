@@ -6,6 +6,8 @@ import { LocalLudo, savedLudoGame } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound, soundOn, setSound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -437,6 +439,7 @@ function renderBanner(g) {
   res.appendChild(table); box.appendChild(res);
   box.hidden = false;
   if (animOk()) sound(f.winner === view.me ? "win" : "pot", 0.2);
+  if (renderedOnce && view.me >= 0) cue.sting(f.winner === view.me ? "win" : "lose");
 }
 $("winBanner").addEventListener("click", () => { if (bannerFor && !bannerFor.endsWith("hidden")) bannerFor += "-hidden"; $("winBanner").hidden = true; });
 
@@ -488,6 +491,7 @@ function motion(g) {
         const walkMs = Math.min(2400, 170 * ((frames.length - 1) / 2) + 60);
         el.animate(frames, { duration: walkMs, easing: "linear" });
         sound(e.captures.length ? "allin" : "flip", 0);
+        if (e.captures.length && (e.seat === view.me || e.captures.some(([cs]) => cs === view.me))) cue.sting("big");
         e.captures.forEach(([s, i]) => {
           const t = tokenEls[s][i], [cl, ct] = pct(cells[cells.length - 1]);
           t.animate([{ left: cl, top: ct, opacity: 1 }, { left: cl, top: ct, opacity: .4, transform: "translate(-50%, -78%) scale(1.4)" }, { left: t.style.left, top: t.style.top, opacity: 1 }], { duration: 700, delay: walkMs - 120, easing: "ease-in-out" });
@@ -497,7 +501,9 @@ function motion(g) {
   }
   if (lastGame !== null && g.no !== lastGame && renderedOnce) sound("deal", 0);
   const myTurnNow = !!(!g.finished && g.turn === view.me);
-  if (myTurnNow && lastTurn === false && renderedOnce) sound("turn");
+  if (myTurnNow && lastTurn === false && renderedOnce) { sound("turn"); cue.sting("turn"); }
+  // the music: calm between games, intense once anyone has three tokens home
+  cue.level(g.finished ? 0 : Math.max(...g.tokens.map(ts => ts.filter(p => p >= L.FINISH).length)) >= 3 ? 2 : 1);
   lastLog = key; lastGame = g.no; lastTurn = myTurnNow;
   renderedOnce = true;
 }

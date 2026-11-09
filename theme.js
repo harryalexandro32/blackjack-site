@@ -129,8 +129,21 @@
     if (!musicLoading) { musicLoading = []; window.CR_MUSIC_READY = () => { const q = musicLoading; musicLoading = null; q.forEach(g => g(window.CR_MUSIC)); }; sibling("theme-music.js"); }
     if (musicLoading) musicLoading.push(fn);
   }
+  // The music follows the game: pages say how heated the table is (0 calm, 1 normal, 2 intense) and what just
+  // happened ("turn", "win", "lose", "big"). Nothing happens while the music is off.
+  let cueLevel = 1;
+  const lastCue = {};
+  window.CR_CUE = {
+    level(i) { if (i === cueLevel) return; cueLevel = i; if (window.CR_MUSIC && window.CR_MUSIC.setIntensity) window.CR_MUSIC.setIntensity(i); },
+    sting(kind) {
+      const now = Date.now();
+      if (now - (lastCue[kind] || 0) < 1500) return;      // one of each at a time
+      lastCue[kind] = now;
+      if (musicOn && window.CR_MUSIC && window.CR_MUSIC.sting) window.CR_MUSIC.sting(kind);
+    }
+  };
   function syncMusic() {
-    if (musicOn) withMusic(M => { M.setVolume(musicVol); M.start(themeId); });
+    if (musicOn) withMusic(M => { M.setVolume(musicVol); if (M.setIntensity) M.setIntensity(cueLevel); M.start(themeId); });
     else if (window.CR_MUSIC) window.CR_MUSIC.stop();
   }
 

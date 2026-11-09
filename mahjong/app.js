@@ -8,6 +8,8 @@ import { LocalMahjong, savedMahjongGame } from "./local.js";
 import { avatarSvg, PRESETS, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound, soundOn, setSound } from "../poker/sound.js";
+// the music follows the game (theme.js; does nothing while the music is off)
+const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
 const $ = id => document.getElementById(id);
 const CONFIG = window.POKER_CONFIG || {};
@@ -492,6 +494,7 @@ function renderBanner(g) {
   box.appendChild(res);
   box.hidden = false;
   if (animOk()) sound(f.winner === view.me ? "win" : f.reason === "draw" ? "fold" : "pot", 0.2);
+  if (renderedOnce && f.reason !== "draw") cue.sting(f.winner === view.me ? "win" : "lose");
 }
 $("winBanner").addEventListener("click", () => { if (bannerFor && !bannerFor.endsWith("hidden")) bannerFor += "-hidden"; $("winBanner").hidden = true; });
 
@@ -623,12 +626,14 @@ function sounds(g) {
     const fresh = no === g.no ? Math.min(6, g.logCount - count) : 0;
     g.log.slice(g.log.length - Math.max(0, fresh)).forEach((e, k) => {
       if (e.type === "discard") sound("flip", k * 0.08);
-      else if (["pung", "kong", "chow", "concealed kong", "add kong"].includes(e.type)) sound("chips", k * 0.08);
+      else if (["pung", "kong", "chow", "concealed kong", "add kong"].includes(e.type)) { sound("chips", k * 0.08); if (e.type.includes("kong")) cue.sting("big"); }
     });
   }
   if (lastGame !== null && g.no !== lastGame && renderedOnce) for (let i = 0; i < 6; i++) sound("deal", i * 0.07);
   const myTurnNow = !!(g.options && !g.finished);
-  if (myTurnNow && lastTurn === false && renderedOnce) sound("turn");
+  if (myTurnNow && lastTurn === false && renderedOnce) { sound("turn"); cue.sting("turn"); }
+  // the music: calm between hands, intense once the wall runs low
+  cue.level(g.finished ? 0 : g.wallLeft <= 30 ? 2 : 1);
   lastLog = key; lastGame = g.no; lastTurn = myTurnNow;
   renderedOnce = true;
 }

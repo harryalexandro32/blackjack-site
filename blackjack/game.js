@@ -5,6 +5,8 @@
   const MAX_BUY_IN = 1e9; // dollars
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const wait = ms => new Promise(r => setTimeout(r, reduced ? 0 : ms));
+  // the music follows the game (theme.js; does nothing while the music is off)
+  const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
@@ -224,7 +226,7 @@
     if (needShuffle || shoeDecks !== opts.decks || shoe.length <= cutAt) { buildShoe(); shuffled = true; }
     session.bankroll -= bet;
     dealer = []; hands = [{ cards: [], bet }]; active = 0; holeHidden = true; insurance = null; firstDecision = true;
-    phase = "dealing";
+    phase = "dealing"; cue.level(1);
     say(shuffled ? "Fresh shoe shuffled." : "");
     for (const target of ["p", "d", "p", "d"]) {
       (target === "p" ? hands[0].cards : dealer).push(draw());
@@ -323,7 +325,7 @@
   }
 
   async function dealerPlay() {
-    phase = "dealer"; busy = true; holeHidden = false; render(); await wait(450);
+    phase = "dealer"; cue.level(2); busy = true; holeHidden = false; render(); await wait(450);
     const live = hands.some(h => !h.surrendered && total(h.cards).t <= 21);
     if (live) {
       while (dealerHits(dealer, opts.h17)) { dealer.push(draw()); render(); await wait(480); }
@@ -360,6 +362,8 @@
     stats.bigWin = Math.max(stats.bigWin, net);
     if (!lead) lead = d > 21 ? `Dealer busts with ${d}.` : hands.every(h => h.surrendered || total(h.cards).t > 21) ? "" : `Dealer stands on ${d}.`;
     const result = net > 0 ? `You win ${fmt(net)}.` : net < 0 ? `You lose ${fmt(-net)}.` : "You break even.";
+    cue.sting(hands.some(h => h.badge && h.badge.text === "Blackjack!") ? "big" : net > 0 ? "win" : net < 0 ? "lose" : "turn");
+    cue.level(0);
     phase = "over";
     bet = Math.min(bet, wholeDollars(session.bankroll));
     saveSession();
