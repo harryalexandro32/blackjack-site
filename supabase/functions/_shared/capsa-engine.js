@@ -5,6 +5,7 @@
 // Bombs: four of a kind (just the 4 cards) and straight flush. A bomb beats any package or a single 2, and a
 // higher bomb beats a lower one. A bomb on a single 2 ends the game: the bomber wins, the bombed player loses.
 // Straights: 2-3-4-5-6 is the lowest, J-Q-K-A-2 the highest; A-2-3-4-5 and wrap-arounds aren't straights.
+// Flushes compare by suit first (a ♣ flush beats any ♦ flush), then by their highest card.
 // Double pairs (a table option): two pairs of neighbouring ranks, like 3-3-4-4 or 10-10-J-J (not 3-3-J-J).
 //   "spare": with one more card of any kind it's a 5-card package, the weakest one (below a straight).
 //   "nospare": just the 4 cards, beaten only by a higher double pair (not even by a bomb).
@@ -86,7 +87,7 @@ export function classify(cards, dp = "off") {
   ranks.forEach(r => count[r] = (count[r] || 0) + 1);
   const groups = Object.entries(count).sort((a, b) => b[1] - a[1]);
   if (groups[0][1] === 3 && groups[1][1] === 2) return { type: "fullhouse", size: 5, key: +groups[0][0] };
-  if (flush) return { type: "flush", size: 5, key: valueOf(top) };
+  if (flush) return { type: "flush", size: 5, key: suitOf(top) * 13 + rankOf(top) };   // suit first, then the top card
   if (st) return { type: "straight", size: 5, key: st.seq * 4 + suitOf(st.top) };
   if (dp === "spare") { const k = doublePairKey(cards); if (k >= 0) return { type: "pairs2s", size: 5, key: k }; }
   return null;

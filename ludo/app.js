@@ -290,7 +290,7 @@ function render() {
 
   if (g) placeTokens(g);
   const myTurn = !!(g && !g.finished && g.turn === me);
-  if (!rolling) drawDie(g ? g.dice : null);
+  if (!rolling) drawDie(shownDie(g), g && g.dice == null && lastRoll(g) ? "spent" : "");
   $("die").style.setProperty("--tc", g && !g.finished && g.turn >= 0 ? TC[g.turn] : "transparent");
   $("actRow").hidden = !g || !!g.finished;
   $("btnRoll").disabled = !(myTurn && g.phase === "roll") || rolling;
@@ -329,10 +329,26 @@ function statusText(g) {
     return `${nameAt(g.finished.winner)} ${verb(g.finished.winner, "bring")} all four tokens home and ${verb(g.finished.winner, "win")}!` + left;
   }
   if (g.turn === view.me) {
-    if (g.phase === "roll") return g.dice === 6 ? "You rolled a 6: roll again." : "Your turn: roll the die.";
+    if (g.phase === "roll") return g.dice === 6 ? "You rolled a 6: roll again." : noMoveNote(g) + "Your turn: roll the die.";
     return g.legal.length === 1 ? `You rolled ${g.dice}.` : `You rolled ${g.dice}: tap a glowing token to move it.`;
   }
-  return `${nameAt(g.turn)} (${COLOR_NAMES[g.turn]}) ${g.phase === "roll" ? "is rolling…" : `rolled ${g.dice}…`}`;
+  return (g.phase === "roll" ? noMoveNote(g) : "") + `${nameAt(g.turn)} (${COLOR_NAMES[g.turn]}) ${g.phase === "roll" ? "is rolling…" : `rolled ${g.dice}…`}`;
+}
+
+// The die keeps showing the last roll after a turn passes (a roll that couldn't move a token passes at once).
+function lastRoll(g) {
+  if (!g) return null;
+  for (let i = g.log.length - 1; i >= 0; i--) { const e = g.log[i]; if (e.type === "roll") return e; if (e.type === "start") return null; }
+  return null;
+}
+const shownDie = g => !g ? null : g.dice != null ? g.dice : (lastRoll(g) ? lastRoll(g).dice : null);
+// "Ayu rolled 3: no token can move." when the last thing that happened was a roll with nothing to move.
+function noMoveNote(g) {
+  const last = g.log[g.log.length - 1], roll = g.log[g.log.length - 2];
+  if (!last || !roll || roll.type !== "roll") return "";
+  if (last.type === "no move" && roll.dice !== 6) return `${nameAt(roll.seat)} rolled ${roll.dice}: no token can move. `;
+  if (last.type === "three sixes") return `${nameAt(roll.seat)} rolled three 6s: turn over. `;
+  return "";
 }
 
 function renderLog(g) {
@@ -489,7 +505,7 @@ $("btnRoll").onclick = guard(async () => {
   const started = Date.now();
   try { await sendMove({ type: "roll" }); } finally {
     const g = view && view.game, wait = Math.max(0, 450 - (Date.now() - started));
-    setTimeout(() => { clearInterval(dieTimer); rolling = false; drawDie(g ? g.dice : null, "land"); render(); }, wait);
+    setTimeout(() => { clearInterval(dieTimer); rolling = false; drawDie(shownDie(g), "land"); render(); }, wait);
   }
 });
 $("tokens").addEventListener("click", guard(async e => {

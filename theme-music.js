@@ -12,16 +12,31 @@
     if (!AC) return false;
     ctx = new AC();
     vol = ctx.createGain(); vol.gain.value = volume;
-    out = ctx.createGain(); out.gain.value = 0;
     const comp = ctx.createDynamicsCompressor();
-    out.connect(vol).connect(comp).connect(ctx.destination);
-    verb = ctx.createConvolver();
-    const len = ctx.sampleRate * 2.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
-    verb.buffer = ir;
+    vol.connect(comp).connect(ctx.destination);
+    const len = ctx.sampleRate * 2.2;
+    irBuf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = irBuf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    return true;
+  }
+  // Each tune plays through its own output and reverb. Switching tunes cuts the old one off at once: the notes
+  // it had already scheduled and its reverb tail go silent with it, instead of bleeding into the new tune.
+  let irBuf = null;
+  function newBus() {
+    cutBus(0.03);
+    out = ctx.createGain(); out.gain.value = 0.0001; out.connect(vol);
+    verb = ctx.createConvolver(); verb.buffer = irBuf;
     const wet = ctx.createGain(); wet.gain.value = 0.28;
     verb.connect(wet).connect(out);
-    return true;
+  }
+  function cutBus(secs) {
+    if (!out) return;
+    const old = out, t = ctx.currentTime;
+    old.gain.cancelScheduledValues(t);
+    old.gain.setValueAtTime(Math.max(0.0001, old.gain.value), t);
+    old.gain.exponentialRampToValueAtTime(0.0001, t + secs);
+    setTimeout(() => { try { old.disconnect(); } catch {} }, secs * 1000 + 80);
+    out = null;
   }
   function voice(node, send = 0.5) {
     node.connect(out);
@@ -375,8 +390,8 @@
     clearInterval(timer);
     current = name;
     if (tune.init) tune.init();
-    out.gain.cancelScheduledValues(ctx.currentTime);
-    out.gain.setValueAtTime(Math.max(0.0001, out.gain.value), ctx.currentTime); out.gain.exponentialRampToValueAtTime(0.8 * (LEVEL[name] || 1), ctx.currentTime + 1.2);
+    newBus();
+    out.gain.setValueAtTime(0.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(0.8 * (LEVEL[name] || 1), ctx.currentTime + 1.2);
     const beat = 60 / tune.bpm, barLen = beat * tune.beats;
     let bar = 0, next = ctx.currentTime + 0.15;
     timer = setInterval(() => {
@@ -399,8 +414,7 @@
     pending = null;
     if (!ctx) return;
     clearInterval(timer); timer = null; current = null;
-    out.gain.cancelScheduledValues(ctx.currentTime);
-    out.gain.setValueAtTime(Math.max(0.0001, out.gain.value), ctx.currentTime); out.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+    cutBus(0.4);
   }
   function setVolume(v) {
     volume = Math.max(0, Math.min(1, v));

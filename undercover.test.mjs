@@ -10,7 +10,9 @@ const fixed = () => U.startGame(1, 6, { words, roles: ["undercover", "white", "c
 const clueRound = g => { while (g.phase === "clue") U.clue(g, g.speaker, "", { spoken: true }); };
 
 test("the word list: every pair has two different words in both languages", () => {
-  assert.ok(PAIRS.length >= 150);
+  assert.ok(PAIRS.length >= 400);
+  const seen = new Set();
+  for (const p of PAIRS) { const k = [U.norm(p[0]), U.norm(p[1])].sort().join("|"); assert.ok(!seen.has(k), "twice: " + p.join()); seen.add(k); }
   for (const p of PAIRS) {
     assert.strictEqual(p.length, 4, p.join());
     assert.ok(p.every(w => typeof w === "string" && w.trim()), p.join());
@@ -35,6 +37,8 @@ test("clues go round the table in turn; your word can't be in your clue, in eith
   assert.throws(() => U.clue(g, 3, "hot"), /turn/);
   assert.throws(() => U.clue(g, 2, "iced coffee"), /word/);
   assert.throws(() => U.clue(g, 2, "kopi susu"), /word/);
+  assert.throws(() => U.clue(g, 2, "coffeeshop"), /word/);
+  assert.ok(!U.saysWord("next door", "Ex") && U.saysWord("my ex", "Ex") && !U.saysWord("back seat", "AC"));
   U.clue(g, 2, "morning drink");
   assert.strictEqual(g.speaker, 3);
   U.clue(g, 3, "", { spoken: true });

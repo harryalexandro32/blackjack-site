@@ -26,6 +26,15 @@ function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = randInt
 
 // Lowercase letters and digits only: "Kupu-kupu" and "kupu kupu" match.
 export const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+const words = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+// Does a clue give the word away? The word as whole words ("iced coffee"), or glued into a longer word
+// ("coffeeshop") for words of 4+ letters, so a short word like "Ex" or "AC" doesn't block "next" or "back".
+export function saysWord(clue, word) {
+  const c = words(clue), w = words(word);
+  if (!w) return false;
+  if (` ${c} `.includes(` ${w} `)) return true;
+  return norm(word).length >= 4 && norm(clue).includes(norm(word));
+}
 
 export function startGame(no, n, { words, mrWhite = true, roles = null, first = null } = {}) {
   if (n < MIN_PLAYERS || n > MAX_PLAYERS) throw new Error(`Undercover needs ${MIN_PLAYERS} to ${MAX_PLAYERS} players.`);
@@ -67,7 +76,7 @@ export function clue(g, s, text, { spoken = false } = {}) {
   if (!spoken && !t) throw new Error("Type a clue first.");
   if (t) {
     const mine = [g.words.civ, g.words.und][g.roles[s] === "civilian" ? 0 : 1];
-    if (g.roles[s] !== "white" && [mine.id, mine.en].some(w => norm(w) && norm(t).includes(norm(w)))) throw new Error("Your clue can't contain your word.");
+    if (g.roles[s] !== "white" && [mine.id, mine.en].some(w => saysWord(t, w))) throw new Error("Your clue can't contain your word.");
   }
   g.spoke.push(s);
   g.clues.push({ round: g.round, seat: s, text: t, spoken: !t });
@@ -116,6 +125,15 @@ export function resolveVote(g) {
   }
   g.log.push({ type: "voted", round: g.round, out: null, votes });
   return nextRound(g);
+}
+
+// Pass and play: the table votes out loud and taps who's out, or that nobody is (a tie).
+export function voteOut(g, s) {
+  if (g.phase !== "talk" && g.phase !== "vote") throw new Error("It isn't time to vote.");
+  if (s === null) { g.log.push({ type: "voted", round: g.round, out: null, votes: {} }); return nextRound(g); }
+  if (!g.alive[s]) throw new Error("That player is already out.");
+  g.votes = {};
+  return eliminate(g, s, {});
 }
 
 function eliminate(g, s, votes) {

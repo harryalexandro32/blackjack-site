@@ -51,6 +51,19 @@
         <button class="primary" type="submit" id="btnJoin">Join room</button>
         <button class="ghost" type="button" id="btnRejoin" hidden>Back to your room</button>
       </form>
+      <form class="panel" id="formLocal" novalidate>
+        <h2>Pass and play</h2>
+        <p class="note">One phone for the whole table: pass it round so each player sees their word in private, give clues out loud, vote by pointing. No room code needed.</p>
+        <div class="field"><label for="lcNames">Players, one name per line (4 to 12)</label><textarea class="text-input" id="lcNames" rows="6" placeholder="Ayu&#10;Budi&#10;Citra&#10;Dewi"></textarea></div>
+        <label class="check"><input type="checkbox" id="lcWhite" checked> Mr. White <span class="note">(no word, bluffs; from 5 players)</span></label>
+        <div class="row2">
+          <div class="field"><label for="lcLang">Words in</label><select id="lcLang"><option value="id">Bahasa Indonesia</option><option value="en">English</option></select></div>
+          <div class="field"><label for="lcWords">Words</label><select id="lcWords"><option value="builtin">Built-in list</option><option value="mix">Built-in + ours</option><option value="custom">Only ours</option></select></div>
+        </div>
+        <div class="field" id="lcPairsField" hidden><label for="lcPairs">Our own pairs, one per line</label><textarea class="text-input" id="lcPairs" rows="4" placeholder="Nasi padang / Nasi kapau"></textarea></div>
+        <p class="err" id="lcErr"></p>
+        <button class="primary" type="submit">Start</button>
+      </form>
       <div class="panel rules-panel">
         <h2>How it plays</h2>
         <ul class="rules-list">
@@ -62,11 +75,35 @@
           <li><b>Civilians</b> win when every undercover and Mr. White is out. The <b>infiltrators</b> win when the civilians are down to as few as them.</li>
           <li>Points: a civilian win is worth 2, Mr. White 6, the undercover 10.</li>
           <li>Words come in <b>Bahasa Indonesia</b> and <b>English</b>: everyone picks which they see.</li>
+          <li>Play in an online room (everyone on their own phone) or <b>pass and play</b> on one phone.</li>
         </ul>
       </div>
       <div class="panel" id="onlineOff" hidden>
         <h2>Online play isn't switched on yet</h2>
         <p>This copy of the site has no game server configured.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrLocal" hidden>
+    <div class="ww-stage">
+      <div class="phase-banner">
+        <div class="phase-icon" id="lIcon"></div>
+        <div><h2 id="lTitle"></h2><p id="lText" class="note"></p></div>
+      </div>
+      <div class="pass-box" id="lPass" hidden></div>
+      <div class="ww-players" id="lPlayers"></div>
+      <div class="ww-actions" id="lActions"></div>
+    </div>
+    <div class="lower">
+      <div class="panel">
+        <h2>Points</h2>
+        <div class="players-list" id="lScores"></div>
+        <div class="table-tools"><button class="ghost" id="lQuit" type="button">End and change players</button></div>
+      </div>
+      <div class="panel">
+        <h2>What happened</h2>
+        <div class="log" id="lLog"></div>
       </div>
     </div>
   </section>
@@ -183,5 +220,6 @@
 
 <script src="../poker/config.js"></script>
 <script type="module" src="app.js"></script>
+<script type="module" src="local.js"></script>
 </body>
 </html>

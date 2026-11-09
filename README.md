@@ -15,7 +15,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 - **Board games** (`boardgames/`): a page of its own on the menu.
   - **Ludo** (`ludo/`): 4 colours, bots in empty seats, classic rules (6 to come out, a 6 rolls again, three 6s lose the turn, captures except on safe squares, exact roll home) with house options (1 also comes out, capture rolls again, blocks, must capture). The others pay the winner 1 point per token not home.
   - **Werewolf** (`werewolf/`): 5 to 12 friends in a room, Werewolves (1/2/3 by table size), Seer, Doctor and Villagers; timed night, day and vote; roles revealed on death; village, wolves and graveyard chats; optional bots that never talk; a tally of wins, no money.
-  - **Undercover** (`undercover/`): 4 to 12 friends in a room. Civilians share a word, the undercover (1/2/3 by table size) has a close one and isn't told, optional Mr. White has none. Clues in turn (typed, or "said it out loud" at a table), talk, vote, runoff on a tie; Mr. White's guess when voted out. About 200 built-in pairs in Bahasa Indonesia and English (each player picks), plus the host's own pairs. Points: civilian win 2, Mr. White 6, undercover 10. No bots.
+  - **Undercover** (`undercover/`): 4 to 12 friends in a room. Civilians share a word, the undercover (1/2/3 by table size) has a close one and isn't told, optional Mr. White has none. Clues in turn (typed, or "said it out loud" at a table), talk, vote, runoff on a tie; Mr. White's guess when voted out. About 470 built-in pairs in Bahasa Indonesia and English (each player picks), plus the host's own pairs. Also pass and play on one phone (clues out loud, the table taps who's out). Points: civilian win 2, Mr. White 6, undercover 10. No bots.
 
 ## Files
 

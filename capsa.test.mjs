@@ -377,3 +377,10 @@ test("double pairs: the table's rule reaches the game, bots play whole games wit
   assert.strictEqual(s.g.dp, "nospare");
   assert.strictEqual(R.validateSettings({ ...settingsC, doublePair: "nonsense" }).doublePair, "off");
 });
+
+test("flushes compare by suit first, then by the highest card", () => {
+  const dia = C.classify(["3d", "4d", "5d", "7d", "Ad"]), club = C.classify(["6c", "8c", "Jc", "Qc", "Kc"]), club2 = C.classify(["3c", "4c", "5c", "7c", "9c"]);
+  assert.ok(C.beats(club, dia));
+  assert.ok(!C.beats(dia, club));
+  assert.ok(C.beats(club, club2));
+});

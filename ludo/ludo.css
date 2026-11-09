@@ -41,6 +41,7 @@
 .ldie.rolling { animation: ld-tumble .3s linear infinite; }
 .ldie.land { animation: ld-land .35s cubic-bezier(.3,1.6,.5,1); }
 .ldie.blank { opacity: .35; }
+.ldie.spent { opacity: .8; }
 @keyframes ld-tumble { 0% { transform: rotate(0) translateY(0); } 25% { transform: rotate(90deg) translateY(-8px); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) translateY(-5px); } 100% { transform: rotate(360deg); } }
 @keyframes ld-land { from { transform: scale(1.35); } to { transform: none; } }
 .lrail #btnRoll { min-width: 160px; font-size: 1.05rem; }

@@ -139,3 +139,19 @@ button.wp:hover, button.wp:focus-visible { transform: translateY(-3px); border-c
 
 /* panels hold their content at the top rather than spreading it down a tall column */
 .lower > .panel { align-content: start; }
+
+/* pass and play: the phone goes round */
+.pass-box { display: grid; place-items: center; min-height: 300px; }
+.pass-card { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 26px 22px; border-radius: 18px; width: min(100%, 380px); box-sizing: border-box;
+  background: rgba(8,16,20,.6); border: 1.5px solid rgba(255,236,179,.35); color: #fdf3d8; animation: uc-pop .35s ease; }
+.pass-card p { margin: 0; }
+.pass-card h3 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 8vw, 2.8rem); color: #ffe082; overflow-wrap: anywhere; }
+.pass-card form { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pass-card.shown { background: #fbf5e6; color: #2b2420; border-color: #c9a96a; }
+.pass-card.shown .note { color: #6d625a; }
+.big-word { display: grid; justify-items: center; gap: 4px; }
+.big-word small { font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: #6d625a; }
+.big-word b { font-family: var(--font-display); font-size: clamp(2.2rem, 9vw, 3.2rem); line-height: 1.05; color: #1d2b2f; overflow-wrap: anywhere; }
+.big-word svg { width: 90px; height: 90px; }
+.wp .pic.initial { display: grid; place-items: center; background: #2f5a5e; color: #fdf3d8; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
+#formLocal textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
