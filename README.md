@@ -12,6 +12,9 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 
 - **Capsa Banting** (`capsa/`): 4 players with house rules: 2 highest, suits ♠ ♥ ♣ ♦, 3♦ starts the first game, bombs (four of a kind, straight flush) beat any package or a single 2, a bomb on a single 2 ends the game, no finishing on a single 2. Points per card left (2s count double, ×2 at 10+ cards, ×3 at 13) at a $ value per point. Online rooms fill empty seats with bots; points won or lost against bots don't count as money. **Loser mode** (a host option): play goes on until one player is left holding cards; places score +3, +1, −1, −3. Playable cards are highlighted (a personal toggle), cards can be grouped in your hand, plays and passes can be premoved, and bots come in Easy, Normal, Hard and Expert (plans its whole hand and remembers played cards; `capsa-expert.js`).
 - **Mahjong** (`mahjong/`): Hong Kong rules with 144 tiles (flowers and seasons included): chow, pung, kong (robbing a kong allowed), seven pairs and thirteen orphans, faan scoring capped at 10 with limit hands. The table chooses whether a hand needs 3 faan to win or any complete hand wins. Self-drawn wins are paid by all three others; off a discard the discarder pays double. Bots plan towards a scoring hand; online rooms fill empty seats with bots like Capsa.
+- **Board games** (`boardgames/`): a page of its own on the menu.
+  - **Ludo** (`ludo/`): 4 colours, bots in empty seats, classic rules (6 to come out, a 6 rolls again, three 6s lose the turn, captures except on safe squares, exact roll home) with house options (1 also comes out, capture rolls again, blocks, must capture). The others pay the winner 1 point per token not home.
+  - **Werewolf** (`werewolf/`): 5 to 12 friends in a room, Werewolves (1/2/3 by table size), Seer, Doctor and Villagers; timed night, day and vote; roles revealed on death; village, wolves and graveyard chats; optional bots that never talk; a tally of wins, no money.
 
 ## Files
 
@@ -28,6 +31,9 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `supabase/functions/_shared/capsa-engine.js`, `capsa-bot.js`, `capsa-expert.js`, `capsa-room.js` | Capsa rules, bots and online rooms (used by the browser and the server) |
 | `mahjong/` | Mahjong page, tile art (`tiles.js`), bots mode (`local.js`) and online rooms (`online.js`) |
 | `supabase/functions/_shared/mahjong-engine.js`, `mahjong-bot.js`, `mahjong-room.js` | Mahjong rules and scoring, bots, and online rooms |
+| `boardgames/`, `ludo/`, `werewolf/` | Board games page, the Ludo page, the Werewolf page |
+| `supabase/functions/_shared/ludo-engine.js`, `ludo-bot.js`, `ludo-room.js` | Ludo rules, bots and online rooms |
+| `supabase/functions/_shared/werewolf-engine.js`, `werewolf-room.js` | Werewolf rules, rooms, bots and chat channels |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
 | `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
 | `theme-music.js` | Background music for every theme, played live with Web Audio (off until you press ♪) |

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Werewolf</title>
+<meta name="description" content="Werewolf for 5 to 12 friends: the app deals secret roles and runs the night, the day and the vote.">
+<meta name="theme-color" content="#14111c">
+<script src="../theme.js"></script>
+<link rel="icon" type="image/svg+xml" href="../logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../shared.css">
+<link rel="stylesheet" href="../poker/poker.css">
+<link rel="stylesheet" href="werewolf.css">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand-link" href="../boardgames/" title="Board games"><img class="logo" src="../logo.svg" alt="The Card Room, board games" width="44" height="44"><span class="brand-text"><span class="brand">The Card Room</span><h1 class="brand-sub">Werewolf</h1></span></a>
+    <div class="meters" id="meters" hidden>
+      <div class="meter"><small>Game</small><b id="mGame">–</b></div>
+      <div class="meter"><small>Phase</small><b id="mPhase">–</b></div>
+      <div class="meter"><small>Alive</small><b id="mAlive">–</b></div>
+      <div class="meter"><small>Room code</small><b id="mCode">–</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main class="room">
+
+  <section class="screen" id="scrSetup">
+    <div class="setup-grid">
+      <form class="panel" id="formCreate" novalidate>
+        <h2>Open a room</h2>
+        <p class="note">Share the code with your friends: 5 to 12 players. The app deals the roles and runs the night, the day and the vote, so nobody has to be the moderator.</p>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
+        <p class="err" id="crErr"></p>
+        <button class="primary" type="submit" id="btnCreate">Open room</button>
+      </form>
+      <form class="panel" id="formJoin" novalidate>
+        <h2>Join a room</h2>
+        <div class="field"><label for="jnCode">Room code</label><input class="text-input" id="jnCode" maxlength="6" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="jnName">Your name</label><input class="text-input" id="jnName" maxlength="16" autocomplete="nickname"></div></div>
+        <p class="note" id="jnRules"></p>
+        <p class="err" id="jnErr"></p>
+        <button class="primary" type="submit" id="btnJoin">Join room</button>
+        <button class="ghost" type="button" id="btnRejoin" hidden>Back to your room</button>
+      </form>
+      <div class="panel rules-panel">
+        <h2>How it plays</h2>
+        <ul class="rules-list">
+          <li>Everyone gets a secret role. <b>Werewolves</b> (1 with 5–6 players, 2 with 7–9, 3 with 10–12) know each other. Everyone else is the village.</li>
+          <li><b>Night:</b> the wolves pick someone to kill. The <b>Seer</b> learns whether one player is a wolf. The <b>Doctor</b> protects one player (not the same one two nights running).</li>
+          <li><b>Day:</b> you hear who died, then talk it over: in the room chat, on a call, or face to face. Then everyone votes; the most votes is out. A tie means nobody.</li>
+          <li>When someone dies their role is shown. The dead chat in the graveyard and can see every role.</li>
+          <li>The village wins when every wolf is gone. The wolves win when they're as many as everyone else.</li>
+        </ul>
+      </div>
+      <div class="panel" id="onlineOff" hidden>
+        <h2>Online play isn't switched on yet</h2>
+        <p>This copy of the site has no game server configured.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrRoom" hidden>
+    <div class="ww-stage" id="stage">
+      <div class="phase-banner" id="banner">
+        <div class="phase-icon" id="phaseIcon"></div>
+        <div><h2 id="phaseTitle">Lobby</h2><p id="phaseText" class="note"></p></div>
+        <div class="phase-timer"><div id="phaseBar"></div></div>
+      </div>
+      <div class="ww-main">
+        <div class="role-card" id="roleCard" hidden tabindex="0" role="button" aria-label="Your role (tap to show or hide)">
+          <div class="rc-inner"><div class="rc-back"><span>Your role</span><small>Tap to look</small></div><div class="rc-front" id="roleFront"></div></div>
+        </div>
+        <div class="ww-players" id="players"></div>
+      </div>
+      <div class="ww-actions" id="actions"></div>
+    </div>
+
+    <div class="lower">
+      <div class="panel" id="lobbyPanel">
+        <h2>The room</h2>
+        <div class="players-list" id="lobbyList"></div>
+        <div id="settingsBox" class="ww-settings" hidden>
+          <div class="row2">
+            <div class="field"><label for="sNight">Night</label><select id="sNight"><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">60 seconds</option></select></div>
+            <div class="field"><label for="sDay">Talking time</label><select id="sDay"><option value="60">1 minute</option><option value="120">2 minutes</option><option value="180">3 minutes</option><option value="300">5 minutes</option></select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label for="sVote">Voting</label><select id="sVote"><option value="30">30 seconds</option><option value="45">45 seconds</option><option value="60">60 seconds</option></select></div>
+            <div class="field"><label for="sBots">Bots</label><select id="sBots"><option value="0">People only</option><option value="5">Fill up to 5</option><option value="6">Fill up to 6</option><option value="7">Fill up to 7</option><option value="8">Fill up to 8</option><option value="9">Fill up to 9</option><option value="10">Fill up to 10</option></select></div>
+          </div>
+          <p class="note">Bots never talk: they act at night and vote on hunches, so a small group can still play.</p>
+        </div>
+        <div class="table-tools">
+          <button class="ghost" id="btnLook">Change look</button>
+          <button class="ghost" id="btnCopyLink">Copy invite link</button>
+          <button class="ghost" id="btnHostLink" hidden>Copy host link</button>
+          <button class="danger" id="btnClose" hidden>Close room for good</button>
+          <button class="danger" id="btnLeave">Leave the room</button>
+        </div>
+        <h3 class="wins-h">Wins</h3>
+        <div class="players-list" id="winsList"></div>
+      </div>
+      <div class="panel">
+        <h2>What happened</h2>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="panel" id="chatPanel">
+        <h2>Chat</h2>
+        <div class="chat-tabs" id="chatTabs" role="tablist"></div>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="chat-reacts" id="chatReacts" role="group" aria-label="Reactions"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <input class="text-input" id="chatInput" maxlength="200" placeholder="Say something…" aria-label="Chat message">
+          <button class="primary" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<div class="reveal" id="reveal" hidden aria-live="assertive"><div class="reveal-in"><div class="reveal-icon" id="revealIcon"></div><h2 id="revealTitle"></h2><p id="revealText"></p></div></div>
+
+<dialog id="lookDlg" class="look-dlg" aria-labelledby="lookTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head">
+      <div class="look-preview" id="lookPreview"></div>
+      <div class="look-head-text">
+        <h2 id="lookTitle">Your look</h2>
+        <p class="note">Start from a character, then change anything you like.</p>
+        <button type="button" class="ghost" id="lookRandom">Surprise me</button>
+      </div>
+    </div>
+    <div class="look-body">
+      <h3>Characters</h3>
+      <div class="look-opts tiles" id="lookPresets"></div>
+      <h3>Make it yours</h3>
+      <div class="look-fields" id="lookFields"></div>
+    </div>
+    <div class="look-foot"><button value="cancel" class="ghost">Cancel</button><button value="save" class="primary">Save look</button></div>
+  </form>
+</dialog>
+
+<script src="../poker/config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
