@@ -206,6 +206,13 @@ function drawBoard() {
   svg.innerHTML = out.join("");
 }
 
+const PAWN = `<svg viewBox="0 0 34 46" aria-hidden="true">
+  <ellipse cx="17" cy="42" rx="14" ry="4" fill="currentColor"/><ellipse cx="17" cy="42" rx="14" ry="4" fill="#000" opacity=".25"/>
+  <path d="M5 41 C6 33 11 30 12 22 L22 22 C23 30 28 33 29 41 Z" fill="currentColor" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M9 23 Q17 19 25 23 Q17 26 9 23Z" fill="currentColor" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="17" cy="13" r="8.5" fill="currentColor" stroke="#fff" stroke-width="1.6"/>
+  <circle cx="14" cy="10" r="2.6" fill="#fff" opacity=".7"/><path d="M9 36 Q11 31 13 28" stroke="#fff" stroke-width="1.4" fill="none" opacity=".45" stroke-linecap="round"/>
+</svg>`;
 let seatEls = [], tokenEls = [], rowEls = [];
 function buildSeats() {
   drawBoard();
@@ -218,7 +225,7 @@ function buildSeats() {
   });
   const layer = $("tokens"); layer.innerHTML = "";
   tokenEls = [0, 1, 2, 3].map(s => [0, 1, 2, 3].map(i => {
-    const t = document.createElement("button"); t.type = "button"; t.className = "token"; t.style.setProperty("--tc", TC[s]);
+    const t = document.createElement("button"); t.type = "button"; t.className = "token"; t.style.setProperty("--tc", TC[s]); t.innerHTML = PAWN;
     t.dataset.seat = s; t.dataset.i = i; t.setAttribute("aria-label", `${COLOR_NAMES[s]} token ${i + 1}`); t.tabIndex = -1;
     layer.appendChild(t);
     return t;
@@ -467,13 +474,23 @@ function motion(g) {
       if (e.type === "roll") { if (e.seat !== view.me || !rolling) rollDie(e.dice, e.seat === view.me ? 0 : 420); sound("deal", k * 0.05); }
       else if (e.type === "move" && animOk()) {
         const el = tokenEls[e.seat][e.token], cells = pathCells(e.seat, e.from, e.to, e.token);
-        const frames = cells.map(c => { const [left, top] = pct(c); return { left, top }; });
-        frames.push({ left: el.style.left, top: el.style.top });
-        el.animate(frames, { duration: Math.min(1600, 120 * frames.length), easing: "linear" });
+        // walking: between squares the pawn lifts and leans, landing upright on each one (left foot, right foot…)
+        const pts = cells.map(c => pct(c)).concat([[el.style.left, el.style.top]]);
+        const rest = "translate(-50%, -78%)";
+        const frames = [{ left: pts[0][0], top: pts[0][1], transform: rest }];
+        for (let k = 1; k < pts.length; k++) {
+          const [l0, t0] = pts[k - 1], [l1, t1] = pts[k];
+          if (l0 === l1 && t0 === t1) continue;
+          const mid = (x, y) => `calc((${x} + ${y}) / 2)`;
+          frames.push({ left: mid(l0, l1), top: mid(t0, t1), transform: `translate(-50%, -100%) rotate(${k % 2 ? -9 : 9}deg)` });
+          frames.push({ left: l1, top: t1, transform: rest });
+        }
+        const walkMs = Math.min(2400, 170 * ((frames.length - 1) / 2) + 60);
+        el.animate(frames, { duration: walkMs, easing: "linear" });
         sound(e.captures.length ? "allin" : "flip", 0);
         e.captures.forEach(([s, i]) => {
           const t = tokenEls[s][i], [cl, ct] = pct(cells[cells.length - 1]);
-          t.animate([{ left: cl, top: ct, opacity: 1 }, { left: cl, top: ct, opacity: .4, transform: "translate(-50%, -62%) scale(1.4)" }, { left: t.style.left, top: t.style.top, opacity: 1 }], { duration: 700, delay: Math.min(1400, 130 * frames.length) - 120, easing: "ease-in-out" });
+          t.animate([{ left: cl, top: ct, opacity: 1 }, { left: cl, top: ct, opacity: .4, transform: "translate(-50%, -78%) scale(1.4)" }, { left: t.style.left, top: t.style.top, opacity: 1 }], { duration: 700, delay: walkMs - 120, easing: "ease-in-out" });
         });
       }
     });
