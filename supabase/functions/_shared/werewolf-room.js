@@ -81,16 +81,21 @@ function botVotes(state) {
 // ---------- the clock ----------
 // With nobody alive but bots, each phase still takes a few seconds so the dead and onlookers can follow.
 const BOT_ONLY_MS = { night: 4000, day: 6000, vote: 4000 };
+// A night always lasts a little while, so how fast it ends gives nothing away about who has a night role.
+const NIGHT_MIN_MS = 8000;
 const peopleAlive = state => !!state.g && state.inGame.some((id, s) => state.g.alive[s] && !isBot(state, s));
 
 function settle(state, now) {
   const g = state.g;
+  setClock(state, now);                      // a phase that just began gets its start time and deadline first
   for (let guard = 0; guard < 10 && g && !g.finished; guard++) {
     const due = !!(state.deadline && now >= state.deadline);
     if (!peopleAlive(state) && !due) break;
     if (g.phase === "night") {
       botNight(state);
       if (W.nightWaiting(g).length && !due) break;
+      const earliest = (state.phaseStart || 0) + NIGHT_MIN_MS;
+      if (!due && peopleAlive(state) && now < earliest) { state.deadline = Math.min(state.deadline || earliest, earliest); break; }
       W.resolveNight(g); state.ready = {};
       setClock(state, now);
       continue;
@@ -128,6 +133,7 @@ function setClock(state, now) {
   const key = `${g.no}:${g.phase}:${g.round}`;
   if (state.phaseKey === key) return;
   state.phaseKey = key;
+  state.phaseStart = now;
   const sec = g.phase === "night" ? state.settings.nightSeconds : g.phase === "day" ? state.settings.daySeconds : state.settings.voteSeconds;
   state.deadline = now + (peopleAlive(state) ? sec * 1000 : BOT_ONLY_MS[g.phase]);
 }

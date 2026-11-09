@@ -101,7 +101,7 @@ test("werewolf rooms: too few people can't start; bots top up; whole games run o
       }
       if (g.phase === "day" && i % 3 === 0) R.applyAction(s, { type: "chat", text: "it's " + seat, channel: "all" }, ctx(id));
       if (g.phase === "vote") { const t = g.alive.findIndex((a, x) => a && x !== seat); R.applyAction(s, { type: "vote", target: t }, ctx(id)); }
-      if (g.roles[seat] === "wolf" && !g.finished) R.applyAction(s, { type: "chat", text: "psst", channel: "wolves" }, ctx(id));
+      if (g.roles[seat] === "wolf" && !g.finished && g.alive[seat] && g.phase !== "done") R.applyAction(s, { type: "chat", text: "psst", channel: "wolves" }, ctx(id));
     }
     clock += 50000; R.applyAction(s, { type: "tick" }, ctx("h"));
   }
