@@ -73,3 +73,14 @@
   .lrail .dice-row { position: absolute; right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
   .lrail #actRow, .lrail #betweenRow { justify-content: flex-start; padding-right: 64px; }
 }
+
+/* pieces you can move: a gold ring ripples out from the pawn's base and the pawn blinks bright, all without moving it */
+.token.can::before, .token.can::after { content: ""; position: absolute; left: 50%; bottom: 8%; width: 240%; aspect-ratio: 1 / .62; border-radius: 50%;
+  transform: translate(-50%, 50%); z-index: -1; pointer-events: none; }
+.token.can::before { background: radial-gradient(closest-side, rgba(255,214,102,.75), rgba(255,214,102,0)); animation: ld-spot 1s ease-in-out infinite; }
+.token.can::after { border: 3px solid #fff3c4; box-shadow: 0 0 6px var(--gold), inset 0 0 4px var(--gold); animation: ld-ripple 1s ease-out infinite; }
+.token.can svg { animation: ld-glow 1s ease-in-out infinite, ld-blink 1s steps(1) infinite; }
+@keyframes ld-ripple { from { transform: translate(-50%, 50%) scale(.45); opacity: 1; } 70% { opacity: .8; } to { transform: translate(-50%, 50%) scale(1.25); opacity: 0; } }
+@keyframes ld-spot { 50% { opacity: .35; } }
+@keyframes ld-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 1px rgba(0,0,0,.95)) drop-shadow(0 0 6px #fff3c4) drop-shadow(0 0 12px var(--gold)); } }
+@media (prefers-reduced-motion: reduce) { .token.can::after { animation: none; opacity: .9; } .token.can svg, .token.can::before { animation: none; } }
