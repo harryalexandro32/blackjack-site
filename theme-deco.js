@@ -156,16 +156,152 @@
   const lanternDefs = `<defs><radialGradient id="lg" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".75"/><stop offset=".55" stop-color="#ff7a2e" stop-opacity=".15"/><stop offset="1" stop-color="#5a0508" stop-opacity=".35"/></radialGradient></defs>`;
   const blossom = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-7" rx="5" ry="7" fill="#ffc9d6" transform="rotate(${a})"/>`).join("")}<circle r="3" fill="#ffd36b"/></g>`;
   const cloud = `<g fill="none" stroke="#e0b040" stroke-width="4" stroke-linecap="round" opacity=".75"><path d="M10 60 Q10 30 40 30 Q50 10 75 15 Q100 0 120 25 Q150 22 150 50 Q150 70 125 70 L30 70 Q10 70 10 60Z"/><path d="M40 52 q0 -14 14 -14 q14 0 14 14 q0 9 -9 9"/><path d="M100 50 q0 -12 12 -12 q12 0 12 12"/></g>`;
+  // a friendly, smiling dragon curled on a lucky cloud
+  const dragon = `
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M210 120 C170 150 140 96 100 128 C64 156 80 196 34 204" stroke="#c9302c" stroke-width="40"/>
+      <path d="M210 120 C170 150 140 96 100 128 C64 156 80 196 34 204" stroke="#f0473f" stroke-width="30"/>
+      <path d="M206 132 C172 160 140 108 104 140 C72 166 84 202 40 214" stroke="#ffd36b" stroke-width="10"/>
+    </g>
+    ${[[188, 112], [160, 106], [134, 104], [108, 116], [88, 136], [74, 160], [58, 182]].map(([x, y]) => `<path d="M${x - 8} ${y - 14} L${x} ${y - 30} L${x + 8} ${y - 14}Z" fill="#ffb347"/>`).join("")}
+    <path d="M34 204 C18 210 8 196 14 186 C22 196 30 192 34 188" fill="#ffb347"/>
+    <g fill="#c9302c"><path d="M120 150 l-6 18 l6 -4 l4 6 l3 -8Z"/><path d="M70 186 l-6 18 l6 -4 l4 6 l3 -8Z"/></g>
+    <!-- mane -->
+    <g fill="#ff8a3c">${[[196, 58], [184, 74], [182, 96], [196, 112], [214, 120]].map(([x, y], i) => `<path d="M${x} ${y} q-22 ${-6 + i * 3} -26 ${8 + i * 2} q14 -2 26 ${8 - i}Z"/>`).join("")}</g>
+    <!-- head -->
+    <ellipse cx="236" cy="88" rx="46" ry="40" fill="#f0473f"/>
+    <ellipse cx="280" cy="104" rx="34" ry="25" fill="#ff6a5a"/>
+    <ellipse cx="282" cy="112" rx="26" ry="13" fill="#ffd36b"/>
+    <circle cx="296" cy="96" r="3.2" fill="#8a1d1a"/><circle cx="284" cy="94" r="3.2" fill="#8a1d1a"/>
+    <path d="M258 114 Q280 134 306 112" stroke="#8a1d1a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M276 122 q8 10 16 0" fill="#ff8fa3"/>
+    <!-- big friendly eyes -->
+    <circle cx="226" cy="76" r="15" fill="#fff"/><circle cx="254" cy="70" r="13" fill="#fff"/>
+    <circle cx="230" cy="78" r="8" fill="#2a1410"/><circle cx="257" cy="72" r="7" fill="#2a1410"/>
+    <circle cx="233" cy="74" r="3" fill="#fff"/><circle cx="260" cy="68" r="2.6" fill="#fff"/>
+    <path d="M212 58 Q226 48 240 56 M246 52 Q258 44 268 52" stroke="#8a1d1a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="214" cy="98" rx="8" ry="5" fill="#ff8fa3" opacity=".7"/>
+    <!-- horns and whiskers -->
+    <path d="M222 50 C214 30 220 14 234 8 C228 22 230 34 236 46Z" fill="#ffd36b"/>
+    <path d="M250 46 C250 26 262 14 278 12 C268 24 266 36 264 46Z" fill="#ffd36b"/>
+    <path d="M300 104 C322 96 326 80 318 66 M300 112 C326 116 330 134 320 146" stroke="#ffd36b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <!-- the pearl it's holding -->
+    <circle cx="300" cy="170" r="16" fill="#fff3c2"/><circle cx="295" cy="165" r="5" fill="#fff" opacity=".8"/>
+    <path d="M276 150 q8 10 14 8 M318 152 q-6 12 -14 8" stroke="#c9302c" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <!-- lucky cloud -->
+    <g fill="none" stroke="#e0b040" stroke-width="4" stroke-linecap="round" opacity=".8" transform="translate(150 186)"><path d="M10 34 Q10 14 30 14 Q38 2 56 6 Q74 -2 88 14 Q108 12 108 30 Q108 42 92 42 L22 42 Q10 42 10 34Z"/><path d="M34 32 q0 -10 10 -10 q10 0 10 10"/></g>`;
+
   const lanternNight = () => {
     const spots = [["福", 3, 26], ["喜", 17, 8], ["發", 81, 14], ["春", 94, 30], ["樂", 44, 2], ["吉", 62, 4]];
     return `${spots.map(([ch, x, len], i) => `<svg class="d sway-${i % 2 ? "2" : "1"} glow" viewBox="0 0 100 ${len + 170}" style="left:${x}vw;top:calc(var(--bar-h, 64px) - 4px);height:clamp(88px,${12 + len / 5}vh,${150 + len * 1.5}px);transform-origin:50% 0" preserveAspectRatio="xMidYMin meet" aria-hidden="true">${lanternDefs}${lantern(ch, len)}</svg>`).join("")}
-      ${svg("0 0 300 220", "left:0;bottom:0;width:clamp(120px,17.6vw,272px)", `<path d="M0 220 C40 170 90 140 150 120 C200 104 240 80 290 40" stroke="#3a1a0c" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <path d="M120 128 C130 100 150 86 170 76" stroke="#3a1a0c" stroke-width="5" fill="none"/><path d="M60 170 C70 150 62 130 48 118" stroke="#3a1a0c" stroke-width="4" fill="none"/>
-        ${blossom(170, 76, 1.3)}${blossom(240, 66, 1.1)}${blossom(48, 118, 1.2)}${blossom(130, 126, 1)}${blossom(205, 100, 1.4)}${blossom(282, 42, 1.2)}${blossom(95, 150, 0.9)}`)}
+      ${svg("0 0 330 230", "left:0;bottom:0;width:clamp(150px,22vw,330px)", dragon, "float")}
       ${svg("0 0 160 80", "right:3vw;bottom:4vh;width:clamp(80px,10.4vw,160px)", cloud)}
       ${svg("0 0 160 80", "right:16vw;bottom:14vh;width:clamp(56px,6.4vw,104px)", cloud, "drift")}`;
   };
 
-  window.CR_DECO = { ocean, pretty, west, vegas, future, aurora, lantern: lanternNight };
+  // ---------- Emperor's House: sakura everywhere, falling petals, a castle, hanging scrolls ----------
+  const sakuraFlower = (x, y, s, c = "#ffc4d4") => `<g transform="translate(${x} ${y}) scale(${s})">${[0, 72, 144, 216, 288].map(a => `<path d="M0 0 C-6 -6 -6 -13 -2 -16 L0 -13.5 L2 -16 C6 -13 6 -6 0 0Z" fill="${c}" transform="rotate(${a})"/>`).join("")}<circle r="2.6" fill="#ff7aa0"/></g>`;
+  const sakuraBranch = (flip, seed) => {
+    const r = rnd(seed), flowers = [];
+    const pts = [[60, 120], [95, 96], [130, 78], [170, 60], [210, 48], [250, 40], [290, 34], [120, 120], [160, 104], [200, 92], [240, 80], [150, 46], [195, 30], [70, 150], [105, 140], [230, 110], [270, 66], [320, 30], [335, 52]];
+    pts.forEach(([x, y]) => flowers.push(sakuraFlower(x + r() * 10 - 5, y + r() * 10 - 5, 0.9 + r() * 0.8, r() < 0.3 ? "#ffe1ea" : r() < 0.6 ? "#ffb3c7" : "#ffc9d6")));
+    return `<g ${flip ? 'transform="translate(360 0) scale(-1 1)"' : ""}>
+      <path d="M0 175 C60 150 120 110 190 70 C240 44 300 28 350 22" stroke="#3b2224" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M110 118 C130 130 150 128 170 112 M180 76 C190 52 205 40 222 30 M240 52 C262 60 282 58 300 46 M70 146 C80 162 96 168 112 160" stroke="#3b2224" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      ${flowers.join("")}</g>`;
+  };
+  const castle = `<g>
+    <path d="M30 260 L52 205 L248 205 L270 260Z" fill="#3a2c31"/><path d="M52 205 L248 205" stroke="#5a4650" stroke-width="2"/>
+    <rect x="70" y="160" width="160" height="45" fill="#f1e9df"/><g fill="#2b1d24"><rect x="88" y="174" width="12" height="16"/><rect x="128" y="174" width="12" height="16"/><rect x="160" y="174" width="12" height="16"/><rect x="200" y="174" width="12" height="16"/></g>
+    <path d="M40 165 Q150 140 260 165 Q246 152 236 146 L64 146 Q54 152 40 165Z" fill="#26323f"/>
+    <rect x="95" y="112" width="110" height="36" fill="#f1e9df"/><g fill="#2b1d24"><rect x="114" y="122" width="10" height="14"/><rect x="145" y="122" width="10" height="14"/><rect x="176" y="122" width="10" height="14"/></g>
+    <path d="M70 117 Q150 96 230 117 Q218 106 210 100 L90 100 Q82 106 70 117Z" fill="#26323f"/>
+    <rect x="118" y="72" width="64" height="30" fill="#f1e9df"/><rect x="142" y="80" width="16" height="14" fill="#2b1d24"/>
+    <path d="M98 77 Q150 58 202 77 Q192 66 186 60 L114 60 Q108 66 98 77Z" fill="#26323f"/>
+    <path d="M128 60 Q150 38 172 60Z" fill="#26323f"/>
+    <path d="M136 44 q-6 -10 2 -16 M164 44 q6 -10 -2 -16" stroke="#e8c066" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M40 165 Q34 160 30 152 M260 165 Q266 160 270 152 M70 117 Q64 112 62 104 M230 117 Q236 112 238 104" stroke="#e8c066" stroke-width="3" fill="none"/></g>`;
+  const scroll = chars => `<rect x="4" y="0" width="52" height="8" rx="4" fill="#c9a24a"/><rect x="8" y="8" width="44" height="${chars.length * 46 + 16}" fill="#f4e9d6"/>
+    <rect x="11" y="11" width="38" height="${chars.length * 46 + 10}" fill="none" stroke="#c9a24a" stroke-width="1.5"/>
+    ${chars.map((ch, i) => `<text x="30" y="${50 + i * 46}" text-anchor="middle" font-size="34" font-family="'Shippori Mincho','Noto Serif JP','Yu Mincho',serif" fill="#8a1f2c" font-weight="700">${ch}</text>`).join("")}
+    <rect x="4" y="${chars.length * 46 + 24}" width="52" height="8" rx="4" fill="#c9a24a"/>`;
+  const petals = () => {
+    const r = rnd(21), out = [];
+    for (let i = 0; i < 22; i++) {
+      const x = Math.round(r() * 100), dur = 16 + r() * 16, delay = -r() * dur, size = 10 + r() * 10;
+      out.push(`<svg class="d petal" viewBox="-10 -10 20 20" style="left:${x}vw;top:-4vh;width:${size.toFixed(0)}px;--fall:${dur.toFixed(1)}s;--delay:${delay.toFixed(1)}s;--drift:${(r() * 8 - 4).toFixed(1)}vw" aria-hidden="true"><path d="M0 8 C-7 2 -7 -6 -2 -9 L0 -6 L2 -9 C7 -6 7 2 0 8Z" fill="${r() < 0.5 ? "#ffc4d4" : "#ffdbe5"}"/></svg>`);
+    }
+    return out.join("");
+  };
+  const emperor = () => `
+    ${svg("0 0 360 200", "left:-1vw;top:calc(var(--bar-h, 64px) - 6px);width:clamp(180px,30vw,460px)", sakuraBranch(false, 4), "sway-slow")}
+    ${svg("0 0 360 200", "right:-1vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(150px,24vw,380px)", sakuraBranch(true, 9), "sway-slow")}
+    ${svg("0 0 360 200", "right:-2vw;bottom:2vh;width:clamp(150px,22vw,340px);transform:scaleY(-1)", sakuraBranch(true, 15))}
+    ${svg("0 0 300 260", "left:3vw;bottom:0;width:clamp(150px,20vw,300px)", castle)}
+    ${svg("0 0 60 180", "left:1.5vw;top:34vh;height:clamp(120px,24vh,220px)", scroll(["皇", "桜", "福"]), "sway-1")}
+    ${svg("0 0 60 134", "right:2vw;top:44vh;height:clamp(90px,18vh,170px)", scroll(["和", "夢"]), "sway-2")}
+    ${petals()}`;
+
+  // ---------- Pirate's Cove: jolly roger, treasure chest of gold, ship's wheel, rope, night sea ----------
+  const pirate = () => `
+    ${svg("0 0 140 220", "left:2vw;top:calc(var(--bar-h, 64px) + 2vh);height:clamp(140px,30vh,300px)", `<rect x="16" y="0" width="7" height="220" fill="#5b3a1e"/>
+      <path d="M23 12 L130 20 Q118 50 130 80 L23 72Z" fill="#141414"/>
+      <g fill="#f3ecdf"><circle cx="70" cy="40" r="15"/><rect x="62" y="50" width="16" height="9" rx="2"/></g>
+      <g fill="#141414"><circle cx="64" cy="39" r="4"/><circle cx="76" cy="39" r="4"/><path d="M70 45 l-2 4 h4Z"/></g>
+      <g stroke="#f3ecdf" stroke-width="5" stroke-linecap="round"><path d="M50 58 L90 70 M90 58 L50 70"/></g>`, "sway")}
+    ${svg("0 0 240 170", "left:2vw;bottom:2vh;width:clamp(130px,17vw,250px)", `<path d="M20 70 Q120 30 220 70 L220 80 L20 80Z" fill="#7a4a22"/><rect x="20" y="78" width="200" height="80" rx="6" fill="#8a5528"/>
+      <g fill="#c9a24a"><rect x="20" y="76" width="200" height="8"/><rect x="104" y="72" width="32" height="40" rx="4"/><rect x="20" y="150" width="200" height="8"/><rect x="40" y="78" width="8" height="80"/><rect x="192" y="78" width="8" height="80"/></g>
+      <circle cx="120" cy="96" r="6" fill="#3a2410"/>
+      <g fill="#f2c14e" stroke="#b8862a" stroke-width="2">${[[60, 64], [86, 52], [112, 46], [140, 50], [168, 58], [74, 40], [128, 32], [154, 40], [100, 30]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="11"/>`).join("")}</g>
+      <g fill="#f2c14e" stroke="#b8862a" stroke-width="2"><circle cx="232" cy="160" r="9"/><circle cx="12" cy="162" r="8"/></g>`)}
+    ${svg("0 0 200 200", "right:2vw;bottom:3vh;width:clamp(110px,13vw,200px)", `<g class="spin-slow"><circle cx="100" cy="100" r="62" fill="none" stroke="#6b4423" stroke-width="12"/><circle cx="100" cy="100" r="18" fill="#6b4423"/>
+      ${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<g transform="rotate(${a} 100 100)"><rect x="96" y="14" width="8" height="70" rx="3" fill="#7d5230"/><circle cx="100" cy="14" r="8" fill="#7d5230"/></g>`).join("")}<circle cx="100" cy="100" r="7" fill="#c9a24a"/></g>`)}
+    ${band("0 0 1440 40", "left:0;top:calc(var(--bar-h, 64px) - 4px);width:100%;height:24px", `<path d="M0 8 Q60 30 120 8 Q180 30 240 8 Q300 30 360 8 Q420 30 480 8 Q540 30 600 8 Q660 30 720 8 Q780 30 840 8 Q900 30 960 8 Q1020 30 1080 8 Q1140 30 1200 8 Q1260 30 1320 8 Q1380 30 1440 8" stroke="#a87a45" stroke-width="7" fill="none" stroke-dasharray="14 5"/>`)}
+    ${band("0 0 1440 140", "left:0;bottom:0;width:100%;height:clamp(60px,12vh,130px)", `<path class="wave" d="M0 60 C120 40 240 80 360 60 C480 40 600 80 720 60 C840 40 960 80 1080 60 C1200 40 1320 80 1440 60 L1440 140 L0 140Z" fill="#0f2a3d" opacity=".9"/>
+      <path d="M0 90 C160 75 320 105 480 90 C640 75 800 105 960 90 C1120 75 1280 105 1440 90 L1440 140 L0 140Z" fill="#0a1e2c"/>`)}
+    ${svg("0 0 200 200", "right:6vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(60px,7vw,110px)", `<circle cx="100" cy="100" r="70" fill="#f4ecd2"/><circle cx="78" cy="84" r="12" fill="#e2d8b8"/><circle cx="120" cy="118" r="9" fill="#e2d8b8"/>`)}`;
+
+  // ---------- Midnight Jazz Club: brass horns, piano keys, a spinning record, floating notes ----------
+  const jazz = () => {
+    const keys = [];
+    for (let i = 0; i < 52; i++) keys.push(`<rect x="${i * 28}" y="0" width="27" height="90" fill="#f4efe4"/>`);
+    for (let i = 0; i < 52; i++) if ([0, 1, 3, 4, 5].includes(i % 7)) keys.push(`<rect x="${i * 28 + 19}" y="0" width="17" height="56" fill="#141218"/>`);
+    const r = rnd(33), notes = [];
+    for (let i = 0; i < 9; i++) notes.push(svg("0 0 40 60", `left:${(5 + r() * 90).toFixed(0)}vw;top:${(25 + r() * 45).toFixed(0)}vh;width:${(18 + r() * 14).toFixed(0)}px;--delay:${(-r() * 12).toFixed(1)}s`, i % 2 ? `<path d="M12 48 a9 7 -20 1 1 0 -1 V8 L34 2 V40 a9 7 -20 1 1 0 -1 V14 L14 19Z" fill="#d9a441"/>` : `<path d="M16 46 a9 7 -20 1 1 0 -1 V4 q10 6 14 16 q-6 -6 -12 -6Z" fill="#d9a441"/>`, "note"));
+    return `
+      ${band("0 0 1440 600", "left:0;top:0;width:100%;height:100vh", `<defs><radialGradient id="jz" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#fff3d0" stop-opacity=".16"/><stop offset=".6" stop-color="#fff3d0" stop-opacity="0"/></radialGradient></defs>
+        <polygon points="560,0 880,0 1100,600 340,600" fill="url(#jz)"/>`)}
+      ${band("0 0 1456 90", "left:0;bottom:0;width:100%;height:clamp(40px,8vh,80px)", keys.join(""))}
+      ${svg("0 0 200 200", "right:3vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(90px,11vw,170px)", `<g class="spin"><circle cx="100" cy="100" r="92" fill="#111"/>${[78, 66, 54, 44].map(rr => `<circle cx="100" cy="100" r="${rr}" fill="none" stroke="#2a2a2a" stroke-width="2"/>`).join("")}<circle cx="100" cy="100" r="28" fill="#a3263a"/><circle cx="100" cy="100" r="4" fill="#111"/><path d="M60 40 A70 70 0 0 1 150 44" stroke="#fff" stroke-opacity=".12" stroke-width="6" fill="none"/></g>`)}
+      ${svg("0 0 140 300", "left:2vw;bottom:9vh;height:clamp(150px,34vh,330px)", `<path d="M70 10 L70 40 Q70 60 60 70 L40 210 Q32 262 66 270 Q104 274 106 232 L108 200" stroke="#d9a441" stroke-width="22" fill="none" stroke-linecap="round"/>
+        <path d="M108 200 Q116 186 126 196 Q132 214 112 222" fill="#d9a441"/><path d="M70 10 L60 2 L54 8" stroke="#3a3a3a" stroke-width="5" fill="none"/>
+        ${[90, 120, 150, 180, 210].map(y => `<circle cx="${52 - (y - 90) * 0.08}" cy="${y}" r="5" fill="#f4d58a" stroke="#8a6420" stroke-width="2"/>`).join("")}`, "sway")}
+      ${svg("0 0 260 90", "right:2vw;bottom:10vh;width:clamp(130px,16vw,240px)", `<rect x="10" y="40" width="140" height="10" rx="5" fill="#d9a441"/><path d="M150 45 Q190 45 210 20 L250 2 L250 88 L210 70 Q190 45 150 45Z" fill="#d9a441"/>
+        <rect x="70" y="28" width="12" height="20" rx="3" fill="#b8862a"/><rect x="90" y="28" width="12" height="20" rx="3" fill="#b8862a"/><rect x="110" y="28" width="12" height="20" rx="3" fill="#b8862a"/><circle cx="12" cy="45" r="8" fill="#b8862a"/>`)}
+      ${notes.join("")}`;
+  };
+
+  // ---------- Enchanted Forest: trees with fairy lights, glowing mushrooms, vines, fireflies ----------
+  const forest = () => {
+    const r = rnd(41), flies = [];
+    for (let i = 0; i < 18; i++) flies.push(`<svg class="d firefly" viewBox="0 0 10 10" style="left:${(r() * 100).toFixed(0)}vw;top:${(15 + r() * 75).toFixed(0)}vh;width:8px;--delay:${(-r() * 10).toFixed(1)}s;--dx:${(r() * 8 - 4).toFixed(1)}vw;--dy:${(r() * 8 - 4).toFixed(1)}vh" aria-hidden="true"><circle cx="5" cy="5" r="3" fill="#fff6a8"/></svg>`);
+    const tree = flip => `<g ${flip ? 'transform="translate(220 0) scale(-1 1)"' : ""}>
+      <path d="M40 520 C60 400 50 300 70 200 C80 150 60 100 40 60 M70 200 C110 160 150 150 190 120 M62 300 C100 290 140 300 170 280 M58 120 C90 90 120 70 150 30" stroke="#1d150e" stroke-width="20" fill="none" stroke-linecap="round"/>
+      <path d="M110 180 C130 220 128 250 120 290 M150 150 C160 190 170 210 168 240" stroke="#2f5a2e" stroke-width="4" fill="none"/>
+      ${[[90, 190], [120, 172], [150, 158], [176, 132], [90, 290], [120, 296], [148, 292], [80, 110], [104, 90], [128, 64]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#ffe680" class="twinkle-dot"/>`).join("")}
+      <path d="M70 200 C110 160 150 150 190 120" stroke="#ffe680" stroke-opacity=".25" stroke-width="1.5" fill="none"/></g>`;
+    const mushroom = (x, s, cap) => `<g transform="translate(${x} 0) scale(${s})"><rect x="-7" y="-34" width="14" height="34" rx="6" fill="#efe6cf"/><path d="M-26 -30 Q0 -64 26 -30Z" fill="${cap}"/>
+      <g fill="#fff" opacity=".9"><circle cx="-10" cy="-42" r="4"/><circle cx="6" cy="-48" r="3"/><circle cx="14" cy="-36" r="3.5"/></g></g>`;
+    return `
+      ${svg("0 0 220 520", "left:-2vw;bottom:0;height:clamp(260px,78vh,640px)", tree(false))}
+      ${svg("0 0 220 520", "right:-2vw;bottom:0;height:clamp(240px,70vh,580px)", tree(true))}
+      ${band("0 0 1440 60", "left:0;top:calc(var(--bar-h, 64px) - 6px);width:100%;height:40px", `<path d="M0 10 C80 40 160 0 240 25 C320 50 400 5 480 28 C560 50 640 6 720 26 C800 48 880 8 960 28 C1040 48 1120 6 1200 26 C1280 46 1360 10 1440 22" stroke="#2f5a2e" stroke-width="5" fill="none"/>
+        ${Array.from({ length: 24 }, (_, i) => `<ellipse cx="${30 + i * 60}" cy="${22 + (i % 2) * 10}" rx="9" ry="5" fill="#4a7d3e" transform="rotate(${i % 2 ? 30 : -30} ${30 + i * 60} ${22 + (i % 2) * 10})"/>`).join("")}`)}
+      ${svg("0 0 300 80", "left:16vw;bottom:0;width:clamp(150px,20vw,300px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(40, 1.2, "#d9443a")}${mushroom(110, 0.8, "#e8a33a")}${mushroom(170, 1, "#d9443a")}${mushroom(240, 0.7, "#9a5ad9")}</g>`)}
+      ${svg("0 0 200 80", "right:18vw;bottom:0;width:clamp(100px,13vw,200px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(50, 0.9, "#9a5ad9")}${mushroom(120, 1.1, "#d9443a")}</g>`)}
+      ${flies.join("")}`;
+  };
+
+  window.CR_DECO = { ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest };
   if (window.CR_DECO_READY) window.CR_DECO_READY();
 })();

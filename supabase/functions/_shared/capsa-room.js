@@ -19,7 +19,8 @@ export function validateSettings(s) {
   if (!(pointValue >= 1 && pointValue <= 1e9)) fail("Pick how many dollars a point is worth.");
   if (![20, 30, 60].includes(actSeconds)) fail("Pick a time to play from the list.");
   const skill = ["easy", "normal", "hard"].includes(s.skill) ? s.skill : "normal";
-  return { pointValue, actSeconds, skill };
+  const mode = s.mode === "loser" ? "loser" : "winner";
+  return { pointValue, actSeconds, skill, mode };
 }
 
 export function newRoom({ code, settings, host, now }) {
@@ -66,7 +67,7 @@ const isBotSeat = (state, seat) => !!(state.seats[seat] && state.seats[seat].bot
 
 function deal(state, now, shuffled) {
   state.gameNo += 1;
-  state.g = C.startGame(state.gameNo, shuffled, state.lastWinner);
+  state.g = C.startGame(state.gameNo, shuffled, state.lastWinner, state.settings.mode);
   state.nextGameAt = null;
 }
 
@@ -77,7 +78,12 @@ function score(state) {
   g.counted = true;
   state.games += 1;
   f.points.forEach((p, i) => state.points[i] += p);
-  if (f.winner >= 0) {
+  if (f.mode === "loser") {
+    // places: a point from every person you finish above (bots don't pay or get paid)
+    for (let i = 0; i < C.SEATS; i++) for (let j = 0; j < C.SEATS; j++)
+      if (f.place[i] < f.place[j] && !isBotSeat(state, i) && !isBotSeat(state, j)) { state.money[i] += 1; state.money[j] -= 1; }
+    if (f.winner >= 0) state.lastWinner = f.winner;
+  } else if (f.winner >= 0) {
     const pay = (from, amt) => {
       if (isBotSeat(state, from) || isBotSeat(state, f.winner)) return;
       state.money[from] -= amt; state.money[f.winner] += amt;

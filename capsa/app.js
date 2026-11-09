@@ -22,12 +22,19 @@ function fmt(cents, signed) {
   return signed ? (cents > 0 ? "+" : cents < 0 ? "−" : "") + s : (cents < 0 ? "−" : "") + s;
 }
 const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n);
+const ordinal = n => n + (["st", "nd", "rd"][n - 1] || "th");
+const placeOf = (g, seat) => g.finished && g.finished.place ? g.finished.place[seat] + 1 : (g.out || []).indexOf(seat) + 1;
+const loserGame = g => !!g && (g.mode === "loser" || (g.finished && g.finished.mode === "loser"));
 // Money in points. Against bots (bots mode) every point counts; in rooms with friends, points won from or
 // lost to a bot don't turn into money, so friends only owe each other.
 const isBot = seat => !!(view.seats[seat] && view.seats[seat].bot);
 const moneyPts = seat => view.mode === "online" ? (view.seats[seat]?.money || 0) : (view.seats[seat]?.points || 0);
 function gameMoney(f, seat) {
   if (view.mode !== "online") return f.points[seat];
+  if (f.mode === "loser") {     // a point from every person you finish above
+    if (isBot(seat)) return 0;
+    return [0, 1, 2, 3].filter(i => i !== seat && !isBot(i)).reduce((a, i) => a + Math.sign(f.place[i] - f.place[seat]), 0);
+  }
   if (f.winner < 0 || isBot(f.winner)) return 0;
   const paid = i => f.bombed !== null ? (i === f.bombed ? -f.points[i] : 0) : -f.points[i];
   if (seat === f.winner) return [0, 1, 2, 3].filter(i => i !== seat && !isBot(i)).reduce((a, i) => a + paid(i), 0);
@@ -104,7 +111,7 @@ $("formAi").addEventListener("submit", e => {
   if (!(pointValue >= 1)) return $("aiErr").textContent = "Enter how many dollars a point is worth.";
   $("aiErr").textContent = "";
   store.set("pk-name", name);
-  attach(LocalCapsa.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), pointValue }));
+  attach(LocalCapsa.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), mode: segValue("aiMode"), pointValue }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedCapsaGame(); if (s) attach(new LocalCapsa(s)); });
 
@@ -119,7 +126,7 @@ $("formCreate").addEventListener("submit", async e => {
   try {
     store.set("pk-name", name);
     const { OnlineCapsa } = await online();
-    attach(await OnlineCapsa.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill") }));
+    attach(await OnlineCapsa.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill"), mode: segValue("crMode") }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -143,7 +150,7 @@ $("jnCode").addEventListener("change", async () => {
   try {
     const { peekRoom } = await online();
     const r = await peekRoom(code);
-    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? "That code is a poker table. Join it from the poker page." : `${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
+    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "capsa" ? "That code is a poker table. Join it from the poker page." : `${r.mode === "loser" ? "Loser mode · " : ""}${fmt(r.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
   } catch {}
 });
 $("btnRejoin").addEventListener("click", async () => {
@@ -247,8 +254,10 @@ function render() {
     el.querySelector(".count b").textContent = g ? `${n} card${n === 1 ? "" : "s"}` : "";
     const fin = g && g.finished;
     const tag = el.querySelector(".tag");
-    tag.className = "tag" + (fin && fin.winner === seat ? " win" : fin && fin.bombed === seat ? " lose" : "");
-    tag.textContent = fin ? (fin.winner === seat ? "Winner" : signed(fin.points[seat]) + " pts")
+    const isLoser = fin && (fin.mode === "loser" ? fin.loser === seat || fin.bombed === seat : fin.bombed === seat);
+    tag.className = "tag" + (fin && fin.winner === seat ? " win" : isLoser ? " lose" : g && !fin && placeOf(g, seat) ? " win" : "");
+    tag.textContent = fin ? (fin.mode === "loser" ? `${ordinal(placeOf(g, seat))} · ${signed(fin.points[seat])} pts` : fin.winner === seat ? "Winner" : signed(fin.points[seat]) + " pts")
+      : g && placeOf(g, seat) ? `Out · ${ordinal(placeOf(g, seat))}`
       : g && g.trick && g.passed[seat] ? "Passed" : g && g.turn === seat ? "Thinking…" : n <= 3 && n > 0 ? `${n} left!` : "";
     el.classList.toggle("acting", !!(g && !fin && g.turn === seat));
     el.classList.toggle("passed", !!(g && g.trick && g.passed[seat] && !fin));
@@ -320,9 +329,15 @@ function statusText(g, problem) {
   if (g.finished) {
     const f = g.finished;
     const left = view.nextGameAt ? ` Next game in ${Math.max(0, Math.ceil((view.nextGameAt - Date.now()) / 1000))}s.` : "";
+    if (f.mode === "loser") {
+      if (f.reason === "stuck") return "Everyone still holding cards is stuck on a single 2: they share the last places." + left;
+      if (f.reason === "bomb") return `${nameAt(f.bomber)} ${verb(f.bomber, "bomb")} ${f.bombed === me ? "your" : nameAt(f.bombed) + "'s"} 2: ${f.bombed === me ? "you lose" : nameAt(f.bombed) + " loses"}!` + left;
+      return `${f.loser === me ? "You're" : nameAt(f.loser) + " is"} left holding cards and ${f.loser === me ? "lose" : "loses"}.` + left;
+    }
     if (f.reason === "stuck") return "Everyone was left with a single 2, so nobody can finish. Nobody pays." + left;
     return `${nameAt(f.winner)} ${verb(f.winner, "win")}${f.reason === "bomb" ? ` by bombing ${f.bombed === me ? "your" : nameAt(f.bombed) + "'s"} 2` : ""}!` + left;
   }
+  if (loserGame(g) && placeOf(g, me)) return `You're out in ${ordinal(placeOf(g, me))} place. The others play on until one is left holding cards.`;
   if (g.legal) {
     if (problem) return problem;
     if (g.legal.leading) return g.legal.mustInclude ? "Your lead. Your first play must include the 3♦." : g.hand.length === 1 && g.hand[0][0] === "2" ? "You can't finish on a single 2: pass the lead." : "Your lead: play anything.";
@@ -343,7 +358,10 @@ function renderLog(g) {
     else if (e.type === "round") lines.push(`New round: ${nameAt(e.seat)} ${verb(e.seat, "lead")}`);
     else if (e.type === "win") lines.push(`${nameAt(e.seat)} ${verb(e.seat, "go", "goes")} out and ${verb(e.seat, "win")}`);
     else if (e.type === "bomb win") lines.push(`${nameAt(e.seat)} ${verb(e.seat, "bomb")} a 2 and ${verb(e.seat, "win")}`);
-    else if (e.type === "stuck") lines.push("Everyone is stuck on a single 2: nobody wins");
+    else if (e.type === "stuck") lines.push(loserGame(g) ? "Everyone left is stuck on a single 2: they share the last places" : "Everyone is stuck on a single 2: nobody wins");
+    else if (e.type === "out") lines.push(`${nameAt(e.seat)} ${verb(e.seat, "go", "goes")} out in ${ordinal(e.place)} place`);
+    else if (e.type === "lose") lines.push(`${nameAt(e.seat)} ${verb(e.seat, "are", "is")} left holding cards and ${verb(e.seat, "lose")}`);
+    else if (e.type === "bomb lose") lines.push(`${nameAt(e.seat)} ${verb(e.seat, "get", "gets")} bombed on a 2 and ${verb(e.seat, "lose")}`);
   }
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
   box.innerHTML = "";
@@ -366,7 +384,7 @@ function renderScores() {
   });
   const note = document.createElement("div");
   note.className = "pl watchers";
-  note.textContent = `${fmt(view.pointValue)} a point · ${view.games ? view.games.length : 0} games played` + (view.mode === "online" && view.seats.some(x => x && x.bot) ? " · points won or lost against bots don't count as money" : "");
+  note.textContent = (view.gameMode === "loser" ? "Loser mode · " : "") + `${fmt(view.pointValue)} a point · ${view.games ? view.games.length : 0} games played` + (view.mode === "online" && view.seats.some(x => x && x.bot) ? " · points won or lost against bots don't count as money" : "");
   box.appendChild(note);
 }
 
@@ -394,15 +412,21 @@ function renderBanner(g) {
   box.innerHTML = "";
   const head = document.createElement("div"); head.className = "wb-row";
   head.innerHTML = `<div class="pic">${f.winner >= 0 ? avatarSvg(avatarOf(view.seats[f.winner])) : ""}</div><div class="wb-text"><div class="wb-title"></div><div class="wb-hand"></div></div>`;
-  head.querySelector(".wb-title").textContent = f.winner < 0 ? "Nobody wins" : `${nameAt(f.winner)} ${verb(f.winner, "win")}!`;
-  head.querySelector(".wb-hand").textContent = f.reason === "bomb" ? `Bombed ${f.bombed === view.me ? "your" : nameAt(f.bombed) + "'s"} 2` : f.reason === "stuck" ? "Everyone was stuck on a single 2" : "Out of cards first";
+  const loserSeat = f.mode === "loser" ? (f.reason === "bomb" ? f.bombed : f.loser) : -1;
+  if (f.mode === "loser") {
+    head.querySelector(".pic").innerHTML = loserSeat >= 0 ? avatarSvg(avatarOf(view.seats[loserSeat])) : "";
+    head.querySelector(".wb-title").textContent = loserSeat < 0 ? "Stuck on single 2s" : loserSeat === view.me ? "You lose!" : `${nameAt(loserSeat)} loses!`;
+    head.querySelector(".wb-hand").textContent = f.reason === "bomb" ? `Bombed on a 2 by ${nameAt(f.bomber)}` : f.reason === "stuck" ? "The players left share the last places" : "Last one holding cards";
+  } else head.querySelector(".wb-title").textContent = f.winner < 0 ? "Nobody wins" : `${nameAt(f.winner)} ${verb(f.winner, "win")}!`;
+  if (f.mode !== "loser") head.querySelector(".wb-hand").textContent = f.reason === "bomb" ? `Bombed ${f.bombed === view.me ? "your" : nameAt(f.bombed) + "'s"} 2` : f.reason === "stuck" ? "Everyone was stuck on a single 2" : "Out of cards first";
   box.appendChild(head);
   const res = document.createElement("div"); res.className = "cb-result";
   const table = document.createElement("table");
   f.points.forEach((pts, seat) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td></td><td><span class="left"></span></td><td></td><td></td>`;
-    tr.children[0].textContent = nameAt(seat);
+    tr.dataset.place = f.place ? f.place[seat] : 0;
+    tr.children[0].textContent = (f.mode === "loser" ? ordinal(f.place[seat] + 1) + " " : "") + nameAt(seat);
     const left = tr.querySelector(".left");
     (f.left[seat] || []).slice(0, 13).forEach(c => left.appendChild(cardEl(c)));
     tr.children[2].textContent = `${signed(pts)} pts`;
@@ -415,7 +439,8 @@ function renderBanner(g) {
   res.appendChild(table);
   box.appendChild(res);
   box.hidden = false;
-  if (animOk()) sound(f.winner === view.me ? "win" : f.reason === "bomb" ? "allin" : "pot", 0.2);
+  if (f.mode === "loser") table.append(...[...table.children].sort((a, b) => a.dataset.place - b.dataset.place));
+  if (animOk()) sound(f.winner === view.me || (f.mode === "loser" && loserSeat !== view.me) ? "win" : f.reason === "bomb" ? "allin" : "pot", 0.2);
 }
 $("winBanner").addEventListener("click", () => { if (bannerFor && !bannerFor.endsWith("hidden")) bannerFor += "-hidden"; $("winBanner").hidden = true; });
 

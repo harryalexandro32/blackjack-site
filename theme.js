@@ -36,7 +36,19 @@
     { id: "lantern", name: "Lantern Night", tag: "Red lacquer, gold and warm lantern glow", font: ["Cinzel", "'Cinzel', serif"],
       c: { felt: "#7a1414", deep: "#240505", hi: "#a32626", rail: "#160904", railHi: "#3b1d0e", text: "#fff1d6", accent: "#ffb347", muted: "#e4bea2", back: "#b8892a", btn: "#ffe3b3" },
       page: "radial-gradient(circle at 10% 15%, rgba(255,160,60,.45) 0 10px, rgba(255,120,40,.12) 22px, transparent 48px), radial-gradient(circle at 88% 22%, rgba(255,160,60,.4) 0 9px, rgba(255,120,40,.1) 20px, transparent 44px), radial-gradient(circle at 50% 6%, rgba(255,190,90,.35) 0 8px, transparent 36px), linear-gradient(#3a0a0a, #160303 70%)",
-      pageSize: "100% 520px, 100% 560px, 100% 480px, 100% 100%" }
+      pageSize: "100% 520px, 100% 560px, 100% 480px, 100% 100%" },
+    { id: "emperor", name: "Emperor's House", tag: "Sakura, a castle and gold on black lacquer", font: ["Shippori Mincho", "'Shippori Mincho', serif"],
+      c: { felt: "#3d1527", deep: "#12060c", hi: "#5e2440", rail: "#0c0508", railHi: "#2a1119", text: "#fdf0f4", accent: "#e8c066", muted: "#e3bccb", back: "#b0283f", btn: "#ffe3ec" },
+      page: "radial-gradient(circle at 84% 14%, rgba(255,240,215,.9) 0 34px, rgba(255,220,190,.18) 46px, transparent 90px), linear-gradient(#2a0f1d, #10060b 70%)" },
+    { id: "pirate", name: "Pirate's Cove", tag: "Ship's deck, treasure and a moonlit sea", font: ["Pirata One", "'Pirata One', serif"],
+      c: { felt: "#5d3d22", deep: "#0c1620", hi: "#7d5634", rail: "#2a1a0e", railHi: "#4a2e18", text: "#f6e7c8", accent: "#f2c14e", muted: "#cdb894", back: "#7a1d1d", btn: "#f3dfb2" },
+      page: "linear-gradient(#0f2233, #08121c 75%)" },
+    { id: "jazz", name: "Midnight Jazz Club", tag: "Smoky blue, brass and piano keys", font: ["Poiret One", "'Poiret One', sans-serif"],
+      c: { felt: "#1c2a4a", deep: "#090d1a", hi: "#2e4170", rail: "#120d0a", railHi: "#2e2018", text: "#f3ead8", accent: "#d9a441", muted: "#a9b3c9", back: "#6b1d2c", btn: "#f1e3c2" },
+      page: "radial-gradient(70% 50% at 50% 0%, rgba(120,140,200,.18), transparent 70%), linear-gradient(#141c33, #070a14 75%)" },
+    { id: "forest", name: "Enchanted Forest", tag: "Moss, glowing mushrooms and fireflies", font: ["Uncial Antiqua", "'Uncial Antiqua', serif"],
+      c: { felt: "#2f5a2e", deep: "#0c160d", hi: "#4a7d3e", rail: "#1e140c", railHi: "#3a2a18", text: "#f0f7e6", accent: "#f5e07a", muted: "#b8cfa8", back: "#4a6b2a", btn: "#eef6d8" },
+      page: "radial-gradient(50% 40% at 30% 70%, rgba(150,220,120,.12), transparent 70%), radial-gradient(40% 30% at 75% 30%, rgba(245,224,122,.1), transparent 70%), linear-gradient(#142414, #070d08 75%)" }
   ];
 
   // ---------- colour helpers ----------
@@ -177,7 +189,19 @@
     @keyframes cr-flicker { 0%, 100% { opacity: .9; } 46% { opacity: .55; } 47% { opacity: .9; } }
     @keyframes cr-beam { from { rotate: -10deg; } to { rotate: 8deg; } }
     @keyframes cr-wave { from { translate: -10px 0; } to { translate: 10px 2px; } }
-    @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } }
+    /* Emperor's House petals drift down; Enchanted Forest fireflies wander; Jazz notes float; the record spins */
+    .theme-deco .petal { animation: cr-fall var(--fall, 20s) linear var(--delay, 0s) infinite; }
+    @keyframes cr-fall { from { translate: 0 0; rotate: 0deg; } 50% { translate: calc(var(--drift, 2vw) * -1) 55vh; rotate: 200deg; } to { translate: var(--drift, 2vw) 112vh; rotate: 400deg; } }
+    .theme-deco .firefly { filter: drop-shadow(0 0 5px #fff27a) drop-shadow(0 0 10px rgba(255,240,120,.6)); animation: cr-firefly 9s ease-in-out var(--delay, 0s) infinite alternate; }
+    @keyframes cr-firefly { 0% { translate: 0 0; opacity: .2; } 40% { opacity: 1; } 70% { opacity: .4; } 100% { translate: var(--dx, 2vw) var(--dy, 2vh); opacity: .9; } }
+    .theme-deco .note { opacity: .55; animation: cr-note 12s ease-in-out var(--delay, 0s) infinite; }
+    @keyframes cr-note { 0% { translate: 0 0; opacity: 0; } 20% { opacity: .55; } 100% { translate: 2vw -14vh; opacity: 0; } }
+    .theme-deco .spin { transform-origin: 100px 100px; animation: cr-spin 9s linear infinite; }
+    .theme-deco .spin-slow { transform-origin: 100px 100px; animation: cr-spin 60s linear infinite; }
+    @keyframes cr-spin { to { rotate: 360deg; } }
+    .theme-deco .glow-green { filter: drop-shadow(0 0 8px rgba(190,255,150,.45)); }
+    .theme-deco .twinkle-dot { filter: drop-shadow(0 0 4px #ffe680); }
+    @media (prefers-reduced-motion: reduce) { .theme-deco * { animation: none !important; } .theme-deco .petal { display: none; } }
     @media (max-width: 720px) { .theme-deco { opacity: .65; } }
   `;
   const style = document.createElement("style");

@@ -227,3 +227,91 @@ test("capsa rooms: every bot gets its own name", () => {
   const names = s.seats.map(x => x.name);
   assert.strictEqual(new Set(names).size, 4);
 });
+
+// ---------- loser mode ----------
+// a loser-mode game with exactly these hands (no padding)
+const loserGame = (hands, turn = 0) => ({ no: 2, mode: "loser", out: [], hands: hands.map(h => h.split(" ").filter(Boolean).sort(C.byValue)), turn, trick: null, passed: [false, false, false, false], lead3d: false, log: [], finished: null });
+
+test("loser mode: going out doesn't end the game; places score +3 +1 -1 -3", () => {
+  const g = loserGame(["3d", "4d 9c", "5d 9d", "6d 9h Kc"]);
+  C.play(g, 0, ["3d"]);                                  // seat 0 is out in 1st
+  assert.strictEqual(g.finished, null);
+  assert.deepStrictEqual(g.out, [0]);
+  assert.strictEqual(g.turn, 1);
+  C.play(g, 1, ["4d"]); C.play(g, 2, ["5d"]); C.play(g, 3, ["6d"]);
+  assert.strictEqual(g.turn, 1);                          // seat 0 is skipped
+  C.pass(g, 1); C.pass(g, 2);                             // seat 3 takes the round
+  assert.strictEqual(g.turn, 3); assert.strictEqual(g.trick, null);
+  C.play(g, 3, ["9h"]); C.pass(g, 1); C.pass(g, 2);
+  C.play(g, 3, ["Kc"]);                                   // seat 3 out in 2nd
+  assert.deepStrictEqual(g.out, [0, 3]);
+  C.pass(g, 1); C.pass(g, 2);                             // nobody beats it: the next player holding cards leads
+  assert.strictEqual(g.trick, null);
+  assert.strictEqual(g.turn, 1);
+  C.play(g, 1, ["9c"]);                                   // seat 1 out in 3rd: seat 2 is left holding
+  assert.ok(g.finished);
+  assert.deepStrictEqual(g.finished.place, [0, 2, 3, 1]);
+  assert.deepStrictEqual(g.finished.points, [3, -1, -3, 1]);
+  assert.strictEqual(g.finished.winner, 0);
+  assert.strictEqual(g.finished.loser, 2);
+});
+
+test("loser mode: a bomb on a single 2 ends it: out players keep places, bomber next, rest by fewest cards, bombed last", () => {
+  const g = loserGame(["3d", "2s 4c", "5c 5d 5h 5s 9d", "6d 7d 8d"]);
+  C.play(g, 0, ["3d"]);                                   // seat 0 out in 1st
+  C.play(g, 1, ["2s"]);                                   // seat 1 plays a single 2
+  C.play(g, 2, ["5c", "5d", "5h", "5s"]);                 // seat 2 bombs it
+  const f = g.finished;
+  assert.strictEqual(f.reason, "bomb");
+  assert.deepStrictEqual(f.place, [0, 3, 1, 2]);          // 1st kept, bomber 2nd, seat 3 (3 cards) 3rd, bombed last
+  assert.deepStrictEqual(f.points, [3, -3, 1, -1]);
+  assert.strictEqual(f.bombed, 1);
+});
+
+test("loser mode: players stuck on single 2s share the last places", () => {
+  const g = loserGame(["3d", "2c", "2d", "2h"]);
+  C.play(g, 0, ["3d"]);
+  C.pass(g, 1); C.pass(g, 2); C.pass(g, 3);               // nobody beats it; seat 1 leads but holds only a 2
+  assert.strictEqual(g.turn, 1);
+  C.pass(g, 1);                                           // everyone left holds a single 2: stuck
+  assert.strictEqual(g.finished.reason, "stuck");
+  assert.deepStrictEqual(g.finished.points, [3, -1, -1, -1]);
+});
+
+test("loser mode: whole games end with one player holding cards and points adding to zero", () => {
+  for (let k = 0; k < 150; k++) {
+    const g = C.startGame(1, shuffled, -1, "loser");
+    for (let i = 0; i < 600 && !g.finished; i++) {
+      const m = awaitBot.capsaMove(g, g.turn, "normal");
+      if (m.type === "pass") C.pass(g, g.turn); else C.play(g, g.turn, m.cards);
+    }
+    assert.ok(g.finished, "game ended");
+    assert.strictEqual(g.finished.points.reduce((a, b) => a + b, 0), 0);
+    if (g.finished.reason === "out") {
+      assert.deepStrictEqual(g.finished.place.slice().sort(), [0, 1, 2, 3]);
+      assert.strictEqual(g.hands.filter(h => h.length).length, 1);
+    }
+  }
+});
+
+test("loser mode rooms: money only between people, the winner starts the next game", () => {
+  const s = R.newRoom({ code: "CAP234", settings: { ...settingsC, mode: "loser" }, host: { id: "h", name: "Host", tokenHash: "th" }, now: clock });
+  R.applyAction(s, { type: "join", name: "Ana" }, ctx("a", { tokenHash: "ta" }));
+  R.applyAction(s, { type: "start" }, ctx("h"));
+  assert.strictEqual(s.g.mode, "loser");
+  for (let i = 0; i < 800 && !s.g.finished; i++) {
+    runBots(s);
+    if (s.g.finished) break;
+    const id = s.g.turn === s.players.h.seat ? "h" : "a";
+    const m = awaitBot.capsaMove(s.g, s.g.turn, "normal");
+    R.applyAction(s, m.type === "pass" ? { type: "pass" } : { type: "play", cards: m.cards }, ctx(id));
+  }
+  const f = s.g.finished;
+  assert.ok(f && f.mode === "loser");
+  const [h, a] = [s.players.h.seat, s.players.a.seat];
+  const expect = Math.sign(f.place[a] - f.place[h]);
+  assert.strictEqual(s.money[h], expect); assert.strictEqual(s.money[a], -expect);
+  assert.ok(s.seats.every((x, i) => !x.bot || s.money[i] === 0));
+  clock += 10000; R.applyAction(s, { type: "tick" }, ctx("h"));
+  if (f.winner >= 0) assert.strictEqual(s.g.turn, f.winner);
+});

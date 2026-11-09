@@ -77,7 +77,7 @@ export function capsaMove(g, seat, skill = "normal") {
   if (!L) return null;
   const hand = g.hands[seat];
   const rnd = Math.random;
-  const opponentsMin = Math.min(...g.hands.map((h, i) => i === seat ? 99 : h.length));
+  const opponentsMin = Math.min(...g.hands.map((h, i) => i === seat || !h.length ? 99 : h.length));
   const options = combos(hand).filter(p => !whyNot(g, seat, p.cards));
   if (!options.length) return { type: "pass" };
 

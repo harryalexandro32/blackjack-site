@@ -9,6 +9,12 @@
 // You can't finish on a single 2. Once you pass you're out until the round ends.
 // Scoring: losers pay the winner 1 point per card left, each 2 counting 2; ×2 with 10–12 cards, ×3 with 13.
 // Bombed on a 2: that player pays the bomber double; the others pay nothing.
+//
+// Loser mode (a host option): going out doesn't end the game. Players who finish leave the rotation and play
+// goes on until one player is left holding cards. Places score +1 against every player you finish above
+// (so 1st +3, 2nd +1, 3rd -1, last -3). A bomb on a single 2 still ends the game: players already out keep
+// their places, the bomber takes the best open place, the rest go by fewest cards, the bombed player is last.
+// If a player goes out and nobody beats their last play, the next player still holding cards leads.
 
 export const ORDER = "3456789TJQKA2";
 export const SUITS = "dchs"; // ♦ ♣ ♥ ♠, weakest to strongest
@@ -93,7 +99,7 @@ const hasAllTwos = hand => hand.filter(c => c[0] === "2").length === 4;
 
 // Deals a new game. shuffled() must return a freshly shuffled 52-card deck; it's called again if someone
 // gets all four 2s. leader: the last winner, or -1 for the first game (the 3♦ starts).
-export function startGame(no, shuffled, leader = -1) {
+export function startGame(no, shuffled, leader = -1, mode = "winner") {
   let hands;
   for (let tries = 0; tries < 50; tries++) {
     const deck = shuffled();
@@ -102,11 +108,18 @@ export function startGame(no, shuffled, leader = -1) {
   }
   const first = leader < 0;
   const turn = first ? hands.findIndex(h => h.includes("3d")) : leader;
-  return { no, hands, turn, trick: null, passed: [false, false, false, false], lead3d: first, log: [], finished: null };
+  return { no, mode: mode === "loser" ? "loser" : "winner", out: [], hands, turn, trick: null, passed: [false, false, false, false], lead3d: first, log: [], finished: null };
 }
 
+const holding = (g, i) => g.hands[i].length > 0;
+// the next player still in the round (holding cards, not passed), or `from` if there's nobody else
 const nextSeat = (g, from) => {
-  for (let k = 1; k <= SEATS; k++) { const i = (from + k) % SEATS; if (!g.passed[i]) return i; }
+  for (let k = 1; k < SEATS; k++) { const i = (from + k) % SEATS; if (!g.passed[i] && holding(g, i)) return i; }
+  return from;
+};
+// the next player holding cards, whether or not they passed
+const nextHolder = (g, from) => {
+  for (let k = 1; k <= SEATS; k++) { const i = (from + k) % SEATS; if (holding(g, i)) return i; }
   return from;
 };
 
@@ -147,12 +160,18 @@ export function play(g, seat, cards) {
   // a bomb on a single 2 ends the game at once
   if (prev && prev.combo.type === "single" && rankOf(prev.cards[0]) === 12 && isBomb(combo)) {
     g.trick = { combo, cards, by: seat };
-    return finish(g, seat, prev.by);
+    return g.mode === "loser" ? finishLoser(g, "bomb", seat, prev.by) : finish(g, seat, prev.by);
   }
   g.trick = { combo, cards, by: seat };
-  if (!g.hands[seat].length) return finish(g, seat, -1);
-  g.turn = nextSeat(g, seat);
-  if (g.turn === seat) newRound(g, seat);
+  if (!g.hands[seat].length) {
+    if (g.mode !== "loser") return finish(g, seat, -1);
+    g.out.push(seat);
+    g.log.push({ seat, type: "out", place: g.out.length });
+    if (g.hands.filter(h => h.length).length <= 1) return finishLoser(g, "out");
+  }
+  const next = nextSeat(g, seat);
+  if (next === seat) newRound(g, holding(g, seat) ? seat : nextHolder(g, seat));
+  else g.turn = next;
   return g;
 }
 
@@ -163,14 +182,14 @@ export function pass(g, seat) {
   g.log.push({ seat, type: "pass" });
   if (!g.trick) {                                  // a leader holding only a single 2 hands the lead on
     // if every player is down to a single 2, nobody can ever finish: the game ends and nobody pays
-    if (g.hands.every(h => h.length === 1 && h[0][0] === "2")) return finish(g, -1, -1);
-    g.turn = (seat + 1) % SEATS;
+    if (g.hands.every(h => !h.length || (h.length === 1 && h[0][0] === "2"))) return g.mode === "loser" ? finishLoser(g, "stuck") : finish(g, -1, -1);
+    g.turn = nextHolder(g, seat);
     return g;
   }
   g.passed[seat] = true;
-  const next = nextSeat(g, seat);
-  if (next === g.trick.by || g.passed.filter(p => !p).length === 1) newRound(g, g.trick.by);
-  else g.turn = next;
+  const by = g.trick.by, live = [0, 1, 2, 3].filter(i => !g.passed[i] && holding(g, i) && i !== by);
+  if (!live.length) newRound(g, holding(g, by) ? by : nextHolder(g, by)); // everyone else passed
+  else g.turn = nextSeat(g, seat);
   return g;
 }
 
@@ -209,6 +228,36 @@ function finish(g, winner, bombed) {
   return g;
 }
 
+// Loser mode's end. place[seat] is 0 for 1st … 3 for last; players stuck together share a place.
+// Points: +1 from every player you finish above.
+function finishLoser(g, reason, bomber = -1, bombed = -1) {
+  const place = [0, 0, 0, 0];
+  g.out.forEach((s, i) => place[s] = i);
+  let rest = [0, 1, 2, 3].filter(i => !g.out.includes(i));
+  let next = g.out.length;
+  if (reason === "bomb") {
+    if (!g.out.includes(bomber)) { place[bomber] = next++; rest = rest.filter(i => i !== bomber); }
+    rest = rest.filter(i => i !== bombed);
+    const fromBomber = i => (i - bomber + SEATS) % SEATS;
+    rest.sort((a, b) => g.hands[a].length - g.hands[b].length || penalty(g.hands[a]) - penalty(g.hands[b]) || fromBomber(a) - fromBomber(b));
+    rest.forEach(i => place[i] = next++);
+    place[bombed] = next;
+  } else if (reason === "stuck") {
+    rest.forEach(i => place[i] = next);        // nobody can finish: they share the place
+  } else {
+    rest.forEach(i => place[i] = next);        // the one player left holding cards
+  }
+  const points = place.map((p, i) => place.reduce((a, q, j) => a + (j === i ? 0 : q > p ? 1 : q < p ? -1 : 0), 0));
+  const firsts = [0, 1, 2, 3].filter(i => place[i] === 0);
+  const winner = firsts.length === 1 ? firsts[0] : -1;
+  const lasts = [0, 1, 2, 3].filter(i => place[i] === Math.max(...place));
+  const loser = lasts.length === 1 && Math.max(...place) > 0 ? lasts[0] : -1;
+  g.finished = { mode: "loser", winner, loser, bombed: reason === "bomb" ? bombed : null, bomber: reason === "bomb" ? bomber : null, place, points, reason, left: g.hands.map(h => h.slice()) };
+  g.turn = -1;
+  g.log.push({ seat: reason === "stuck" ? -1 : loser, type: reason === "stuck" ? "stuck" : reason === "bomb" ? "bomb lose" : "lose" });
+  return g;
+}
+
 // A timed-out player: pass if allowed, otherwise lead the lowest single (with the 3♦ if it's the first play).
 export function autoMove(g) {
   const seat = g.turn, L = legal(g, seat);
@@ -225,7 +274,7 @@ export function autoMove(g) {
 export function viewFor(g, seat) {
   if (!g) return null;
   return {
-    no: g.no, turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log,
+    no: g.no, mode: g.mode || "winner", out: g.out || [], turn: g.turn, trick: g.trick, passed: g.passed, lead3d: g.lead3d, log: g.log,
     counts: g.hands.map(h => h.length),
     hand: seat >= 0 ? g.hands[seat] : null,
     legal: seat >= 0 ? legal(g, seat) : null,

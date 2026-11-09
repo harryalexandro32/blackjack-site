@@ -42,8 +42,8 @@ function realtimeLib() {
 export async function peekRoom(code) { return (await call({ type: "peek", code })).table; }
 
 export class OnlineCapsa {
-  static async create({ name, avatar, pointValue, actSeconds, skill }) {
-    const r = await call({ type: "create", game: "capsa", name, avatar, settings: { pointValue, actSeconds, skill } });
+  static async create({ name, avatar, pointValue, actSeconds, skill, mode }) {
+    const r = await call({ type: "create", game: "capsa", name, avatar, settings: { pointValue, actSeconds, skill, mode } });
     if (r.hostKey) saveHostKey(r.state.code, r.hostKey);
     return OnlineCapsa.from(r);
   }
@@ -127,7 +127,7 @@ export class OnlineCapsa {
     const s = this.state, toLocal = ms => ms == null ? null : ms - this.offset;
     return {
       mode: "online", me: s.me, isHost: s.isHost, hostSeat: s.hostSeat, code: s.code, myName: s.myName,
-      seats: s.seats, game: s.view, gameNo: s.gameNo, pointValue: s.settings.pointValue, games: { length: s.games },
+      seats: s.seats, game: s.view, gameNo: s.gameNo, gameMode: s.settings.mode || "winner", pointValue: s.settings.pointValue, games: { length: s.games },
       nextGameAt: toLocal(s.nextGameAt), deadline: toLocal(s.deadline), actMs: s.actMs,
       started: s.started, ended: !!(s.closed || s.left), summary: s.summary || null,
       chat: s.chat || [], sessions: s.sessions || [], ledger: s.ledger || [], ledgerResetAt: s.ledgerResetAt,
