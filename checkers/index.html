@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkers</title>
+<meta name="description" content="Checkers (Dam) against bots, with a friend on one device, or online. Dam rules with flying kings, or classic English rules.">
+<meta name="theme-color" content="#2b1910">
+<script src="../theme.js"></script>
+<link rel="icon" type="image/svg+xml" href="../logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../shared.css">
+<link rel="stylesheet" href="../poker/poker.css">
+<link rel="stylesheet" href="checkers.css">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand-link" href="../boardgames/" title="Board games"><img class="logo" src="../logo.svg" alt="The Card Room, board games" width="44" height="44"><span class="brand-text"><span class="brand">The Card Room</span><h1 class="brand-sub">Checkers</h1></span></a>
+    <div class="meters" id="meters" hidden>
+      <div class="meter"><small>Game</small><b id="mGame">–</b></div>
+      <div class="meter"><small>Rules</small><b id="mRules">–</b></div>
+      <div class="meter"><small>Pieces</small><b id="mPieces">–</b></div>
+      <div class="meter" id="mCodeWrap" hidden><small>Room code</small><b id="mCode">–</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<main class="room">
+
+  <section class="screen" id="scrSetup">
+    <nav class="tabs" aria-label="Game mode">
+      <a href="#ai" id="tabAi">Play vs a bot</a>
+      <a href="#local" id="tabLocal">Two on this device</a>
+      <a href="#online" id="tabOnline">Play online</a>
+    </nav>
+    <div class="setup-grid">
+      <form class="panel" id="formAi" novalidate>
+        <h2>Play vs a bot</h2>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
+        <div class="field"><span class="label">Bot skill</span>
+          <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
+        <div class="field"><span class="label">Rules</span>
+          <div class="seg" id="aiRules" role="group" aria-label="Rules"><button type="button" data-v="dam" aria-pressed="true">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+        <p class="err" id="aiErr"></p>
+        <button class="primary" type="submit">Start the game</button>
+      </form>
+      <form class="panel" id="formLocal" novalidate hidden>
+        <h2>Two on this device</h2>
+        <p class="note">Take turns on one phone or tablet. The board stays the same way up; light pieces start at the bottom.</p>
+        <div class="row2">
+          <div class="field"><label for="lcA">Light pieces</label><input class="text-input" id="lcA" maxlength="16" placeholder="Player 1"></div>
+          <div class="field"><label for="lcB">Dark pieces</label><input class="text-input" id="lcB" maxlength="16" placeholder="Player 2"></div>
+        </div>
+        <div class="field"><span class="label">Rules</span>
+          <div class="seg" id="lcRules" role="group" aria-label="Rules"><button type="button" data-v="dam" aria-pressed="true">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+        <button class="primary" type="submit">Start the game</button>
+      </form>
+      <form class="panel" id="formCreate" novalidate hidden>
+        <h2>Open a room</h2>
+        <p class="note">Share the code with a friend. The first two people play; anyone else who joins watches and chats.</p>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
+        <div class="field"><span class="label">Rules</span>
+          <div class="seg" id="crRules" role="group" aria-label="Rules"><button type="button" data-v="dam" aria-pressed="true">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+        <div class="field"><label for="crTime">Time per move</label>
+          <select id="crTime"><option value="30">30 seconds</option><option value="60" selected>1 minute</option><option value="120">2 minutes</option><option value="0">No clock</option></select></div>
+        <p class="err" id="crErr"></p>
+        <button class="primary" type="submit" id="btnCreate">Open room</button>
+      </form>
+      <form class="panel" id="formJoin" novalidate hidden>
+        <h2>Join a room</h2>
+        <div class="field"><label for="jnCode">Room code</label><input class="text-input" id="jnCode" maxlength="6" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase;letter-spacing:.2em"></div>
+        <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
+          <div class="field"><label for="jnName">Your name</label><input class="text-input" id="jnName" maxlength="16" autocomplete="nickname"></div></div>
+        <p class="note" id="jnRules"></p>
+        <p class="err" id="jnErr"></p>
+        <button class="primary" type="submit" id="btnJoin">Join room</button>
+        <button class="ghost" type="button" id="btnRejoin" hidden>Back to your room</button>
+      </form>
+      <div class="panel" id="onlineOff" hidden>
+        <h2>Online play isn't switched on yet</h2>
+        <p>This copy of the site has no game server configured.</p>
+      </div>
+      <div class="panel rules-panel">
+        <h2>How it plays</h2>
+        <ul class="rules-list">
+          <li>8×8 board, dark squares only, 12 pieces each. Light moves first. Pieces move one square diagonally forward.</li>
+          <li><b>Capturing is compulsory.</b> Jump an enemy piece to an empty square behind it, and keep jumping while you can. If there are several ways to capture, pick any.</li>
+          <li>Reach the far row and your piece becomes a <b>king</b>, which moves backwards too.</li>
+          <li><b>Dam</b> (the usual Indonesian way): kings fly any distance along a diagonal and capture from afar, landing anywhere past the piece. Men capture backwards as well as forwards.</li>
+          <li><b>Classic English:</b> kings move one square at a time; men only capture forwards. Being crowned ends your move.</li>
+          <li>You lose when you have no pieces or can't move. 25 moves each with only kings moving and no capture is a draw.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrTable" hidden>
+    <div class="ck-table">
+      <div class="ck-player top" id="pTop"></div>
+      <div class="ck-board-wrap">
+        <div class="ck-board" id="board" role="grid" aria-label="Checkers board">
+          <div class="ck-cells" id="cells"></div>
+          <div class="ck-pieces" id="pieces"></div>
+        </div>
+        <div class="win-banner" id="winBanner" hidden aria-live="polite" title="Tap to hide"></div>
+      </div>
+      <div class="ck-player bottom" id="pBottom"></div>
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="act-row" id="actRow">
+        <button class="primary" id="btnRematch" hidden>Play again</button>
+        <button class="ghost" id="btnUndoPick" hidden>Pick another piece</button>
+        <button class="danger" id="btnResign">Resign</button>
+      </div>
+    </div>
+
+    <div class="lower">
+      <div class="panel">
+        <h2>The room</h2>
+        <div class="players-list" id="lobbyList"></div>
+        <div class="ck-settings" id="settingsBox" hidden>
+          <div class="field"><span class="label">Rules</span>
+            <div class="seg" id="sRules" role="group" aria-label="Rules"><button type="button" data-v="dam">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+          <div class="field"><label for="sTime">Time per move</label>
+            <select id="sTime"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="0">No clock</option></select></div>
+        </div>
+        <h3 class="wins-h">Wins</h3>
+        <div class="players-list" id="winsList"></div>
+        <div class="table-tools">
+          <button class="ghost" id="btnLook" hidden>Change look</button>
+          <button class="ghost" id="btnCopyLink" hidden>Copy invite link</button>
+          <button class="ghost" id="btnHostLink" hidden>Copy host link</button>
+          <button class="danger" id="btnClose" hidden>Close room for good</button>
+          <button class="danger" id="btnLeave">Leave</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Moves</h2>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="panel" id="chatPanel" hidden>
+        <h2>Room chat</h2>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="chat-reacts" id="chatReacts" role="group" aria-label="Reactions"></div>
+        <form class="chat-form" id="chatForm" autocomplete="off">
+          <input class="text-input" id="chatInput" maxlength="200" placeholder="Say something…" aria-label="Chat message">
+          <button class="primary" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<dialog id="lookDlg" class="look-dlg" aria-labelledby="lookTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head">
+      <div class="look-preview" id="lookPreview"></div>
+      <div class="look-head-text">
+        <h2 id="lookTitle">Your look</h2>
+        <p class="note">Start from a character, then change anything you like.</p>
+        <button type="button" class="ghost" id="lookRandom">Surprise me</button>
+      </div>
+    </div>
+    <div class="look-body">
+      <h3>Characters</h3>
+      <div class="look-opts tiles" id="lookPresets"></div>
+      <h3>Make it yours</h3>
+      <div class="look-fields" id="lookFields"></div>
+    </div>
+    <div class="look-foot"><button value="cancel" class="ghost">Cancel</button><button value="save" class="primary">Save look</button></div>
+  </form>
+</dialog>
+
+<script src="../poker/config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

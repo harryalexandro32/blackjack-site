@@ -16,7 +16,7 @@
   .hero { max-width: 1080px; margin: 0 auto; padding-block: 28px 8px; display: grid; gap: 6px; }
   .hero h1 { font-family: var(--font-display); color: var(--gold); font-size: clamp(2.2rem, 7vw, 3.6rem); letter-spacing: .06em; margin: 0; line-height: 1; text-wrap: balance; }
   .hero p { margin: 0; max-width: 56ch; color: var(--print); font-size: 1.02rem; }
-  .games { max-width: 1080px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 18px; }
+  .games { max-width: 1080px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
   .game {
     position: relative; overflow: hidden; display: grid; gap: 14px; align-content: start;
     background: radial-gradient(ellipse at 50% 0%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-deep) 100%);
@@ -55,7 +55,7 @@
 <div class="wrap">
   <section class="hero">
     <h1>Board games</h1>
-    <p>Ludo for four, and Werewolf or Undercover for the whole group. <a href="../">Back to the card tables</a>.</p>
+    <p>Ludo and Checkers to out-think each other; Werewolf, Undercover and Heist for the whole group. <a href="../">Back to the card tables</a>.</p>
   </section>
 
   <section class="games">
@@ -99,6 +99,36 @@
       </ul>
       <div class="modes">
         <a class="pill gold" href="../undercover/">Open or join a room</a>
+      </div>
+    </div>
+
+    <div class="game">
+      <div class="art" aria-hidden="true"><svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true"><rect width="100" height="100" rx="10" fill="#6b3f1f"/><rect x="10" y="10" width="20" height="20" fill="#ecd2a8"/><rect x="30" y="10" width="20" height="20" fill="#8f5a2f"/><rect x="50" y="10" width="20" height="20" fill="#ecd2a8"/><rect x="70" y="10" width="20" height="20" fill="#8f5a2f"/><rect x="10" y="30" width="20" height="20" fill="#8f5a2f"/><rect x="30" y="30" width="20" height="20" fill="#ecd2a8"/><rect x="50" y="30" width="20" height="20" fill="#8f5a2f"/><rect x="70" y="30" width="20" height="20" fill="#ecd2a8"/><rect x="10" y="50" width="20" height="20" fill="#ecd2a8"/><rect x="30" y="50" width="20" height="20" fill="#8f5a2f"/><rect x="50" y="50" width="20" height="20" fill="#ecd2a8"/><rect x="70" y="50" width="20" height="20" fill="#8f5a2f"/><rect x="10" y="70" width="20" height="20" fill="#8f5a2f"/><rect x="30" y="70" width="20" height="20" fill="#ecd2a8"/><rect x="50" y="70" width="20" height="20" fill="#8f5a2f"/><rect x="70" y="70" width="20" height="20" fill="#ecd2a8"/><circle cx="40" cy="40" r="8" fill="#3d1411" stroke="#f2c14e" stroke-width="2"/><circle cx="80" cy="40" r="8" fill="#3d1411" stroke="#f2c14e" stroke-width="2"/><circle cx="20" cy="80" r="8" fill="#efe0c2" stroke="#9a6b24" stroke-width="2"/><circle cx="60" cy="80" r="8" fill="#efe0c2" stroke="#9a6b24" stroke-width="2"/><circle cx="40" cy="60" r="8" fill="#efe0c2" stroke="#9a6b24" stroke-width="2"/><text x="40" y="64" font-size="10" text-anchor="middle" fill="#9a6b24">♛</text></svg></div>
+      <h2>Checkers</h2>
+      <p>The classic diagonal duel: capture is compulsory, crown your pieces at the far row. Dam rules with flying kings, or classic English.</p>
+      <ul class="facts">
+        <li>Bots from Easy to Hard</li>
+        <li>Two players on one device, or online</li>
+        <li>The host picks Dam or English rules</li>
+      </ul>
+      <div class="modes">
+        <a class="pill gold" href="../checkers/#ai">Play vs a bot</a>
+        <a class="pill" href="../checkers/#local">Two on one device</a>
+        <a class="pill" href="../checkers/#online">Play online</a>
+      </div>
+    </div>
+
+    <div class="game">
+      <div class="art" aria-hidden="true"><svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true"><rect x="10" y="14" width="80" height="72" rx="8" fill="#455a64" stroke="#90a4ae" stroke-width="3"/><circle cx="50" cy="50" r="22" fill="#263238" stroke="#f2c14e" stroke-width="3"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(0 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(45 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(90 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(135 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(180 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(225 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(270 50 50)"/><path d="M50 31 V36" stroke="#cfd8dc" stroke-width="3" transform="rotate(315 50 50)"/><path d="M50 50 L62 42" stroke="#f2c14e" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="50" r="4" fill="#f2c14e"/><rect x="82" y="38" width="6" height="24" rx="2" fill="#cfd8dc"/></svg></div>
+      <h2>Heist</h2>
+      <p>A crew pulls five heists, but undercover cops are among them. Pick teams, vote, and work out who keeps sabotaging the job. Nobody gets knocked out.</p>
+      <ul class="facts">
+        <li>5 to 10 friends, at a table or on a call</li>
+        <li>Optional Mastermind and Sniper roles</li>
+        <li>Optional bots, a private chat for the cops</li>
+      </ul>
+      <div class="modes">
+        <a class="pill gold" href="../heist/">Open or join a room</a>
       </div>
     </div>
   </section>

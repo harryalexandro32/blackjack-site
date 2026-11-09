@@ -1,0 +1,52 @@
+/* Heist: built on the Werewolf page's pieces (stage, role card, player tiles, announcements), restyled as a
+   night-time city job: steel blue, with amber for the crew and red-and-blue for the cops. */
+.ww-stage { background: radial-gradient(110% 80% at 50% 0%, #2f4858, #141c24 65%, #0b1015); }
+.ww-stage::before { right: auto; left: 50%; top: -70px; width: 70%; height: 170px; transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,193,7,.16), transparent); box-shadow: none; }
+body.hs-vote .ww-stage { background: radial-gradient(110% 80% at 50% 0%, #4a3f62, #191526 65%, #0e0b16); }
+body.hs-heist .ww-stage { background: radial-gradient(110% 80% at 50% 0%, #5b4a24, #221b10 65%, #120e08); }
+body.hs-snipe .ww-stage { background: radial-gradient(110% 80% at 50% 0%, #6a2a2a, #241010 65%, #140808); }
+.phase-banner { padding-right: 0; }
+.rc-back { background: repeating-linear-gradient(45deg, #263845 0 10px, #1f2f3a 10px 20px); border-color: #f2c14e; }
+
+/* the five heists and the rejection count */
+.hs-track { display: grid; gap: 8px; justify-items: center; }
+.hs-heists { display: flex; gap: clamp(6px, 2vw, 14px); justify-content: center; flex-wrap: wrap; }
+.hs-heist { position: relative; width: clamp(46px, 11vw, 64px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.18); color: #e8eef2; line-height: 1.05; }
+.hs-heist b { font-size: clamp(1.05rem, 3.4vw, 1.4rem); }
+.hs-heist small { display: block; font-size: .6rem; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.hs-heist.now { border-color: #f2c14e; box-shadow: 0 0 0 3px rgba(242,193,78,.25), 0 0 18px rgba(242,193,78,.35); }
+.hs-heist.ok { background: radial-gradient(circle at 40% 35%, #ffe08a, #e0a526); border-color: #ffe08a; color: #3a2a06; }
+.hs-heist.fail { background: radial-gradient(circle at 40% 35%, #6aa5ff, #1d4fb8); border-color: #9cc2ff; color: #fff; }
+.hs-heist .two { position: absolute; bottom: -6px; right: -6px; font-size: .58rem; font-weight: 800; padding: 1px 5px; border-radius: 8px; background: #b71c1c; color: #fff; }
+.hs-heist.ok, .hs-heist.fail { animation: hs-pop .5s cubic-bezier(.2,.9,.3,1.4); }
+@keyframes hs-pop { from { transform: scale(.4); } }
+.hs-rejects { display: flex; gap: 6px; align-items: center; font-size: .78rem; color: rgba(255,255,255,.75); }
+.hs-rejects i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); }
+.hs-rejects i.on { background: #ff6b6b; border-color: #ff6b6b; }
+.hs-rejects i.last { border-color: #ff6b6b; }
+
+/* players */
+.wp.leader { border-color: #f2c14e; }
+.wp.onteam { box-shadow: 0 0 0 2px rgba(242,193,78,.6), 0 0 16px rgba(242,193,78,.3); background: rgba(60,48,14,.6); }
+.wp.choosing { border-style: dashed; }
+.wp .crown { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; }
+.wp .tag.cop, .wp .tag.sniper { color: #ff8a80; } .wp .tag.crew { color: #ffe082; } .wp .tag.mastermind { color: #b39ddb; }
+.wp .vote-mark { position: absolute; top: 6px; left: 6px; font-size: .95rem; }
+.wp .vote-mark.no { filter: grayscale(.2); }
+.ww-actions .seg-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.hs-card { min-width: 120px; }
+.hs-card.success { background: linear-gradient(#ffe08a, #e0a526); color: #3a2a06; }
+.hs-card.sabotage { background: linear-gradient(#ff8a80, #c62828); color: #fff; }
+.chat-line.cops b { color: #ff8a80; }
+@media (prefers-reduced-motion: reduce) { .hs-heist.ok, .hs-heist.fail { animation: none; } }
+.wp.won { border-color: #f2c14e; box-shadow: 0 0 0 2px rgba(242,193,78,.5), 0 0 16px rgba(242,193,78,.35); }
+/* the role card carries more words here (who the other cops are), so it's a little roomier */
+.role-card { width: 190px; }
+.rc-front { overflow: auto; }
+.rc-front p { font-size: .7rem; }
+@media (max-width: 720px) {
+  .role-card { width: 200px; aspect-ratio: 3 / 3.4; }
+  .rc-front svg { width: 54px; height: 54px; }
+}

@@ -16,6 +16,8 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
   - **Ludo** (`ludo/`): 4 colours, bots in empty seats, classic rules (6 to come out, a 6 rolls again, three 6s lose the turn, captures except on safe squares, exact roll home) with house options (1 also comes out, capture rolls again, blocks, must capture). The others pay the winner 1 point per token not home.
   - **Werewolf** (`werewolf/`): 5 to 12 friends in a room, Werewolves (1/2/3 by table size), Seer, Doctor and Villagers; timed night, day and vote; roles revealed on death; village, wolves and graveyard chats; optional bots that never talk; a tally of wins, no money.
   - **Undercover** (`undercover/`): 4 to 12 friends in a room. Civilians share a word, the undercover (1/2/3 by table size) has a close one and isn't told, optional Mr. White has none. Clues in turn (typed, or "said it out loud" at a table), talk, vote, runoff on a tie; Mr. White's guess when voted out. About 470 built-in pairs in Bahasa Indonesia and English (each player picks), plus the host's own pairs. Also pass and play on one phone (clues out loud, the table taps who's out). Points: civilian win 2, Mr. White 6, undercover 10. No bots.
+  - **Checkers** (`checkers/`): vs a bot (Easy/Normal/Hard, an alpha-beta search with a per-move budget), two on one device, or online (first two in the room play, others watch; colours swap each game; optional move clock, a timed-out move is made for you). Dam rules (flying kings, men capture backwards) or classic English; capture is compulsory and chains must be completed; 25 king-only moves each without a capture is a draw. Wins tally, no money.
+  - **Heist** (`heist/`): 5 to 10 friends; crew vs hidden undercover cops (2/2/3/3/3/4 for 5–10), 5 heists with set team sizes, open team votes (5 rejections in a row = cops win), secret Success/Sabotage cards (the 4th heist needs 2 sabotages with 7+). Optional Mastermind (crew, knows the cops) and Sniper (cop, one shot at the Mastermind after 3 crew successes). Optional bots; a leaver's seat is played by a bot; cops-only chat. Wins tally, no money.
 
 ## Files
 
@@ -32,9 +34,11 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `supabase/functions/_shared/capsa-engine.js`, `capsa-bot.js`, `capsa-expert.js`, `capsa-room.js` | Capsa rules, bots and online rooms (used by the browser and the server) |
 | `mahjong/` | Mahjong page, tile art (`tiles.js`), bots mode (`local.js`) and online rooms (`online.js`) |
 | `supabase/functions/_shared/mahjong-engine.js`, `mahjong-bot.js`, `mahjong-room.js` | Mahjong rules and scoring, bots, and online rooms |
-| `boardgames/`, `ludo/`, `werewolf/`, `undercover/` | Board games page, the Ludo, Werewolf and Undercover pages |
+| `boardgames/`, `ludo/`, `werewolf/`, `undercover/`, `checkers/`, `heist/` | Board games page and each board game's page |
 | `supabase/functions/_shared/ludo-engine.js`, `ludo-bot.js`, `ludo-room.js` | Ludo rules, bots and online rooms |
 | `supabase/functions/_shared/werewolf-engine.js`, `werewolf-room.js` | Werewolf rules, rooms, bots and chat channels |
+| `supabase/functions/_shared/checkers-engine.js`, `checkers-bot.js`, `checkers-room.js` | Checkers rules (Dam and English), the search bot, two-player rooms |
+| `supabase/functions/_shared/heist-engine.js`, `heist-room.js` | Heist rules, rooms, bots and the cops' chat |
 | `supabase/functions/_shared/undercover-engine.js`, `undercover-room.js`, `undercover-words.js` | Undercover rules, rooms and the bilingual word list |
 | `theme.js`, `theme-deco.js` | Themes, dark mode and each theme's background scenery |
 | `theme-loader.js` | The loading screen: a short animation in each theme while a page opens |
