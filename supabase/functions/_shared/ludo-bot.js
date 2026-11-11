@@ -22,17 +22,23 @@ function threats(g, seat, sq) {
   return n;
 }
 
+// With the "pairs are safe" rule: would this token share its square with another of its own colour?
+const paired = (g, seat, token, sq) => !!g.rules.pairSafe && sq >= 0 && g.tokens[seat].some((p, i) => i !== token && squareOf(seat, p) === sq);
+
 function score(g, seat, m, skill) {
   let s = m.to / 4;
   if (m.captures.length) s += 100 + m.captures.reduce((a, [o, i]) => a + Math.max(0, g.tokens[o][i]) / 2, 0);
-  if (m.to === FINISH) s += 80;
+  if (m.to === FINISH) s += g.rules.homeBonus ? 95 : 80;        // home, and with that rule another roll too
   if (m.from < 0) s += 60;
   if (m.to > 50 && m.from <= 50) s += 30;                       // into the home column: safe from now on
   const to = squareOf(seat, m.to), from = m.from >= 0 ? squareOf(seat, m.from) : -1;
-  if (to >= 0 && SAFE.has(to)) s += 25;
+  const pairTo = paired(g, seat, m.token, to), pairFrom = paired(g, seat, m.token, from);
+  if (to >= 0 && (SAFE.has(to) || pairTo)) s += 25;
   if (skill !== "easy") {
-    s -= threats(g, seat, to) * 40;
-    s += threats(g, seat, from) * 30;                           // getting out of danger
+    if (!pairTo) s -= threats(g, seat, to) * 40;
+    if (!pairFrom) s += threats(g, seat, from) * 30;            // getting out of danger
+    // leaving a pair leaves the token behind on its own
+    if (pairFrom && g.tokens[seat].filter((p, i) => i !== m.token && squareOf(seat, p) === from).length === 1) s -= threats(g, seat, from) * 25;
   }
   return s;
 }

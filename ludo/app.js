@@ -86,7 +86,7 @@ document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e
 }));
 const segValue = id => $(id).querySelector('[aria-pressed="true"]').dataset.v;
 // house rules: tick boxes, remembered on this device
-const RULE_KEYS = ["leave16", "captureBonus", "blocks", "mustCapture"];
+const RULE_KEYS = ["leave16", "captureBonus", "blocks", "mustCapture", "homeBonus", "pairSafe"];
 const savedRules = store.get("ld-rules", {});
 for (const id of ["aiRules", "crRules"]) $(id).querySelectorAll("input").forEach(box => {
   box.checked = !!savedRules[box.dataset.r];
@@ -241,7 +241,11 @@ const verb = (seat, base, third = base + "s") => seat === view.me ? base : third
 
 let lastLog = null, lastGame = null, lastTurn = null, bannerFor = null, rolling = false, autoTimer = 0;
 
-// where each token sits: tokens sharing a cell spread out a little
+// How a crowd of n pieces sits in one square: how many across, and how small they are drawn so they all fit.
+const crowd = n => n <= 1 ? { cols: 1, size: 1 } : n === 2 ? { cols: 2, size: 0.78 } : n <= 4 ? { cols: 2, size: 0.62 } : n <= 6 ? { cols: 3, size: 0.52 } : n <= 9 ? { cols: 3, size: 0.46 } : { cols: 4, size: 0.38 };
+
+// where each token sits: tokens sharing a square are drawn smaller, in rows, so they stay inside it;
+// pieces also shrink a little when the squares around them are busy, so pawns don't cover each other
 function placeTokens(g, skipAnim) {
   const groups = {};
   g.tokens.forEach((ts, s) => ts.forEach((p, i) => {
@@ -250,11 +254,19 @@ function placeTokens(g, skipAnim) {
     (groups[key] = groups[key] || []).push([s, i, c, r, p]);
   }));
   const legal = new Set((g.legal || []).map(m => m.token));
+  // how many pieces stand on the squares touching this one
+  const around = (c, r) => Object.values(groups).reduce((sum, l) => { const dc = Math.abs(l[0][2] - c), dr = Math.abs(l[0][3] - r); return sum + (l[0][4] >= 0 && (dc || dr) && dc <= 1.01 && dr <= 1.01 ? l.length : 0); }, 0);
   for (const list of Object.values(groups)) list.forEach(([s, i, c, r, p], k) => {
-    const n = list.length, off = n > 1 ? (k - (n - 1) / 2) * 0.28 : 0;
+    const n = list.length, { cols, size } = crowd(n), rows = Math.ceil(n / cols);
+    const near = p >= 0 ? around(c, r) : 0;
+    const scale = Math.max(0.36, size * (near >= 4 ? 0.8 : near >= 2 ? 0.88 : near === 1 && n === 1 ? 0.94 : 1));
+    const col = k % cols, row = Math.floor(k / cols), inRow = row === rows - 1 ? n - row * cols : cols;
+    const dx = (col - (inRow - 1) / 2) * Math.min(0.34, 0.84 / cols), dy = rows > 1 ? (row - (rows - 1) / 2) * Math.min(0.34, 0.8 / rows) : 0;
     const el = tokenEls[s][i];
-    el.style.left = ((c + off) / 15 * 100) + "%";
-    el.style.top = ((r + 0.12 + (n > 1 ? Math.abs(off) * 0.2 : 0)) / 15 * 100) + "%";
+    el.style.setProperty("--ts", scale.toFixed(3));
+    el.style.zIndex = n > 1 ? String(2 + row) : "";              // nearer rows are drawn over the ones behind
+    el.style.left = ((c + dx) / 15 * 100) + "%";
+    el.style.top = ((r + 0.12 * scale + dy + (rows > 1 ? 0.12 : 0)) / 15 * 100) + "%";
     el.classList.toggle("home", p >= L.FINISH);
     const can = s === view.me && g.phase === "move" && legal.has(i) && !g.finished;
     el.classList.toggle("can", can);
@@ -393,7 +405,7 @@ function renderScores() {
     row.children[2].className = netClass(m);
     box.appendChild(row);
   });
-  const r = view.rules || {}, on = [r.leave16 && "1 brings a token out", r.captureBonus && "capture rolls again", r.blocks && "blocks", r.mustCapture && "must capture"].filter(Boolean);
+  const r = view.rules || {}, on = [r.leave16 && "1 brings a token out", r.captureBonus && "capture rolls again", r.blocks && "blocks", r.mustCapture && "must capture", r.homeBonus && "home rolls again", r.pairSafe && "pairs are safe"].filter(Boolean);
   const note = document.createElement("div"); note.className = "pl watchers";
   note.textContent = (on.length ? on.join(" · ") + " · " : "Classic rules · ") + `${fmt(view.pointValue)} a point · ${view.games ? view.games.length : 0} games played` + (view.mode === "online" && view.seats.some(x => x && x.bot) ? " · points won or lost against bots don't count as money" : "");
   box.appendChild(note);

@@ -121,3 +121,39 @@ test("ludo rooms: bots fill seats, people get a clock, games play out, money onl
   assert.strictEqual(s.money[s.players.h.seat] + s.money[s.players.a.seat], 0);
   assert.ok(s.seats.every((x, i) => !x.bot || s.money[i] === 0));
 });
+
+test("home bonus: bringing a token home earns another roll only with the rule on", () => {
+  for (const on of [false, true]) {
+    const g = L.startGame(1, { rules: { homeBonus: on } });
+    g.tokens[0] = [53, -1, -1, -1];
+    L.act(g, 0, { type: "roll", die: 3 });
+    L.act(g, 0, { type: "move", token: 0 });
+    assert.strictEqual(g.tokens[0][0], L.FINISH);
+    assert.strictEqual(g.turn, on ? 0 : 1);
+    assert.strictEqual(g.phase, "roll");
+  }
+});
+
+test("pairs are safe: two tokens of one colour on a square can't be captured, a lone one can", () => {
+  const sq = L.squareOf(0, 5);
+  const greenAt = p => { for (let q = 0; q <= 50; q++) if (L.squareOf(1, q) === p) return q; throw new Error("no square"); };
+  for (const on of [false, true]) {
+    const g = L.startGame(1, { rules: { pairSafe: on } });
+    g.tokens[0] = [3, -1, -1, -1];
+    g.tokens[1] = [greenAt(sq), greenAt(sq), -1, -1];
+    const m = L.moveOf(g, 0, 0, 2);
+    assert.strictEqual(m.captures.length, on ? 0 : 2);
+  }
+  const g = L.startGame(1, { rules: { pairSafe: true } });
+  g.tokens[0] = [3, -1, -1, -1];
+  g.tokens[1] = [greenAt(sq), -1, -1, -1];
+  g.tokens[2] = [-1, -1, -1, -1];
+  assert.strictEqual(L.moveOf(g, 0, 0, 2).captures.length, 1);
+});
+
+test("the room keeps the new house rules", () => {
+  const s = R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "normal", rules: { homeBonus: true, pairSafe: 1 } });
+  assert.strictEqual(s.rules.homeBonus, true);
+  assert.strictEqual(s.rules.pairSafe, true);
+  assert.strictEqual(s.rules.blocks, false);
+});

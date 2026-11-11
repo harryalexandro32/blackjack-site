@@ -11,7 +11,7 @@
 /* pieces: a small pawn in the player's colour. The ones you can move glow where they stand.
    --tf is the pawn's resting transform: its base sits on the middle of its square. */
 .tokens .token { padding: 0; min-width: 0; min-height: 0; height: auto; font-size: 0; line-height: 0; margin: 0; background: none; border: 0; box-shadow: none; }
-.token { --tf: translate(-50%, -78%); position: absolute; width: 4.5%; aspect-ratio: 34 / 46; transform: var(--tf); pointer-events: none; z-index: 2; color: var(--tc); }
+.token { --tf: translate(-50%, -78%) scale(var(--ts, 1)); transform-origin: 50% 78%; position: absolute; width: 4.5%; aspect-ratio: 34 / 46; transform: var(--tf); pointer-events: none; z-index: 2; color: var(--tc); }
 .token svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 1px rgba(0,0,0,.95)) drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
 .token.can { pointer-events: auto; cursor: pointer; z-index: 3; }
 .token.can svg { animation: ld-glow 1s ease-in-out infinite; }

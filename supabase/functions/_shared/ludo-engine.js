@@ -6,14 +6,15 @@
 // row lose the turn; landing on another colour's token sends it back to base, except on the start and star squares;
 // you need the exact roll to finish. First to bring all four tokens home wins.
 // House options (rules): leave16 (a 1 or a 6 brings a token out), captureBonus (a capture earns another roll),
-// blocks (two tokens of one colour on a square can't be passed or landed on), mustCapture (capture when you can).
+// blocks (two tokens of one colour on a square can't be passed or landed on), mustCapture (capture when you can),
+// homeBonus (bringing a token home earns another roll), pairSafe (two tokens of one colour on a square can't be captured).
 // Scoring: every other player pays the winner 1 point per token they haven't brought home.
 
 export const SEATS = 4;
 export const COLORS = ["red", "green", "yellow", "blue"];
 export const FINISH = 56;
 export const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);       // start squares and stars (track squares)
-export const DEFAULT_RULES = { leave16: false, captureBonus: false, blocks: false, mustCapture: false };
+export const DEFAULT_RULES = { leave16: false, captureBonus: false, blocks: false, mustCapture: false, homeBonus: false, pairSafe: false };
 
 // ---------- the board ----------
 // Track squares as [col, row] on the 15x15 grid, starting at red's start square and going clockwise.
@@ -85,7 +86,12 @@ export function moveOf(g, seat, i, roll) {
 function captured(g, seat, sq) {
   if (SAFE.has(sq)) return [];
   const out = [];
-  g.tokens.forEach((ts, s) => { if (s !== seat) ts.forEach((p, i) => { if (squareOf(s, p) === sq) out.push([s, i]); }); });
+  g.tokens.forEach((ts, s) => {
+    if (s === seat) return;
+    const here = ts.map((p, i) => (squareOf(s, p) === sq ? i : -1)).filter(i => i >= 0);
+    if (g.rules.pairSafe && here.length >= 2) return;           // a pair of one colour protects itself
+    for (const i of here) out.push([s, i]);
+  });
   return out;
 }
 export function legalMoves(g, seat, roll) {
@@ -125,7 +131,7 @@ export function act(g, seat, a) {
     for (const [s, i] of m.captures) g.tokens[s][i] = -1;
     g.log.push({ type: "move", seat, token: m.token, from: m.from, to: m.to, captures: m.captures });
     if (g.tokens[seat].every(p => p >= FINISH)) return finish(g, seat);
-    const again = g.dice === 6 || (m.captures.length && g.rules.captureBonus);
+    const again = g.dice === 6 || (m.captures.length && g.rules.captureBonus) || (m.to === FINISH && g.rules.homeBonus);
     if (again) { g.phase = "roll"; g.legal = []; } else passTurn(g, seat);
     return g;
   }

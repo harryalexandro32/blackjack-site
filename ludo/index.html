@@ -51,6 +51,8 @@
             <label class="check"><input type="checkbox" data-r="captureBonus"> Capturing a token earns you another roll</label>
             <label class="check"><input type="checkbox" data-r="blocks"> Two tokens make a block nobody can pass</label>
             <label class="check"><input type="checkbox" data-r="mustCapture"> You must capture when you can</label>
+            <label class="check"><input type="checkbox" data-r="homeBonus"> Bringing a token home earns you another roll</label>
+            <label class="check"><input type="checkbox" data-r="pairSafe"> Two of your tokens on one square can't be captured</label>
           </div></div>
         <div class="field"><label for="aiValue">Pretend dollars per point</label><span class="money-input"><span>$</span><input id="aiValue" type="number" inputmode="decimal" min="0.01" step="0.01" value="1"></span></div>
         <p class="err" id="aiErr"></p>
@@ -65,7 +67,7 @@
           <li>Land on another player's token and it goes back to their base, except on start squares and <b>★</b> star squares, which are safe.</li>
           <li>You need the exact roll to reach the finish in the middle.</li>
           <li>Points: every other player pays the winner 1 point for each token they haven't brought home.</li>
-          <li>House rules you can switch on: a 1 also brings a token out, a capture earns another roll, two tokens make a block, you must capture when you can.</li>
+          <li>House rules you can switch on: a 1 also brings a token out, a capture earns another roll, two tokens make a block, you must capture when you can, bringing a token home earns another roll, two of your tokens on one square are safe.</li>
         </ul>
       </div>
     </div>
@@ -88,6 +90,8 @@
             <label class="check"><input type="checkbox" data-r="captureBonus"> Capturing a token earns you another roll</label>
             <label class="check"><input type="checkbox" data-r="blocks"> Two tokens make a block nobody can pass</label>
             <label class="check"><input type="checkbox" data-r="mustCapture"> You must capture when you can</label>
+            <label class="check"><input type="checkbox" data-r="homeBonus"> Bringing a token home earns you another roll</label>
+            <label class="check"><input type="checkbox" data-r="pairSafe"> Two of your tokens on one square can't be captured</label>
           </div></div>
         <p class="err" id="crErr"></p>
         <button class="primary" type="submit" id="btnCreate">Open room</button>

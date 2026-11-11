@@ -20,7 +20,7 @@ export function validateSettings(s) {
   if (![20, 30, 60].includes(actSeconds)) fail("Pick a time to play from the list.");
   const skill = ["easy", "normal", "hard"].includes(s.skill) ? s.skill : "normal";
   const r = s.rules || {};
-  const rules = { leave16: !!r.leave16, captureBonus: !!r.captureBonus, blocks: !!r.blocks, mustCapture: !!r.mustCapture };
+  const rules = { leave16: !!r.leave16, captureBonus: !!r.captureBonus, blocks: !!r.blocks, mustCapture: !!r.mustCapture, homeBonus: !!r.homeBonus, pairSafe: !!r.pairSafe };
   return { pointValue, actSeconds, skill, rules };
 }
 
