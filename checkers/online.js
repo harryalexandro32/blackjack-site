@@ -81,7 +81,7 @@ export class OnlineCheckers {
     try {
       const lib = await realtimeLib();
       this.client = lib.createClient(CONFIG.supabaseUrl, CONFIG.anonKey, { auth: { persistSession: false } });
-      this.channel = this.client.channel("checkers-" + this.seat.roomId)
+      this.channel = this.client.channel("room-" + this.seat.roomId)
         .on("broadcast", { event: "update" }, () => this.refresh())
         .subscribe(status => { this.live = status === "SUBSCRIBED"; });
     } catch { /* polling keeps up */ }
