@@ -84,3 +84,7 @@
 @keyframes ld-spot { 50% { opacity: .35; } }
 @keyframes ld-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 1px rgba(0,0,0,.95)) drop-shadow(0 0 6px #fff3c4) drop-shadow(0 0 12px var(--gold)); } }
 @media (prefers-reduced-motion: reduce) { .token.can::after { animation: none; opacity: .9; } .token.can svg, .token.can::before { animation: none; } }
+
+/* the colour picker on the bots form: a dot of the colour beside its name */
+.color-seg button { display: inline-flex; align-items: center; gap: 7px; }
+.color-seg i { width: 13px; height: 13px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 2px rgba(255,255,255,.75); flex: none; }

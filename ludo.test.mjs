@@ -157,3 +157,30 @@ test("the room keeps the new house rules", () => {
   assert.strictEqual(s.rules.pairSafe, true);
   assert.strictEqual(s.rules.blocks, false);
 });
+
+test("fewer players: empty colours are skipped and don't pay", () => {
+  const g = L.startGame(1, { seats: [1, 3], first: 0 });
+  assert.deepStrictEqual(g.active, [1, 3]);
+  assert.strictEqual(g.turn, 1);                         // red isn't playing, so green starts
+  L.act(g, 1, { type: "roll", die: 3 });                 // nothing to move: on to blue, skipping yellow
+  assert.strictEqual(g.turn, 3);
+  L.act(g, 3, { type: "roll", die: 2 });
+  assert.strictEqual(g.turn, 1);                         // and back, skipping red
+  g.tokens[1] = [56, 56, 56, 53];
+  L.act(g, 1, { type: "roll", die: 3 });
+  L.act(g, 1, { type: "move", token: 3 });
+  assert.deepStrictEqual(g.finished.points, [0, 4, 0, -4]);
+  assert.throws(() => L.startGame(1, { seats: [2] }));
+});
+
+test("fewer players: bots finish whole games with two and three colours", () => {
+  for (const seats of [[0, 2], [1, 3], [0, 1, 3], [1, 2, 3]]) for (let n = 0; n < 20; n++) {
+    const g = L.startGame(n, { seats, rules: { homeBonus: n % 2 === 0, pairSafe: n % 3 === 0 } });
+    for (let step = 0; step < 20000 && !g.finished; step++) {
+      assert.ok(seats.includes(g.turn));
+      L.act(g, g.turn, ludoMove(g, g.turn, "hard"));
+    }
+    assert.ok(g.finished && seats.includes(g.finished.winner));
+    for (const s of [0, 1, 2, 3]) if (!seats.includes(s)) assert.strictEqual(g.finished.points[s], 0);
+  }
+});

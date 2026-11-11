@@ -15,13 +15,17 @@ export function savedLudoGame() {
 }
 
 export class LocalLudo {
-  // opts: { name, avatar, skill, rules, pointValue (cents) }
+  // opts: { name, avatar, skill, rules, pointValue (cents), bots (1-3), color (0-3: red, green, yellow, blue) }
   static create(opts) {
     const names = BOT_NAMES.filter(n => n.toLowerCase() !== opts.name.toLowerCase()).sort(() => rng() - 0.5).slice(0, 3);
     const looks = BOT_LOOKS.slice().sort(() => rng() - 0.5);
-    const seats = [{ name: opts.name, avatar: opts.avatar || "", bot: false }];
-    for (let i = 0; i < 3; i++) seats.push({ name: names[i], avatar: PRESETS.find(p => p.name === looks[i])?.code || "", bot: true });
-    return new LocalLudo({ seats, me: 0, skill: opts.skill || "normal", rules: opts.rules || {}, pointValue: opts.pointValue,
+    const me = [0, 1, 2, 3].includes(opts.color) ? opts.color : 0, bots = [1, 2, 3].includes(opts.bots) ? opts.bots : 3;
+    // one bot sits across the board from you, two sit either side of you, three fill the table
+    const places = bots === 1 ? [2] : bots === 2 ? [1, 3] : [1, 2, 3];
+    const seats = [null, null, null, null];
+    seats[me] = { name: opts.name, avatar: opts.avatar || "", bot: false };
+    places.forEach((d, i) => { seats[(me + d) % 4] = { name: names[i], avatar: PRESETS.find(p => p.name === looks[i])?.code || "", bot: true }; });
+    return new LocalLudo({ seats, me, skill: opts.skill || "normal", rules: opts.rules || {}, pointValue: opts.pointValue,
       scores: [0, 0, 0, 0], games: [], gameNo: 0, game: null, lastWinner: -1, ended: false });
   }
 
@@ -44,7 +48,7 @@ export class LocalLudo {
   view() {
     const s = this.s;
     return {
-      mode: "ai", me: s.me, isHost: true, seats: s.seats.map((x, i) => ({ ...x, points: s.scores[i] })),
+      mode: "ai", me: s.me, isHost: true, seats: s.seats.map((x, i) => (x ? { ...x, points: s.scores[i] } : null)),
       game: L.viewFor(s.game, s.me), gameNo: s.gameNo, pointValue: s.pointValue, rules: s.rules, scores: s.scores, games: s.games,
       nextGameAt: this.nextGameAt, deadline: null, started: true, ended: s.ended, summary: s.summary || null
     };
@@ -52,7 +56,8 @@ export class LocalLudo {
 
   deal() {
     this.s.gameNo += 1;
-    this.s.game = L.startGame(this.s.gameNo, { rules: this.s.rules, first: this.s.lastWinner >= 0 ? this.s.lastWinner : 0 });
+    const inPlay = this.s.seats.map((x, i) => (x ? i : -1)).filter(i => i >= 0);
+    this.s.game = L.startGame(this.s.gameNo, { rules: this.s.rules, seats: inPlay, first: this.s.lastWinner >= 0 ? this.s.lastWinner : this.s.me });
     this.nextGameAt = null;
   }
 
@@ -68,7 +73,7 @@ export class LocalLudo {
       return;
     }
     const seat = g.turn;
-    if (this.s.seats[seat].bot) {
+    if (this.s.seats[seat] && this.s.seats[seat].bot) {
       // a bot rolls, then (after the die lands) moves
       this.timer = setTimeout(() => {
         if (g.finished || g.turn !== seat) return;
@@ -95,7 +100,7 @@ export class LocalLudo {
   async leave() {
     clearTimeout(this.timer);
     const s = this.s;
-    const rows = s.seats.map((x, i) => ({ name: x.name, buyIn: 0, cashOut: s.scores[i] * s.pointValue, isBot: x.bot, me: i === s.me, avatar: x.avatar, points: s.scores[i] }));
+    const rows = s.seats.map((x, i) => x && ({ name: x.name, buyIn: 0, cashOut: s.scores[i] * s.pointValue, isBot: x.bot, me: i === s.me, avatar: x.avatar, points: s.scores[i] })).filter(Boolean);
     s.ended = true;
     s.summary = { ...settle(rows), games: s.games.length, pointValue: s.pointValue };
     this.emit();

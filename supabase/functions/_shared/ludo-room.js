@@ -74,7 +74,7 @@ function deal(state, now, shuffled) {
 
 // A game just ended: points for everyone, money only between people (a bot's payments aren't money).
 function score(state) {
-  const g = state.g, f = g.finished;
+  const g = state.g, f = g && g.finished;      // no game yet: nothing to count
   if (!f || g.counted) return;
   g.counted = true;
   state.games += 1;

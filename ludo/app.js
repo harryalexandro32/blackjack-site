@@ -86,6 +86,16 @@ document.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e
 }));
 const segValue = id => $(id).querySelector('[aria-pressed="true"]').dataset.v;
 // house rules: tick boxes, remembered on this device
+// how many bots and which colour: remembered on this device
+{
+  const last = store.get("ld-table", {});
+  for (const [id, v] of [["aiBots", last.bots], ["aiColor", last.color]]) {
+    const b = v != null && $(id).querySelector(`[data-v="${String(v).replace(/\D/g, "")}"]`);
+    if (b) $(id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  }
+}
+// a colour that is sitting this table out (fewer than three bots)
+const inPlay = seat => !(view && view.game && view.game.active) || view.game.active.includes(seat);
 const RULE_KEYS = ["leave16", "captureBonus", "blocks", "mustCapture", "homeBonus", "pairSafe"];
 const savedRules = store.get("ld-rules", {});
 for (const id of ["aiRules", "crRules"]) $(id).querySelectorAll("input").forEach(box => {
@@ -102,7 +112,8 @@ $("formAi").addEventListener("submit", e => {
   if (!(pointValue >= 1)) return $("aiErr").textContent = "Enter how many dollars a point is worth.";
   $("aiErr").textContent = "";
   store.set("pk-name", name);
-  attach(LocalLudo.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), rules: rulesOf("aiRules"), pointValue }));
+  store.set("ld-table", { bots: segValue("aiBots"), color: segValue("aiColor") });
+  attach(LocalLudo.create({ name, avatar: myAvatar(), skill: segValue("aiSkill"), rules: rulesOf("aiRules"), pointValue, bots: +segValue("aiBots"), color: +segValue("aiColor") }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedLudoGame(); if (s) attach(new LocalLudo(s)); });
 
@@ -263,6 +274,7 @@ function placeTokens(g, skipAnim) {
     const col = k % cols, row = Math.floor(k / cols), inRow = row === rows - 1 ? n - row * cols : cols;
     const dx = (col - (inRow - 1) / 2) * Math.min(0.34, 0.84 / cols), dy = rows > 1 ? (row - (rows - 1) / 2) * Math.min(0.34, 0.8 / rows) : 0;
     const el = tokenEls[s][i];
+    el.hidden = !inPlay(s);
     el.style.setProperty("--ts", scale.toFixed(3));
     el.style.zIndex = n > 1 ? String(2 + row) : "";              // nearer rows are drawn over the ones behind
     el.style.left = ((c + dx) / 15 * 100) + "%";
@@ -297,6 +309,7 @@ function render() {
 
   // the players
   rowEls.forEach((el, s) => {
+    el.hidden = !inPlay(s);
     const p = view.seats[s] || {};
     const pic = el.querySelector(".pic"), av = avatarOf(p);
     if (pic.dataset.av !== av) { pic.dataset.av = av; pic.innerHTML = avatarSvg(av, p.name || ""); }
@@ -440,6 +453,7 @@ function renderBanner(g) {
   const res = document.createElement("div"); res.className = "ld-result";
   const table = document.createElement("table");
   f.points.forEach((pts, seat) => {
+    if (!inPlay(seat)) return;
     const tr = document.createElement("tr"); tr.innerHTML = "<td></td><td></td><td></td><td></td>";
     tr.children[0].textContent = `${nameAt(seat)} · ${COLOR_NAMES[seat]}`;
     tr.children[1].textContent = `${g.tokens[seat].filter(p => p >= L.FINISH).length}/4 home`;

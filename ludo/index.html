@@ -40,9 +40,13 @@
     </nav>
     <div class="setup-grid" id="setupAi">
       <form class="panel" id="formAi" novalidate>
-        <h2>Play vs 3 bots</h2>
+        <h2>Play vs bots</h2>
         <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
           <div class="field"><label for="aiName">Your name</label><input class="text-input" id="aiName" maxlength="16" autocomplete="nickname" placeholder="Player"></div></div>
+        <div class="field"><span class="label">Bots at the table</span>
+          <div class="seg" id="aiBots" role="group" aria-label="Number of bots"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3" aria-pressed="true">3</button></div></div>
+        <div class="field"><span class="label">Your colour</span>
+          <div class="seg color-seg" id="aiColor" role="group" aria-label="Your colour"><button type="button" data-v="0" aria-pressed="true"><i style="--tc:#e53935"></i>Red</button><button type="button" data-v="1"><i style="--tc:#2e9e4f"></i>Green</button><button type="button" data-v="2"><i style="--tc:#f2bd0d"></i>Yellow</button><button type="button" data-v="3"><i style="--tc:#1e6fd9"></i>Blue</button></div></div>
         <div class="field"><span class="label">Bot skill</span>
           <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
         <div class="field"><span class="label">House rules</span>

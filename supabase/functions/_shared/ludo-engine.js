@@ -51,13 +51,18 @@ function rollDie() {
 }
 
 // ---------- a game ----------
-// g = { no, rules, tokens: [[p x4] x4], turn, phase: "roll" | "move", dice, sixes, legal, log, finished }
-export function startGame(no, { rules = {}, first = 0 } = {}) {
+// g = { no, rules, active, tokens: [[p x4] x4], turn, phase: "roll" | "move", dice, sixes, legal, log, finished }
+// active lists the colours in play (all four unless told otherwise); the others sit out and are skipped.
+export function startGame(no, { rules = {}, first = 0, seats = null } = {}) {
+  const active = [0, 1, 2, 3].filter(s => !Array.isArray(seats) || seats.includes(s));
+  if (active.length < 2) throw new Error("Ludo needs at least two players.");
+  if (!active.includes(first)) first = active[0];
   return {
-    no, rules: { ...DEFAULT_RULES, ...rules }, tokens: [0, 1, 2, 3].map(() => [-1, -1, -1, -1]),
+    no, rules: { ...DEFAULT_RULES, ...rules }, active, tokens: [0, 1, 2, 3].map(() => [-1, -1, -1, -1]),
     turn: first, phase: "roll", dice: null, sixes: 0, legal: [], log: [{ type: "start", seat: first }], finished: null, rolls: 0
   };
 }
+const inPlay = (g, s) => !g.active || g.active.includes(s);
 
 // Tokens of other colours on a track square: { seat: count }
 function occupants(g, sq) {
@@ -100,8 +105,9 @@ export function legalMoves(g, seat, roll) {
   return moves;
 }
 
-const next = s => (s + 1) % SEATS;
-function passTurn(g, seat) { g.turn = next(seat); g.phase = "roll"; g.dice = null; g.sixes = 0; g.legal = []; }
+// the next colour in play, clockwise
+function next(g, s) { for (let k = 1; k <= SEATS; k++) { const t = (s + k) % SEATS; if (inPlay(g, t)) return t; } return s; }
+function passTurn(g, seat) { g.turn = next(g, seat); g.phase = "roll"; g.dice = null; g.sixes = 0; g.legal = []; }
 
 // action: { type: "roll" } | { type: "move", token }
 export function act(g, seat, a) {
@@ -140,7 +146,7 @@ export function act(g, seat, a) {
 
 function finish(g, winner) {
   const points = [0, 0, 0, 0];
-  for (let s = 0; s < SEATS; s++) if (s !== winner) { const owe = g.tokens[s].filter(p => p < FINISH).length; points[s] -= owe; points[winner] += owe; }
+  for (let s = 0; s < SEATS; s++) if (s !== winner && inPlay(g, s)) { const owe = g.tokens[s].filter(p => p < FINISH).length; points[s] -= owe; points[winner] += owe; }
   g.finished = { winner, points };
   g.phase = "done"; g.turn = -1; g.legal = [];
   g.log.push({ type: "win", seat: winner });
@@ -160,7 +166,7 @@ export function autoMove(g) {
 export function viewFor(g, seat) {
   if (!g) return null;
   return {
-    no: g.no, rules: g.rules, tokens: g.tokens, turn: g.turn, phase: g.phase, dice: g.dice, sixes: g.sixes,
+    no: g.no, rules: g.rules, active: g.active || [0, 1, 2, 3], tokens: g.tokens, turn: g.turn, phase: g.phase, dice: g.dice, sixes: g.sixes,
     legal: seat >= 0 && g.turn === seat ? g.legal : [], log: g.log.slice(-40), logCount: g.log.length, finished: g.finished, rolls: g.rolls
   };
 }
