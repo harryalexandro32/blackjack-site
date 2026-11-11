@@ -231,7 +231,11 @@
     .wrap { position: relative; z-index: 1; }
     .theme-deco { opacity: .78; }
     :root[data-mode="dark"] .theme-deco { opacity: .45; filter: brightness(.75) saturate(.85); }
-    :root[data-deco] .panel, :root[data-deco] .box { background: rgba(0,0,0,.45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    .theme-deco .hide-sm { display: block; }
+    @media (max-width: 720px) { .theme-deco .hide-sm { display: none; } }
+    /* room under the page, so the ground-level scenery shows once you reach the end */
+    :root[data-deco] .wrap { padding-bottom: clamp(70px, 18vh, 190px); }
+    :root[data-deco]:not([data-theme-name="classic"]) .panel, :root[data-deco]:not([data-theme-name="classic"]) .box { background: rgba(0,0,0,.45); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
     .theme-deco .sway { transform-origin: 50% 100%; animation: cr-sway 13s ease-in-out infinite alternate; }
     .theme-deco .sway-2 { transform-origin: 50% 100%; animation: cr-sway 16s ease-in-out -5s infinite alternate; }
     .theme-deco .sway-1 { transform-origin: 50% 0; animation: cr-swing 10s ease-in-out infinite alternate; }

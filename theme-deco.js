@@ -1,7 +1,8 @@
 // Background scenery for each theme, drawn as SVG and placed around the edges of the page behind everything.
 // theme.js calls window.CR_DECO[themeId]() and puts the result in a fixed layer that ignores taps.
 (function () {
-  const svg = (box, style, body, extra = "") => `<svg class="d ${extra}" viewBox="${box}" style="${style}" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${body}</svg>`;
+  // a style that starts with "!" marks a piece that is left out on phones, where there is no room beside the heading
+  const svg = (box, style, body, extra = "") => `<svg class="d ${extra}${style[0] === "!" ? " hide-sm" : ""}" viewBox="${box}" style="${style.replace(/^!/, "")}" preserveAspectRatio="xMidYMax meet" aria-hidden="true">${body}</svg>`;
   const band = (box, style, body, extra = "") => `<svg class="d ${extra}" viewBox="${box}" style="${style}" preserveAspectRatio="none" aria-hidden="true">${body}</svg>`;
   // a seeded random so scenes look the same every time
   const rnd = seed => () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
@@ -89,7 +90,7 @@
         <defs><linearGradient id="vb" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6c8" stop-opacity=".12"/><stop offset="1" stop-color="#fff6c8" stop-opacity="0"/></linearGradient></defs>`)}
       ${band("0 0 1440 300", "left:0;bottom:0;width:100%;height:clamp(96px,22.4vh,224px)", `${b.join("")}${w.join("")}
         <rect x="690" y="40" width="12" height="260" fill="#0c0414"/><ellipse cx="696" cy="60" rx="34" ry="12" fill="#0c0414"/><circle cx="696" cy="34" r="5" fill="#ff4fb4" class="blink"/>`)}
-      ${svg("0 0 120 120", "left:3vw;top:14vh;width:clamp(56px,7.2vw,104px)", `<path d="M60 8 L74 44 L112 44 L82 68 L94 106 L60 84 L26 106 L38 68 L8 44 L46 44Z" fill="none" stroke="#ff4fb4" stroke-width="5" stroke-linejoin="round"/>`, "neon flicker")}
+      ${svg("0 0 120 120", "!right:14vw;top:11vh;width:clamp(56px,7.2vw,104px)", `<path d="M60 8 L74 44 L112 44 L82 68 L94 106 L60 84 L26 106 L38 68 L8 44 L46 44Z" fill="none" stroke="#ff4fb4" stroke-width="5" stroke-linejoin="round"/>`, "neon flicker")}
       ${svg("0 0 160 90", "right:3vw;top:14vh;width:clamp(72px,8.8vw,128px)", `<g fill="none" stroke="#5adcff" stroke-width="4"><rect x="8" y="14" width="62" height="62" rx="10" transform="rotate(-12 39 45)"/><rect x="88" y="10" width="62" height="62" rx="10" transform="rotate(10 119 41)"/></g>
         <g fill="#5adcff"><circle cx="26" cy="34" r="5"/><circle cx="50" cy="56" r="5"/><circle cx="106" cy="28" r="5"/><circle cx="132" cy="54" r="5"/><circle cx="119" cy="41" r="5"/></g>`, "neon")}
       ${svg("0 0 120 120", "left:6vw;top:44vh;width:clamp(40px,4.8vw,72px)", `<path d="M60 104 C20 74 8 50 22 32 C34 18 52 24 60 40 C68 24 86 18 98 32 C112 50 100 74 60 104Z" fill="none" stroke="#ff3b5c" stroke-width="5"/>`, "neon flicker-2")}
@@ -257,7 +258,7 @@
     return out.join("");
   };
   const emperor = () => `
-    ${svg("0 0 360 200", "left:-1vw;top:calc(var(--bar-h, 64px) - 6px);width:clamp(180px,30vw,460px)", sakuraBranch(false, 4), "sway-slow")}
+    ${svg("0 0 360 200", "!left:46vw;top:calc(var(--bar-h, 64px) - 6px);width:clamp(180px,24vw,360px)", sakuraBranch(false, 4), "sway-slow")}
     ${svg("0 0 360 200", "right:-1vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(150px,24vw,380px)", sakuraBranch(true, 9), "sway-slow")}
     ${svg("0 0 360 200", "right:-2vw;bottom:2vh;width:clamp(150px,22vw,340px);transform:scaleY(-1)", sakuraBranch(true, 15))}
     ${svg("0 0 300 260", "left:3vw;bottom:0;width:clamp(150px,20vw,300px)", castle)}
@@ -267,7 +268,7 @@
 
   // ---------- Pirate's Cove: jolly roger, treasure chest of gold, ship's wheel, rope, night sea ----------
   const pirate = () => `
-    ${svg("0 0 140 220", "left:2vw;top:calc(var(--bar-h, 64px) + 2vh);height:clamp(140px,30vh,300px)", `<rect x="16" y="0" width="7" height="220" fill="#5b3a1e"/>
+    ${svg("0 0 140 220", "!right:16vw;top:calc(var(--bar-h, 64px) + 2vh);height:clamp(140px,30vh,300px)", `<rect x="16" y="0" width="7" height="220" fill="#5b3a1e"/>
       <path d="M23 12 L130 20 Q118 50 130 80 L23 72Z" fill="#141414"/>
       <g fill="#f3ecdf"><circle cx="70" cy="40" r="15"/><rect x="62" y="50" width="16" height="9" rx="2"/></g>
       <g fill="#141414"><circle cx="64" cy="39" r="4"/><circle cx="76" cy="39" r="4"/><path d="M70 45 l-2 4 h4Z"/></g>
@@ -327,8 +328,8 @@
       ${svg("0 0 220 520", "right:-2vw;bottom:0;height:clamp(240px,70vh,580px)", tree(true))}
       ${band("0 0 1440 60", "left:0;top:calc(var(--bar-h, 64px) - 6px);width:100%;height:40px", `<path d="M0 10 C80 40 160 0 240 25 C320 50 400 5 480 28 C560 50 640 6 720 26 C800 48 880 8 960 28 C1040 48 1120 6 1200 26 C1280 46 1360 10 1440 22" stroke="#2f5a2e" stroke-width="5" fill="none"/>
         ${Array.from({ length: 24 }, (_, i) => `<ellipse cx="${30 + i * 60}" cy="${22 + (i % 2) * 10}" rx="9" ry="5" fill="#4a7d3e" transform="rotate(${i % 2 ? 30 : -30} ${30 + i * 60} ${22 + (i % 2) * 10})"/>`).join("")}`)}
-      ${svg("0 0 300 80", "left:16vw;bottom:0;width:clamp(150px,20vw,300px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(40, 1.2, "#d9443a")}${mushroom(110, 0.8, "#e8a33a")}${mushroom(170, 1, "#d9443a")}${mushroom(240, 0.7, "#9a5ad9")}</g>`)}
-      ${svg("0 0 200 80", "right:18vw;bottom:0;width:clamp(100px,13vw,200px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(50, 0.9, "#9a5ad9")}${mushroom(120, 1.1, "#d9443a")}</g>`)}
+      ${svg("0 0 300 80", "left:5vw;bottom:0;width:clamp(190px,28vw,420px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(40, 1.2, "#d9443a")}${mushroom(110, 0.8, "#e8a33a")}${mushroom(170, 1, "#d9443a")}${mushroom(240, 0.7, "#9a5ad9")}</g>`)}
+      ${svg("0 0 200 80", "right:6vw;bottom:0;width:clamp(140px,19vw,290px)", `<g transform="translate(0 80)" class="glow-green">${mushroom(50, 0.9, "#9a5ad9")}${mushroom(120, 1.1, "#d9443a")}</g>`)}
       ${flies.join("")}`;
   };
 
@@ -356,7 +357,7 @@
       ${svg("0 0 520 180", "right:2vw;bottom:clamp(14px,3vh,34px);width:clamp(230px,36vw,520px)", car)}
       ${svg("0 0 120 130", "left:2vw;bottom:clamp(18px,4vh,40px);width:clamp(70px,9vw,120px)", tyre(126) + tyre(96) + tyre(66) + tyre(36))}
       ${svg("0 0 120 130", "left:clamp(64px,9vw,128px);bottom:clamp(18px,4vh,40px);width:clamp(52px,6.5vw,90px)", tyre(126) + tyre(96))}
-      ${svg("0 0 110 160", "left:3vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(64px,8vw,110px)", `<rect x="4" y="0" width="5" height="160" rx="2" fill="#c9ccd2"/><g class="wave" transform="translate(9 6)">${checker}</g>`)}
+      ${svg("0 0 110 160", "!right:21vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(64px,8vw,110px)", `<rect x="4" y="0" width="5" height="160" rx="2" fill="#c9ccd2"/><g class="wave" transform="translate(9 6)">${checker}</g>`)}
       ${svg("0 0 200 120", "right:3vw;top:calc(var(--bar-h, 64px) + 2vh);width:clamp(110px,15vw,210px)", `<rect x="0" y="0" width="200" height="120" rx="6" fill="#4a3a2a"/>${Array.from({ length: 40 }, (_, i) => `<circle cx="${12 + (i % 10) * 20}" cy="${12 + Math.floor(i / 10) * 30}" r="2" fill="#2b2016"/>`).join("")}
         <g class="sway-1" style="transform-origin:40px 10px"><path d="M40 10 V80" stroke="#c9ccd2" stroke-width="8" stroke-linecap="round"/><path d="M28 80 a12 12 0 1 0 24 0 l-6 0 l0 8 l-12 0 l0 -8Z" fill="#c9ccd2"/></g>
         <g class="sway-2" style="transform-origin:100px 10px"><path d="M100 10 V96" stroke="#ff6a1f" stroke-width="7" stroke-linecap="round"/><rect x="88" y="10" width="24" height="12" rx="3" fill="#ff6a1f"/></g>
@@ -381,7 +382,7 @@
       <rect x="146" y="34" width="10" height="5" fill="#ffb14a" class="blink"/><rect x="146" y="42" width="10" height="5" fill="#ffb14a" class="blink"/>`;
     return `
       ${band("0 0 1440 900", "left:0;top:0;width:100%;height:100%", `<g class="twinkle">${stars.join("")}</g>`)}
-      ${svg("0 0 400 300", "left:-6vw;bottom:-8vh;width:clamp(240px,38vw,560px)", `<defs><radialGradient id="pl" cx="35%" cy="35%"><stop offset="0" stop-color="#e48a5a"/><stop offset=".6" stop-color="#9c3f3a"/><stop offset="1" stop-color="#3a1424"/></radialGradient></defs>
+      ${svg("0 0 400 300", "left:-4vw;bottom:-3vh;width:clamp(240px,38vw,560px)", `<defs><radialGradient id="pl" cx="35%" cy="35%"><stop offset="0" stop-color="#e48a5a"/><stop offset=".6" stop-color="#9c3f3a"/><stop offset="1" stop-color="#3a1424"/></radialGradient></defs>
         <clipPath id="ringfront"><rect x="0" y="170" width="400" height="140"/></clipPath>
         <g transform="rotate(-14 200 170)"><ellipse cx="200" cy="170" rx="190" ry="40" fill="none" stroke="#e9c48a" stroke-width="10" opacity=".5"/></g>
         <circle cx="200" cy="170" r="110" fill="url(#pl)"/><path d="M110 140 Q200 120 300 150 M100 180 Q200 165 305 195" stroke="#f1a87a" stroke-width="7" fill="none" opacity=".35"/>
@@ -420,6 +421,14 @@
       ${orbs.join("")}`;
   };
 
-  window.CR_DECO = { ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest, garage, space, deezy };
+  // ---------- Classic: a few chips, a fan of cards and a gold flourish, kept faint ----------
+  const chipStack = (x, n, c) => Array.from({ length: n }, (_, i) => `<g transform="translate(${x} ${150 - i * 11})"><ellipse cx="0" cy="6" rx="34" ry="11" fill="#0b1f17"/><ellipse cx="0" cy="0" rx="34" ry="11" fill="${c}"/><ellipse cx="0" cy="0" rx="34" ry="11" fill="none" stroke="#f4f1ea" stroke-width="3" stroke-dasharray="9 12"/><ellipse cx="0" cy="0" rx="20" ry="6" fill="none" stroke="#f4f1ea" stroke-opacity=".5" stroke-width="1.5"/></g>`).join("");
+  const fanCard = (rot, suit, red) => `<g transform="rotate(${rot} 100 190)"><rect x="70" y="50" width="60" height="86" rx="6" fill="#fbf9f3" stroke="#0b1f17" stroke-opacity=".35"/><text x="100" y="104" text-anchor="middle" font-size="34" font-family="Georgia, serif" fill="${red ? "#b3223a" : "#1d1b22"}">${suit}</text></g>`;
+  const classic = () => `
+    ${svg("0 0 230 170", "left:1.5vw;bottom:2vh;width:clamp(120px,15vw,230px);opacity:.5", chipStack(48, 5, "#c0392b") + chipStack(118, 3, "#1e7d4f") + chipStack(184, 4, "#1d1d22"))}
+    ${svg("0 0 200 150", "right:2vw;bottom:2vh;width:clamp(110px,14vw,210px);opacity:.45", fanCard(-28, "♠") + fanCard(-9, "♥", true) + fanCard(10, "♣") + fanCard(29, "♦", true))}
+    ${svg("0 0 300 60", "!right:5vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(140px,18vw,270px);opacity:.4", `<g fill="none" stroke="#d4ad55" stroke-width="2.5" stroke-linecap="round"><path d="M10 30 H110 M190 30 H290"/><path d="M110 30 C120 12 136 12 150 30 C164 48 180 48 190 30 C180 12 164 12 150 30 C136 48 120 48 110 30Z"/></g><circle cx="150" cy="30" r="4" fill="#d4ad55"/>`)}`;
+
+  window.CR_DECO = { classic, ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest, garage, space, deezy };
   if (window.CR_DECO_READY) window.CR_DECO_READY();
 })();
