@@ -195,23 +195,21 @@
     .theme-btn { min-width: 0; width: 34px; height: 34px; padding: 0; border-radius: 50%; flex: none; background: transparent; color: var(--print);
       font-size: 1rem; line-height: 1; box-shadow: inset 0 0 0 1.5px var(--line); }
     .theme-btn:hover { box-shadow: inset 0 0 0 1.5px var(--gold); }
-    .theme-dlg { border: 1px solid var(--line); border-radius: 18px; padding: 0; background: var(--dialog); color: var(--print); width: min(560px, calc(100vw - 24px)); max-height: 88vh; }
+    .theme-dlg { border: 1px solid var(--line); border-radius: 18px; padding: 0; background: var(--dialog); color: var(--print); width: min(560px, calc(100vw - 24px)); max-height: 88vh; max-height: 88dvh; overflow: hidden; }
     .theme-dlg::backdrop { background: rgba(0,0,0,.6); }
-    .theme-dlg form { display: grid; gap: 12px; padding: 16px 18px; }
+    .theme-dlg form { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; max-height: 88vh; max-height: 88dvh; box-sizing: border-box; }
+    .theme-dlg form > * { flex: none; }
+    /* only the list scrolls: Music and Done stay in view */
+    .theme-dlg .theme-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px; }
     .theme-dlg h2 { margin: 0; font-family: var(--font-display); color: var(--gold); font-size: 1.5rem; }
     .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
     @media (max-width: 520px) { .theme-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; } .theme-dlg form { padding: 12px 10px; } }
     .theme-opt { display: grid; gap: 3px; align-content: start; text-align: left; padding: 6px 6px 8px; min-width: 0;
       border-radius: 14px; background: rgba(255,255,255,.04); color: var(--print); box-shadow: inset 0 0 0 1.5px transparent; font-weight: 600; }
-    /* the preview: the theme's own page colours and scenery, shrunk, with a little table and heading on top */
-    .theme-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 9px; overflow: hidden; }
-    .theme-thumb .scene { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; pointer-events: none; opacity: .9; }
-    .theme-thumb .scene .d { position: absolute; display: block; height: auto; }
-    .theme-thumb .scene * { animation: none !important; }
-    .theme-thumb .scene .petal, .theme-thumb .scene .laser { display: none; }
-    .theme-thumb .top { position: absolute; inset: 0 0 auto; height: 16%; }
-    .theme-thumb .felt-dot { position: absolute; left: 50%; top: 60%; width: 46%; aspect-ratio: 16 / 10; translate: -50% -50%; border-radius: 50%; }
-    .theme-thumb .felt-dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22%; aspect-ratio: 5 / 7; translate: -50% -50%; rotate: -8deg; border-radius: 2px; background: #fbf9f3; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+    /* the preview: the theme's own page colours with a little table on top */
+    .theme-thumb { position: relative; display: block; width: 100%; height: 44px; border-radius: 9px; overflow: hidden; }
+    .theme-thumb .top { position: absolute; inset: 0 0 auto; height: 8px; }
+    .theme-thumb .felt-dot { position: absolute; left: 50%; top: 26px; width: 50px; height: 22px; translate: -50% -50%; border-radius: 50%; }
     .theme-opt b { overflow-wrap: anywhere; line-height: 1.15; padding-inline: 2px; }
     .theme-opt small { padding-inline: 2px; }
     @media (max-width: 520px) { .theme-opt small { display: none; } .theme-opt b { font-size: .72rem !important; } }
@@ -396,37 +394,25 @@
     const grid = dlg.querySelector(".theme-grid");
     function drawGrid() {
       grid.innerHTML = "";
-      const thumbs = [];
       for (const t of THEMES) {
         const c = mode === "dark" ? (t.dark || darkOf(t.c)) : t.c;
         const b = document.createElement("button");
         b.type = "button"; b.className = "theme-opt"; b.setAttribute("aria-pressed", t.id === themeId);
-        b.innerHTML = `<span class="theme-thumb"><span class="scene"></span><span class="top"></span><span class="felt-dot"></span></span><b></b><small></small>`;
-        const th = b.querySelector(".theme-thumb"), scene = th.querySelector(".scene");
+        b.innerHTML = `<span class="theme-thumb"><span class="top"></span><span class="felt-dot"></span></span><b></b><small></small>`;
+        const th = b.querySelector(".theme-thumb");
         th.style.background = t.page || c.deep; th.style.backgroundSize = "cover";
         th.querySelector(".top").style.background = c.rail;
         const dot = th.querySelector(".felt-dot");
         dot.style.background = `radial-gradient(ellipse at 50% 30%, ${c.hi}, ${c.felt} 70%)`;
         dot.style.boxShadow = `0 0 0 2px ${c.rail}, 0 0 0 3px ${c.accent}`;
         b.querySelector("b").style.color = c.accent;
-        const draw = window.CR_DECO && window.CR_DECO[t.id];
-        if (draw) { scene.innerHTML = draw(); thumbs.push([th, scene]); }
         b.querySelector("b").textContent = t.name;
         b.querySelector("small").textContent = t.tag;
         if (t.font) { loadFont(t); b.querySelector("b").style.fontFamily = t.font[1]; }
         b.onclick = () => { themeId = t.id; save(); apply(); drawGrid(); if (musicOn) syncMusic(); };
         grid.appendChild(b);
       }
-      // the scenery is laid out for the whole window: shrink it to cover each preview
-      const fit = () => thumbs.forEach(([th, scene]) => {
-        const k = Math.max(th.clientWidth / innerWidth, th.clientHeight / innerHeight);
-        scene.style.transform = `translate(${(th.clientWidth - innerWidth * k) / 2}px, ${(th.clientHeight - innerHeight * k) / 2}px) scale(${k})`;
-      });
-      fitThumbs = fit;
-      if (dlg.open) fit();
     }
-    let fitThumbs = () => {};
-    addEventListener("resize", () => { if (dlg.open) fitThumbs(); });
-    pick.onclick = () => { drawGrid(); dlg.showModal(); fitThumbs(); const cur = grid.querySelector('[aria-pressed="true"]'); if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: "nearest" }); } };
+    pick.onclick = () => { drawGrid(); dlg.showModal(); const cur = grid.querySelector('[aria-pressed="true"]'); if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: "nearest" }); } };
   });
 })();
