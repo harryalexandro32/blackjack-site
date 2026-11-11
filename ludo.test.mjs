@@ -184,3 +184,23 @@ test("fewer players: bots finish whole games with two and three colours", () => 
     for (const s of [0, 1, 2, 3]) if (!seats.includes(s)) assert.strictEqual(g.finished.points[s], 0);
   }
 });
+
+test("online rooms for 2 and 3 players: seats, bots, turns and a full room", () => {
+  for (const players of [2, 3]) {
+    const settings = R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "hard", rules: {}, players });
+    assert.strictEqual(settings.players, players);
+    const s = R.newRoom({ code: "ABCDEF", settings, host: { id: "h", name: "Host", tokenHash: "th", hostKeyHash: "k" }, now: 0 });
+    const ctx = id => ({ now: 1000, playerId: id, tokenHash: "t" + id, shuffledDeck: () => [] });
+    R.applyAction(s, { type: "join", name: "Guest" }, ctx("g"));
+    const table = L.TABLES[players];
+    assert.deepStrictEqual([s.players.h.seat, s.players.g.seat], [table[0], table[1]]);
+    R.applyAction(s, { type: "start" }, ctx("h"));
+    R.applyAction(s, { type: "tick" }, ctx("h"));
+    assert.deepStrictEqual(s.seats.map((x, i) => (x ? i : -1)).filter(i => i >= 0), table);   // bots only in this table's seats
+    assert.deepStrictEqual(s.g.active, table);
+    assert.strictEqual(R.personalState(s, "h").table.length, players);
+    if (players === 2) assert.throws(() => R.applyAction(s, { type: "join", name: "Third" }, ctx("x")), /full: 2 people/);
+    else { R.applyAction(s, { type: "join", name: "Third" }, ctx("x")); assert.strictEqual(s.players.x.seat, table[2]); }   // takes the bot's seat
+  }
+  assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, players: 7 }).players, 4);
+});

@@ -21,8 +21,11 @@ export function validateSettings(s) {
   const skill = ["easy", "normal", "hard"].includes(s.skill) ? s.skill : "normal";
   const r = s.rules || {};
   const rules = { leave16: !!r.leave16, captureBonus: !!r.captureBonus, blocks: !!r.blocks, mustCapture: !!r.mustCapture, homeBonus: !!r.homeBonus, pairSafe: !!r.pairSafe };
-  return { pointValue, actSeconds, skill, rules };
+  const players = [2, 3, 4].includes(s.players) ? s.players : 4;      // how many play: people first, bots in what's left
+  return { pointValue, actSeconds, skill, rules, players };
 }
+// the seats (colours) this room plays with
+const tableOf = state => C.TABLES[state.settings.players] || C.TABLES[4];
 
 export function newRoom({ code, settings, host, now }) {
   const s = validateSettings(settings);
@@ -47,9 +50,10 @@ function uniqueName(state, name, selfId) {
 
 // A person sits down: in an empty seat, or in a bot's seat (taking over its cards if a game is on).
 function seatPerson(state, { id, name, tokenHash, avatar }) {
-  let seat = state.seats.findIndex(s => !s);
-  if (seat < 0) seat = state.seats.findIndex(s => s && s.bot);
-  if (seat < 0) fail("This room is full: 4 people are already playing.");
+  const table = tableOf(state);
+  let seat = table.find(i => !state.seats[i]);
+  if (seat === undefined) seat = table.find(i => state.seats[i].bot);
+  if (seat === undefined) fail(`This room is full: ${table.length} people are already playing.`);
   const clean = uniqueName(state, cleanName(name), id);
   state.seats[seat] = { id, name: clean, avatar: cleanAvatar(avatar), bot: false };
   state.points[seat] = 0; state.money[seat] = 0;
@@ -68,7 +72,8 @@ const isBotSeat = (state, seat) => !!(state.seats[seat] && state.seats[seat].bot
 
 function deal(state, now, shuffled) {
   state.gameNo += 1;
-  state.g = C.startGame(state.gameNo, { rules: state.settings.rules, first: state.lastWinner >= 0 ? state.lastWinner : 0 });
+  const table = tableOf(state).filter(i => state.seats[i]);
+  state.g = C.startGame(state.gameNo, { rules: state.settings.rules, seats: table, first: table.includes(state.lastWinner) ? state.lastWinner : table[0] });
   state.nextGameAt = null;
 }
 
@@ -181,7 +186,7 @@ export function applyAction(state, action, ctx) {
     case "start":
       needHost();
       if (state.started) fail("The game has already started.");
-      for (let i = 0; i < C.SEATS; i++) if (!state.seats[i]) state.seats[i] = botFor(state, i); // one at a time, so names don't repeat
+      for (const i of tableOf(state)) if (!state.seats[i]) state.seats[i] = botFor(state, i); // one at a time, so names don't repeat
       state.started = true;
       break;
     case "move": {
@@ -242,7 +247,7 @@ export const roomStatus = state => state.closed ? "closed" : state.started ? "pl
 
 function shared(state) {
   return {
-    game: "ludo", code: state.code, status: roomStatus(state), settings: state.settings,
+    game: "ludo", code: state.code, status: roomStatus(state), settings: state.settings, table: tableOf(state),
     seats: state.seats.map((s, i) => s && { name: s.name, avatar: s.avatar, bot: s.bot, points: state.points[i], money: state.money[i] }),
     hostSeat: seatOf(state, state.hostId), started: state.started, gameNo: state.gameNo, games: state.games,
     nextGameAt: state.nextGameAt, deadline: state.deadline, botAt: state.botAt, actMs: state.settings.actSeconds * 1000,

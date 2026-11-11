@@ -95,7 +95,7 @@ const segValue = id => $(id).querySelector('[aria-pressed="true"]').dataset.v;
   }
 }
 // a colour that is sitting this table out (fewer than three bots)
-const inPlay = seat => !(view && view.game && view.game.active) || view.game.active.includes(seat);
+const inPlay = seat => { const a = view && ((view.game && view.game.active) || view.table); return !a || a.includes(seat); };
 const RULE_KEYS = ["leave16", "captureBonus", "blocks", "mustCapture", "homeBonus", "pairSafe"];
 const savedRules = store.get("ld-rules", {});
 for (const id of ["aiRules", "crRules"]) $(id).querySelectorAll("input").forEach(box => {
@@ -128,7 +128,7 @@ $("formCreate").addEventListener("submit", async e => {
   try {
     store.set("pk-name", name);
     const { OnlineLudo } = await online();
-    attach(await OnlineLudo.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill"), rules: rulesOf("crRules") }));
+    attach(await OnlineLudo.create({ name, avatar: myAvatar(), pointValue, actSeconds: +$("crTime").value, skill: segValue("crSkill"), rules: rulesOf("crRules"), players: +segValue("crPlayers") }));
   } catch (err) { $("crErr").textContent = err.message; }
   finally { $("btnCreate").disabled = false; }
 });
@@ -152,7 +152,7 @@ $("jnCode").addEventListener("change", async () => {
   try {
     const { peekRoom } = await online();
     const r = await peekRoom(code);
-    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "ludo" ? "That code is a different game. Join it from its own page." : `${fmt(r.settings.pointValue)} a point · ${r.humans} of 4 seats taken by people`;
+    $("jnRules").textContent = !r ? "No open room with that code." : r.game !== "ludo" ? "That code is a different game. Join it from its own page." : `${fmt(r.settings.pointValue)} a point · ${r.humans} of ${r.settings.players || 4} seats taken by people`;
   } catch {}
 });
 $("btnRejoin").addEventListener("click", async () => {
@@ -354,7 +354,7 @@ function render() {
 function statusText(g) {
   if (view.mode === "online" && !view.started) {
     const humans = view.seats.filter(s => s && !s.bot).length;
-    return view.closing ? "The host is closing the room." : view.isHost ? `${humans} of 4 seats taken by people. Start whenever you're ready: bots fill the empty seats.` : "Waiting for the host to start. Bots fill any empty seats.";
+    return view.closing ? "The host is closing the room." : view.isHost ? `${humans} of ${(view.table || [0, 1, 2, 3]).length} seats taken by people. Start whenever you're ready: bots fill the empty seats.` : "Waiting for the host to start. Bots fill any empty seats.";
   }
   if (view.ending) return "The host is ending the session after this game.";
   if (!g) return "Setting up the board…";

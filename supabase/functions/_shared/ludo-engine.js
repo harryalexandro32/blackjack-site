@@ -14,6 +14,8 @@ export const SEATS = 4;
 export const COLORS = ["red", "green", "yellow", "blue"];
 export const FINISH = 56;
 export const SAFE = new Set([0, 8, 13, 21, 26, 34, 39, 47]);       // start squares and stars (track squares)
+// Which colours play at a table of 2, 3 or 4: two players face each other across the board.
+export const TABLES = { 2: [0, 2], 3: [0, 1, 2], 4: [0, 1, 2, 3] };
 export const DEFAULT_RULES = { leave16: false, captureBonus: false, blocks: false, mustCapture: false, homeBonus: false, pairSafe: false };
 
 // ---------- the board ----------

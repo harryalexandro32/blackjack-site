@@ -78,7 +78,7 @@
     <div class="setup-grid" id="setupOnline" hidden>
       <form class="panel" id="formCreate" novalidate>
         <h2>Open a room</h2>
-        <p class="note">Share the code with up to 3 friends. Empty seats are filled with bots. The room stays open after each session, so the same code works next time.</p>
+        <p class="note">Pick how many play and share the code with your friends. Empty seats are filled with bots. The room stays open after each session, so the same code works next time.</p>
         <div class="who-row"><button type="button" class="look-btn" data-look aria-label="Change your look"></button>
           <div class="field"><label for="crName">Your name</label><input class="text-input" id="crName" maxlength="16" autocomplete="nickname"></div></div>
         <div class="row2">
@@ -86,6 +86,8 @@
           <div class="field"><label for="crTime">Time to play</label>
             <select id="crTime"><option value="20">20 seconds</option><option value="30" selected>30 seconds</option><option value="60">60 seconds</option></select></div>
         </div>
+        <div class="field"><span class="label">Players at the table</span>
+          <div class="seg" id="crPlayers" role="group" aria-label="Number of players"><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4" aria-pressed="true">4</button></div></div>
         <div class="field"><span class="label">Bots for empty seats</span>
           <div class="seg" id="crSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
         <div class="field"><span class="label">House rules</span>
