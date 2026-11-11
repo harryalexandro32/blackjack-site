@@ -100,7 +100,7 @@ export class OnlineTable {
       const lib = await realtimeLib();
       this.client = lib.createClient(CONFIG.supabaseUrl, CONFIG.anonKey, { auth: { persistSession: false } });
       this.channel = this.client.channel("room-" + this.seat.roomId)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "poker_rooms", filter: `id=eq.${this.seat.roomId}` }, () => this.refresh())
+        .on("broadcast", { event: "update" }, () => this.refresh())
         .subscribe(status => { this.live = status === "SUBSCRIBED"; });
     } catch { /* polling still keeps the table up to date */ }
   }

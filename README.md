@@ -49,7 +49,7 @@ Card games with real casino rules and pretend dollars. Plain HTML, CSS and JavaS
 | `supabase/functions/_shared/poker-engine.js` | Hold'em rules: dealing, betting, side pots, hand evaluation. Used by both modes. |
 | `supabase/functions/_shared/poker-room.js` | Online table rules: seats, buy-ins, turn clock, leaving, closing, settling up |
 | `supabase/functions/poker/index.ts` | Edge function: the only thing that can read the deck and hole cards |
-| `supabase/migrations/0001_poker_rooms.sql` | Tables, row-level security, realtime, and the save function |
+| `supabase/migrations/` | Tables, row-level security, the save function, per-room update messages, and the daily sweep of old rooms |
 | `*.test.js`, `*.test.mjs` | Tests (not needed on the server) |
 
 ## Run it locally
@@ -75,7 +75,7 @@ Use a project of its own for this, not one that holds other data.
    ```bash
    npx supabase login
    ```
-3. Create the tables. In the dashboard, open **SQL Editor**, paste `supabase/migrations/0001_poker_rooms.sql`, and run it.
+3. Create the tables. In the dashboard, open **SQL Editor** and run the files in `supabase/migrations/` one at a time, in order (0001, 0002, 0003).
 4. Deploy the table server. `<project-ref>` is the id in your project's URL:
    ```bash
    npx supabase functions deploy poker --no-verify-jwt --project-ref <project-ref>
@@ -83,7 +83,7 @@ Use a project of its own for this, not one that holds other data.
    `--no-verify-jwt` is needed because players don't have accounts; the function checks each player's private seat token itself.
 5. In **Project Settings → API**, copy the project URL and the anon (public) key into `poker/config.js`, then commit and push.
 
-The anon key is safe to publish: it can only read the public table state. Decks, hole cards and seat tokens live in `poker_secrets`, which only the edge function can touch.
+The anon key is safe to publish: it can only call the table server and listen on a room's channel. It cannot read any table, so nobody can list rooms or codes. Decks, hole cards and seat tokens live in `poker_secrets`, which only the edge function can touch.
 
 ## Put it online
 
