@@ -17,6 +17,7 @@ export class LocalCheckers {
     this.s = { mode: opts.mode, rules: opts.rules, skill: opts.skill || "normal", people, order: [0, 1], gameNo: 0, g: null, wins: people.map(p => ({ name: p.name, wins: 0, draws: 0, games: 0, bot: p.bot })) };
     this.listeners = new Set();
     this.timer = null;
+    this.hist = [];                                    // positions before each person's move, for take-backs
     this.deal();
   }
   deal() {
@@ -24,6 +25,7 @@ export class LocalCheckers {
     if (s.g) s.order = [s.order[1], s.order[0]];      // colours swap every game
     s.gameNo += 1;
     s.g = K.startGame(s.gameNo, { rules: s.rules });
+    this.hist = [];
     this.tick();
   }
   subscribe(fn) { this.listeners.add(fn); fn(this.view()); return () => this.listeners.delete(fn); }
@@ -35,7 +37,7 @@ export class LocalCheckers {
       mode: s.mode, me: this.seatOfMe(), bottom: s.mode === "ai" ? s.order.indexOf(0) : 0,
       players: s.order.map(i => s.people[i]), view: K.viewFor(s.g), gameNo: s.gameNo, running: !s.g.finished,
       deadline: null, moveMs: 0, wins: s.wins.slice().sort((a, b) => b.wins - a.wins), isHost: true, settings: { rules: s.rules },
-      lobby: [], chat: [], ended: false
+      lobby: [], chat: [], ended: false, canTakeBack: this.hist.length > 0
     };
   }
   tick() {
@@ -56,7 +58,22 @@ export class LocalCheckers {
     }
     this.emit();
   }
-  async move(m) { K.play(this.s.g, this.s.g.turn, m); this.tick(); }
+  async move(m) {
+    const g = this.s.g;
+    const before = JSON.stringify({ g, wins: this.s.wins });
+    K.play(g, g.turn, m);
+    this.hist.push(before);
+    if (this.hist.length > 200) this.hist.shift();
+    this.tick();
+  }
+  // back to just before the last move a person made (against a bot, the bot's reply goes too)
+  async takeBack() {
+    if (!this.hist.length) return;
+    clearTimeout(this.timer);
+    const h = JSON.parse(this.hist.pop());
+    this.s.g = h.g; this.s.wins = h.wins;
+    this.tick();
+  }
   async resign() { const g = this.s.g; K.resign(g, this.s.mode === "ai" ? this.s.order.indexOf(0) : g.turn); this.tick(); }
   async rematch() { if (this.s.g.finished) this.deal(); }
   async leave() { clearTimeout(this.timer); }

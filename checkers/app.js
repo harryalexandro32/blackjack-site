@@ -5,6 +5,7 @@ import { avatarSvg, DEFAULT_AVATAR } from "../poker/avatars.js";
 import { openLook } from "../poker/look.js";
 import { play as sound, soundOn, setSound } from "../poker/sound.js";
 import { LocalCheckers } from "./local.js";
+import { hintFor, reviewMove, inDanger, GRADE_NAME } from "./coach.js";
 // the music follows the game (theme.js; does nothing while the music is off)
 const cue = { level: i => window.CR_CUE && window.CR_CUE.level(i), sting: k => window.CR_CUE && window.CR_CUE.sting(k) };
 
@@ -47,13 +48,15 @@ $("formAi").addEventListener("submit", e => {
   e.preventDefault();
   const name = nameOf("aiName") || "Player";
   store.set("pk-name", name);
-  attach(new LocalCheckers({ mode: "ai", rules: aiRules(), skill: aiSkill(), names: [name], avatar: myAvatar() }));
+  store.set("ck-coach", $("aiCoach").checked);
+  attach(new LocalCheckers({ mode: "ai", rules: aiRules(), skill: aiSkill(), names: [name], avatar: myAvatar() }), $("aiCoach").checked);
 });
 $("formLocal").addEventListener("submit", e => {
   e.preventDefault();
   const a = nameOf("lcA") || "Player 1", b = nameOf("lcB") || "Player 2";
   store.set("ck-local-names", [a, b]);
-  attach(new LocalCheckers({ mode: "local", rules: lcRules(), names: [a, b] }));
+  store.set("ck-coach", $("lcCoach").checked);
+  attach(new LocalCheckers({ mode: "local", rules: lcRules(), names: [a, b] }), $("lcCoach").checked);
 });
 $("formCreate").addEventListener("submit", async e => {
   e.preventDefault();
@@ -96,6 +99,7 @@ function initSetup() {
   const ln = store.get("ck-local-names", null);
   if (ln) { $("lcA").value = ln[0]; $("lcB").value = ln[1]; }
   drawLookButtons();
+  $("aiCoach").checked = $("lcCoach").checked = store.get("ck-coach", true);
   $("scrSetup").hidden = false; $("scrTable").hidden = true; $("meters").hidden = true;
   route();
   if (!onlineEnabled) return;
@@ -112,9 +116,12 @@ function initSetup() {
 // ---------- the table ----------
 let lastTurnCue = false;
 let ctrl = null, unsub = null, view = null, picked = null, lastKey = null, prevBoard = null, bannerFor = null;
-function attach(c) {
+// the coach (games on this device): on or off, the hint on show, the note on the last move, and which game they belong to
+let coach = false, hint = null, note = null, coachGame = null;
+function attach(c, withCoach = false) {
   if (unsub) unsub();
   if (ctrl && ctrl !== c) ctrl.destroy();
+  coach = !!withCoach; hint = null; note = null; coachGame = null;
   ctrl = c; picked = null; lastKey = null; prevBoard = null; bannerFor = null; lastChatN = null;
   $("scrSetup").hidden = true; $("scrTable").hidden = false; $("meters").hidden = false;
   buildCells();
@@ -157,6 +164,7 @@ function render() {
   $("mPieces").textContent = g ? `${g.counts[view.bottom]} – ${g.counts[1 - view.bottom]}` : "–";
   $("mCodeWrap").hidden = view.mode !== "online"; $("mCode").textContent = view.code || "";
   renderPlayers(g);
+  if (g && coachGame !== g.no) { coachGame = g.no; hint = null; note = null; }
   if (g) {
     const key = `${g.no}:${g.logCount}`;
     if (key !== lastKey) { if (lastKey && lastKey.split(":")[0] === String(g.no)) animateLast(g); picked = null; lastKey = key; }
@@ -171,6 +179,7 @@ function render() {
   if (turnNow && !lastTurnCue && g && g.moves > 0) cue.sting("turn");
   lastTurnCue = turnNow;
   renderButtons(g);
+  renderCoach();
   renderBanner(g);
   renderLobby(g);
   renderLog(g);
@@ -196,12 +205,16 @@ function renderBoard(g) {
   const mine = myTurn();
   const dests = picked !== null ? g.legal.filter(m => m.from === picked) : [];
   const froms = mine ? new Set(g.legal.map(m => m.from)) : new Set();
+  const coaching = coach && view.mode !== "online";
+  const showHint = !!(coaching && mine && hint && g.legal.some(m => sameMove(m, hint.move)));
+  const danger = coaching && mine ? inDanger(g.board, g.turn, g.rules) : new Set();
   [...$("cells").children].forEach(cell => {
     const sq = sqAt(+cell.dataset.sr, +cell.dataset.sc);
     const d = dests.find(m => m.to === sq);
     cell.className = "ck-cell" + ((+cell.dataset.sr + +cell.dataset.sc) % 2 ? " dark" : "")
       + (g.last && (g.last.from === sq || g.last.to === sq) ? " last" : "") + (picked === sq ? " from" : "") + (d ? " dest" + (d.caps.length ? " cap" : "") : "");
-    cell.onclick = d ? guard(async () => { const m = dests.filter(x => x.to === sq).sort((a, b) => b.caps.length - a.caps.length)[0]; picked = null; await ctrl.move({ from: m.from, to: m.to, path: m.path }); }) : null;
+    if (showHint) cell.classList.toggle("hint", sq === hint.move.from || sq === hint.move.to);
+    cell.onclick = d ? guard(async () => { const m = dests.filter(x => x.to === sq).sort((a, b) => b.caps.length - a.caps.length)[0]; picked = null; await playMove(m, g); }) : null;
   });
   const box = $("pieces"); box.innerHTML = "";
   for (let sq = 0; sq < 64; sq++) {
@@ -209,7 +222,7 @@ function renderBoard(g) {
     const can = froms.has(sq);
     const el = document.createElement(can ? "button" : "div");
     if (can) { el.type = "button"; el.setAttribute("aria-label", `${COLOUR[owner(p)]} ${p === p.toUpperCase() ? "king" : "piece"} on ${name(sq)}`); }
-    el.className = `ck-piece s${owner(p)}` + (can ? " can" : "") + (picked === sq ? " picked" : "");
+    el.className = `ck-piece s${owner(p)}` + (can ? " can" : "") + (picked === sq ? " picked" : "") + (danger.has(sq) ? " danger" : "");
     el.dataset.sq = sq;
     Object.assign(el.style, pos(sq));
     el.innerHTML = `<i>${p === p.toUpperCase() ? "♛" : ""}</i>`;
@@ -217,6 +230,58 @@ function renderBoard(g) {
     box.appendChild(el);
   }
 }
+
+// ---------- the coach ----------
+const sameMove = (a, b) => a.from === b.from && a.to === b.to && (a.path || []).join() === (b.path || []).join();
+// how the coach names the players: against a bot you are "you"; on one device it uses both names
+const coachNames = () => [0, 1].map(s => view.mode === "ai" && s === view.me ? "you" : (view.players[s] ? view.players[s].name : COLOUR[s]));
+async function playMove(m, g) {
+  const before = coach && view.mode !== "online" ? { board: g.board, seat: g.turn, rules: g.rules, no: g.no } : null;
+  hint = null;
+  await ctrl.move({ from: m.from, to: m.to, path: m.path });
+  if (!before) return;
+  // the review takes a moment of looking ahead: let the board draw the move first
+  setTimeout(() => {
+    if (!view || !view.view || view.view.no !== before.no) return;
+    const r = reviewMove(before.board, before.seat, before.rules, m, coachNames());
+    note = r ? { ...r, seat: before.seat } : null;
+    renderCoach();
+  }, 40);
+}
+function renderCoach() {
+  const g = view && view.view, on = !!(coach && view && view.mode !== "online" && g);
+  $("btnHint").hidden = !(on && myTurn() && !g.finished);
+  $("btnTakeBack").hidden = !(on && view.canTakeBack);
+  const box = $("coachBox");
+  if (!on || (!hint && !note)) { box.hidden = true; return; }
+  const local = view.mode === "local";
+  let label, cls, text;
+  if (hint) { label = local && view.players[g.turn] ? `Hint for ${view.players[g.turn].name}` : "Hint"; cls = "hint"; text = hint.text; }
+  else {
+    label = (local && view.players[note.seat] ? view.players[note.seat].name + ": " : "") + GRADE_NAME[note.grade]; cls = note.grade;
+    text = note.text + (note.better && view.canTakeBack ? " Tap Take back to see it." : "");
+  }
+  box.hidden = false;
+  $("coachGrade").textContent = label; $("coachGrade").className = "grade " + cls;
+  $("coachText").textContent = text;
+}
+$("btnHint").onclick = guard(() => {
+  const g = view && view.view;
+  if (!g || !myTurn()) return;
+  const h = hintFor(g.board, g.turn, g.rules);
+  if (!h) return;
+  hint = h; picked = h.move.from;
+  renderBoard(g); renderCoach();
+});
+$("btnTakeBack").onclick = guard(async () => {
+  const better = note && note.better ? note.better : null;
+  lastKey = null; picked = null; hint = null; note = null;
+  await ctrl.takeBack();
+  const g = view && view.view;
+  // show the move the coach preferred, ready to play
+  if (better && g && myTurn() && g.legal.some(m => sameMove(m, better))) { hint = { move: better, text: "Here's the move the coach preferred. Play it, or try your own." }; picked = better.from; }
+  render();
+});
 
 // the last move slides along its path; captured pieces fade away
 function animateLast(g) {
@@ -322,6 +387,7 @@ function renderLog(g) {
 let hist = { no: null, lines: [], seen: null };
 function logHist(g) {
   if (hist.no !== g.no) hist = { no: g.no, lines: [`Game ${g.no} · ${RULE_NAME[g.rules]} rules`], seen: null };
+  if (hist.seen !== null && g.moves < hist.seen) { hist.lines = hist.lines.slice(0, 1 + g.moves); hist.seen = g.moves; hist.done = false; }
   if (g.last && hist.seen !== g.moves) {
     hist.seen = g.moves;
     const L = g.last, who = view.players[L.seat];

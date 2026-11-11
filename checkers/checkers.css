@@ -53,3 +53,20 @@
   .ck-board { border-radius: 10px; }
   .ck-player { padding: 6px 10px; }
 }
+
+/* ---------- the coach ---------- */
+.ck-coach { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 14px; background: rgba(0,0,0,.32); border: 1px solid var(--line); }
+.ck-coach p { margin: 0; font-size: .9rem; line-height: 1.4; }
+.ck-coach .grade { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; white-space: nowrap; color: #17130d; background: #cfc6b4; }
+.ck-coach .grade.best, .ck-coach .grade.good { background: #7fd69c; }
+.ck-coach .grade.forced { background: #cfc6b4; }
+.ck-coach .grade.inaccuracy { background: #f2d16b; }
+.ck-coach .grade.mistake { background: #f5a35c; }
+.ck-coach .grade.blunder { background: #f07a6e; }
+.ck-coach .grade.hint { background: var(--gold); }
+@media (max-width: 520px) { .ck-coach { grid-template-columns: 1fr; } .ck-coach .grade { justify-self: start; } }
+/* the coach's pick: a green ring on where it starts and where it lands */
+.ck-cell.hint { box-shadow: inset 0 0 0 3px #7fe0a7, inset 0 0 0 999px rgba(127, 224, 167, .22); }
+/* a piece the other side could capture right now */
+.ck-piece.danger i { box-shadow: 0 0 0 3px #ff6b5b, 0 0 14px rgba(255, 107, 91, .85), 0 3px 0 rgba(0,0,0,.45); }
+.ck-piece.can.danger i { box-shadow: 0 0 0 3px #ff6b5b, 0 0 0 6px #ffd666, 0 0 16px rgba(255, 107, 91, .85), 0 3px 0 rgba(0,0,0,.45); }

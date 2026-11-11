@@ -109,3 +109,40 @@ test("checkers rooms: two play, others watch, the clock moves for you, colours s
   assert.deepStrictEqual(s.inGame.slice().sort(), ["b", "h"]);
   assert.strictEqual(R.publicState(s).view.counts[0], 12);
 });
+
+// ---------- the coach ----------
+const C = await import("./checkers/coach.js");
+
+test("coach: a move that hangs a piece is a blunder, the safe one is good", () => {
+  // light man on e3 (row 5, col 4) can go to d4 or f4; a dark man on g5 (row 3, col 6) jumps f4 if it goes there
+  const b = board([[5, 4, "a"], [7, 0, "a"], [3, 6, "b"], [0, 1, "b"]]);
+  const bad = C.reviewMove(b, 0, "english", { from: sq(5, 4), to: sq(4, 5) }, ["you", "Rosa"]);
+  assert.strictEqual(bad.grade, "blunder");
+  assert.match(bad.text, /Rosa can jump a piece/);
+  assert.ok(bad.better);
+  const ok = C.reviewMove(b, 0, "english", { from: sq(5, 4), to: sq(4, 3) }, ["you", "Rosa"]);
+  assert.ok(["best", "good"].includes(ok.grade), ok.grade);
+});
+
+test("coach: pieces in danger, forced captures and hints", () => {
+  const b = board([[4, 5, "a"], [3, 6, "b"], [7, 0, "a"], [0, 1, "b"]]);
+  assert.deepStrictEqual([...C.inDanger(b, 0, "english")], [sq(4, 5)]);     // dark on g5 can jump f4 (landing e3 is empty)
+  const forced = board([[5, 2, "a"], [4, 3, "b"], [0, 7, "b"]]);
+  const r = C.reviewMove(forced, 0, "english", { from: sq(5, 2), to: sq(3, 4) });
+  assert.strictEqual(r.grade, "forced");
+  const h = C.hintFor(K.startBoard(), 0, "dam");
+  assert.ok(K.legalMoves(K.startBoard(), 0, "dam").some(m => m.from === h.move.from && m.to === h.move.to));
+  assert.match(h.text, /highlighted move/);
+});
+
+test("coach: reviews every move of a bot game without errors, in both rule sets", () => {
+  for (const rules of ["dam", "english"]) {
+    const g = K.startGame(1, { rules });
+    for (let i = 0; i < 40 && !g.finished; i++) {
+      const m = checkersMove(g, g.turn, "easy");
+      const r = C.reviewMove(g.board, g.turn, rules, m);
+      assert.ok(r && C.GRADE_NAME[r.grade] && r.text.length > 5);
+      K.play(g, g.turn, m);
+    }
+  }
+});

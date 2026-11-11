@@ -46,6 +46,7 @@
           <div class="seg" id="aiSkill" role="group" aria-label="Bot skill"><button type="button" data-v="easy">Easy</button><button type="button" data-v="normal" aria-pressed="true">Normal</button><button type="button" data-v="hard">Hard</button></div></div>
         <div class="field"><span class="label">Rules</span>
           <div class="seg" id="aiRules" role="group" aria-label="Rules"><button type="button" data-v="dam" aria-pressed="true">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+        <label class="switch"><input type="checkbox" id="aiCoach" checked><span class="track" aria-hidden="true"></span><span>Coach<small>A hint when you ask, a grade on each of your moves with the reason, take-backs, and a red ring on pieces that can be captured</small></span></label>
         <p class="err" id="aiErr"></p>
         <button class="primary" type="submit">Start the game</button>
       </form>
@@ -58,6 +59,7 @@
         </div>
         <div class="field"><span class="label">Rules</span>
           <div class="seg" id="lcRules" role="group" aria-label="Rules"><button type="button" data-v="dam" aria-pressed="true">Dam (flying kings)</button><button type="button" data-v="english">Classic English</button></div></div>
+        <label class="switch"><input type="checkbox" id="lcCoach" checked><span class="track" aria-hidden="true"></span><span>Coach<small>A hint when you ask, a grade on each of your moves with the reason, take-backs, and a red ring on pieces that can be captured</small></span></label>
         <button class="primary" type="submit">Start the game</button>
       </form>
       <form class="panel" id="formCreate" novalidate hidden>
@@ -112,9 +114,12 @@
       </div>
       <div class="ck-player bottom" id="pBottom"></div>
       <div class="status" id="status" aria-live="polite"></div>
+      <div class="ck-coach" id="coachBox" hidden aria-live="polite"><span class="grade" id="coachGrade"></span><p id="coachText"></p></div>
       <div class="act-row" id="actRow">
         <button class="primary" id="btnRematch" hidden>Play again</button>
         <button class="ghost" id="btnUndoPick" hidden>Pick another piece</button>
+        <button class="ghost" id="btnHint" hidden>Hint</button>
+        <button class="ghost" id="btnTakeBack" hidden>Take back</button>
         <button class="danger" id="btnResign">Resign</button>
       </div>
     </div>
