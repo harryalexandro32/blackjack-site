@@ -202,17 +202,13 @@
     /* only the list scrolls: Music and Done stay in view */
     .theme-dlg .theme-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px; }
     .theme-dlg h2 { margin: 0; font-family: var(--font-display); color: var(--gold); font-size: 1.5rem; }
-    .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    @media (max-width: 520px) { .theme-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; } .theme-dlg form { padding: 12px 10px; } }
-    .theme-opt { display: grid; gap: 3px; align-content: start; text-align: left; padding: 6px 6px 8px; min-width: 0;
+    .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .theme-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; text-align: left; padding: 8px 10px; min-width: 0;
       border-radius: 14px; background: rgba(255,255,255,.04); color: var(--print); box-shadow: inset 0 0 0 1.5px transparent; font-weight: 600; }
-    /* the preview: the theme's own page colours with a little table on top */
-    .theme-thumb { position: relative; display: block; width: 100%; height: 44px; border-radius: 9px; overflow: hidden; }
-    .theme-thumb .top { position: absolute; inset: 0 0 auto; height: 8px; }
-    .theme-thumb .felt-dot { position: absolute; left: 50%; top: 26px; width: 50px; height: 22px; translate: -50% -50%; border-radius: 50%; }
-    .theme-opt b { overflow-wrap: anywhere; line-height: 1.15; padding-inline: 2px; }
-    .theme-opt small { padding-inline: 2px; }
-    @media (max-width: 520px) { .theme-opt small { display: none; } .theme-opt b { font-size: .72rem !important; } }
+    /* one round swatch per theme: felt in the middle, then the wood rail and a ring of the accent colour */
+    .theme-opt .sw { grid-row: span 2; width: 40px; height: 40px; border-radius: 50%; }
+    .theme-opt b { overflow-wrap: anywhere; line-height: 1.15; }
+    @media (max-width: 520px) { .theme-grid { grid-template-columns: 1fr 1fr; gap: 6px; } .theme-dlg form { padding: 12px 10px; } .theme-opt { padding: 6px 8px; } .theme-opt .sw { width: 32px; height: 32px; } .theme-opt small { display: none; } }
     .hero h1, .hero p, .shelf h2, .foot { text-shadow: 0 1px 2px var(--felt-deep), 0 0 12px var(--felt-deep), 0 0 22px var(--felt-deep); }
     .tabs a:not([aria-current="page"]) { background: color-mix(in srgb, var(--felt-deep) 82%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
     .steady { align-content: center; }
@@ -402,14 +398,8 @@
         const c = mode === "dark" ? (t.dark || darkOf(t.c)) : t.c;
         const b = document.createElement("button");
         b.type = "button"; b.className = "theme-opt"; b.setAttribute("aria-pressed", t.id === themeId);
-        b.innerHTML = `<span class="theme-thumb"><span class="top"></span><span class="felt-dot"></span></span><b></b><small></small>`;
-        const th = b.querySelector(".theme-thumb");
-        th.style.background = t.page || c.deep; th.style.backgroundSize = "cover";
-        th.querySelector(".top").style.background = c.rail;
-        const dot = th.querySelector(".felt-dot");
-        dot.style.background = `radial-gradient(ellipse at 50% 30%, ${c.hi}, ${c.felt} 70%)`;
-        dot.style.boxShadow = `0 0 0 2px ${c.rail}, 0 0 0 3px ${c.accent}`;
-        b.querySelector("b").style.color = c.accent;
+        b.innerHTML = `<span class="sw"></span><b></b><small></small>`;
+        b.querySelector(".sw").style.background = `radial-gradient(circle at 50% 40%, ${c.hi} 0 35%, ${c.felt} 36% 62%, ${c.rail} 63% 78%, ${c.accent} 79% 86%, ${c.rail} 87%)`;
         b.querySelector("b").textContent = t.name;
         b.querySelector("small").textContent = t.tag;
         if (t.font) { loadFont(t); b.querySelector("b").style.fontFamily = t.font[1]; }

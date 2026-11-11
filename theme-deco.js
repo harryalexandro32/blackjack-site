@@ -338,18 +338,24 @@
   const garage = () => {
     const wheel = x => `<g transform="translate(${x} 134)"><circle r="33" fill="#141416"/><circle r="31" fill="none" stroke="#2a2a2e" stroke-width="5"/><circle r="19" fill="#c9ccd2"/><circle r="19" fill="none" stroke="#7d828a" stroke-width="2"/>${[0, 72, 144, 216, 288].map(a => `<path d="M0 0 L0 -16" stroke="#7d828a" stroke-width="4" stroke-linecap="round" transform="rotate(${a})"/>`).join("")}<circle r="5" fill="#5a5e65"/></g>`;
     const car = `
-      <path d="M14 92 L44 89 L46 95 L22 99Z M30 96 L34 104" stroke="#7a0b10" stroke-width="3" fill="#a31015"/>
-      <path d="M16 120 L22 99 Q32 91 62 89 L124 85 Q152 56 194 52 L262 52 Q288 54 316 83 L482 89 Q508 91 512 105 L514 125 Q514 135 500 135 L16 135 Q6 135 9 127Z" fill="#c4161c"/>
-      <path d="M124 85 Q152 56 194 52 L262 52 Q288 54 316 83Z" fill="#a31015"/>
-      <path d="M138 83 Q158 61 194 58 L224 58 L224 83Z M234 58 L262 58 Q282 62 302 83 L234 83Z" fill="#1b2026"/>
-      <path d="M148 79 Q162 64 184 61 L172 79Z M244 61 L258 61 L250 79 L238 79Z" fill="#fff" opacity=".18"/>
-      <path d="M356 86 L392 79 L418 86Z" fill="#1b2026"/>
-      <path d="M20 106 L510 106 L512 113 L18 113Z" fill="#fff" opacity=".92"/><path d="M20 116 L512 116 L513 120 L18 120Z" fill="#fff" opacity=".6"/>
-      <path d="M4 127 L34 127 L34 133 L4 133Z M488 129 L518 129 L518 134 L488 134Z" fill="#d7dade"/>
-      <path d="M500 97 L513 99 L513 107 L498 106Z" fill="#ffe9a3"/><path d="M12 104 L22 102 L22 110 L12 110Z" fill="#ff4d3d"/>
-      <path d="M40 137 L80 137 L80 142 L40 142Z" fill="#9aa0a8"/>
-      ${wheel(112)}${wheel(420)}
-      <path d="M170 94 h22 M262 94 h22" stroke="#7a0b10" stroke-width="3" stroke-linecap="round"/>`;
+      <!-- a fastback muscle car: long hood, cabin set back, short deck with a ducktail, big rear tyres, nose-down stance -->
+      <ellipse cx="262" cy="168" rx="250" ry="7" fill="#000" opacity=".35"/>
+      <path d="M176 139 L332 139 L340 146 L176 146Z" fill="#9aa0a8"/><path d="M332 139 L352 141 L352 147 L340 146Z" fill="#d7dade"/>
+      <path d="M12 130 L10 104 L4 95 L32 91 L80 90 C112 74 150 54 196 50 L262 50 C280 52 298 66 318 86 L470 92 Q500 94 508 104 L512 122 Q512 134 498 136 L16 136 Q10 136 12 130Z" fill="#c4161c"/>
+      <path d="M12 130 L10 112 C80 104 160 118 240 116 L512 116 L512 122 Q512 134 498 136 L16 136 Q10 136 12 130Z" fill="#8f0f14"/>
+      <path d="M110 78 C140 58 170 51 196 50 L262 50 C280 52 298 66 318 86 L304 84 C292 72 278 60 262 57 L204 57 C188 58 170 66 150 82Z" fill="#8f0f14"/>
+      <path d="M152 83 C170 67 188 59 204 58 L230 58 L230 85Z M240 58 L261 58 C277 61 291 73 302 85 L240 85Z" fill="#1b2026"/>
+      <path d="M162 80 C174 68 188 62 200 61 L186 80Z M246 61 L258 61 L250 81 L240 81Z" fill="#fff" opacity=".18"/>
+      <path d="M96 84 L126 70 M106 86 L136 71 M116 88 L146 72" stroke="#8f0f14" stroke-width="3" stroke-linecap="round"/>
+      <path d="M350 88 L370 76 L410 78 L420 90Z" fill="#a31015"/><path d="M402 78 L410 78 L420 90 L408 89Z" fill="#17181c"/>
+      <path d="M40 102 C100 94 160 108 232 107 L474 103" stroke="#e8444a" stroke-width="2" fill="none" opacity=".8"/>
+      <path d="M26 120 L504 120 L505 127 L26 127Z" fill="#fff" opacity=".92"/><path d="M26 120 L16 104 L28 103 L44 120Z" fill="#fff" opacity=".92"/><path d="M28 130 L504 130 L504 132 L28 132Z" fill="#fff" opacity=".6"/>
+      <path d="M236 87 L238 134" stroke="#7a0b10" stroke-width="1.5"/><path d="M250 97 h16" stroke="#e7e9ec" stroke-width="3" stroke-linecap="round"/>
+      <path d="M486 99 L500 100 L498 113 L486 113Z" fill="#17181c"/><path d="M500 100 L511 103 L512 113 L498 113Z" fill="#ffe9a3"/><path d="M9 101 L21 100 L21 111 L10 111Z" fill="#ff4d3d"/>
+      <rect x="0" y="121" width="26" height="10" rx="3" fill="#d7dade"/><rect x="494" y="123" width="26" height="9" rx="3" fill="#d7dade"/>
+      <path d="M468 136 L512 136 L507 144 L472 144Z" fill="#5c0a0e"/>
+      <circle cx="118" cy="131" r="41" fill="#0f0f11"/><circle cx="414" cy="134" r="37" fill="#0f0f11"/>
+      ${wheel(118).replace("translate(118 134)", "translate(118 130) scale(1.12)")}${wheel(414)}`;
     const tyre = y => `<g transform="translate(0 ${y})"><ellipse cx="60" cy="0" rx="56" ry="16" fill="#1a1a1c"/><ellipse cx="60" cy="-6" rx="56" ry="16" fill="#26262a"/><ellipse cx="60" cy="-6" rx="28" ry="7" fill="#0c0c0e"/></g>`;
     const checker = Array.from({ length: 12 }, (_, i) => { const r = Math.floor(i / 4), c = i % 4; return `<rect x="${c * 22}" y="${r * 18}" width="22" height="18" fill="${(r + c) % 2 ? "#111" : "#f4f4f0"}"/>`; }).join("");
     return `
