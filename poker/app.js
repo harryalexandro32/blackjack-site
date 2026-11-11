@@ -195,6 +195,7 @@ $("formAi").addEventListener("submit", e => {
   $("aiErr").textContent = "";
   store.set("pk-name", name);
   store.set("pk-coach", $("aiCoach").checked);
+  store.set("pk-ai-setup", { game: segValue("aiGame"), bots: segValue("aiBots"), skill: segValue("aiSkill"), style: segValue("aiStyle"), show: segValue("aiShow"), sb: +$("aiSb").value, bb: +$("aiBb").value, buy: +$("aiBuy").value });
   attach(LocalTable.create({ name, game: segValue("aiGame"), bots: +segValue("aiBots"), skill: segValue("aiSkill"), botStyle: segValue("aiStyle"), coach: $("aiCoach").checked, botShow: segValue("aiShow"), sb: bl.sb, bb: bl.bb, buyIn, avatar: myAvatar(), show: myShow() }));
 });
 $("aiResume").addEventListener("click", () => { const s = savedAiTable(); if (s) attach(new LocalTable(s)); });
@@ -208,6 +209,17 @@ const STYLE_NOTES = {
 };
 $("aiStyle").addEventListener("click", () => { $("aiStyleNote").textContent = STYLE_NOTES[segValue("aiStyle")]; });
 $("aiCoach").checked = store.get("pk-coach", true);
+// Start from the table you dealt last time, so a rematch is one tap.
+{
+  const last = store.get("pk-ai-setup", null);
+  if (last) {
+    for (const [id, v] of [["aiGame", last.game], ["aiBots", last.bots], ["aiSkill", last.skill], ["aiStyle", last.style], ["aiShow", last.show]]) {
+      const b = v != null && $(id).querySelector(`[data-v="${String(v).replace(/[^\w.-]/g, "")}"]`);
+      if (b && !b.disabled) b.click();
+    }
+    for (const [id, v] of [["aiSb", last.sb], ["aiBb", last.bb], ["aiBuy", last.buy]]) if (v > 0) $(id).value = v;
+  }
+}
 $("tgCoach").onchange = e => ctrl && ctrl.setCoach && ctrl.setCoach(e.target.checked);
 
 // ---------- setup: online ----------

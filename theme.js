@@ -200,10 +200,27 @@
     .theme-dlg form { display: grid; gap: 12px; padding: 16px 18px; }
     .theme-dlg h2 { margin: 0; font-family: var(--font-display); color: var(--gold); font-size: 1.5rem; }
     .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    .theme-opt { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; text-align: left; padding: 10px; min-width: 0;
+    @media (max-width: 520px) { .theme-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; } .theme-dlg form { padding: 12px 10px; } }
+    .theme-opt { display: grid; gap: 3px; align-content: start; text-align: left; padding: 6px 6px 8px; min-width: 0;
       border-radius: 14px; background: rgba(255,255,255,.04); color: var(--print); box-shadow: inset 0 0 0 1.5px transparent; font-weight: 600; }
+    /* the preview: the theme's own page colours and scenery, shrunk, with a little table and heading on top */
+    .theme-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 9px; overflow: hidden; }
+    .theme-thumb .scene { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; transform-origin: 0 0; pointer-events: none; opacity: .9; }
+    .theme-thumb .scene .d { position: absolute; display: block; height: auto; }
+    .theme-thumb .scene * { animation: none !important; }
+    .theme-thumb .scene .petal, .theme-thumb .scene .laser { display: none; }
+    .theme-thumb .top { position: absolute; inset: 0 0 auto; height: 16%; }
+    .theme-thumb .felt-dot { position: absolute; left: 50%; top: 60%; width: 46%; aspect-ratio: 16 / 10; translate: -50% -50%; border-radius: 50%; }
+    .theme-thumb .felt-dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 22%; aspect-ratio: 5 / 7; translate: -50% -50%; rotate: -8deg; border-radius: 2px; background: #fbf9f3; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+    .theme-opt b { overflow-wrap: anywhere; line-height: 1.15; padding-inline: 2px; }
+    .theme-opt small { padding-inline: 2px; }
+    @media (max-width: 520px) { .theme-opt small { display: none; } .theme-opt b { font-size: .72rem !important; } }
+    .hero h1, .hero p, .shelf h2, .foot { text-shadow: 0 1px 2px var(--felt-deep), 0 0 12px var(--felt-deep), 0 0 22px var(--felt-deep); }
+    .tabs a:not([aria-current="page"]) { background: color-mix(in srgb, var(--felt-deep) 82%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    .theme-btn { position: relative; }
+    .theme-btn::after { content: ""; position: absolute; inset: -6px -3px; }
     .theme-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold); background: rgba(255,255,255,.08); }
-    .theme-opt .sw { grid-row: span 2; width: 42px; height: 42px; border-radius: 50%; }
+    .theme-opt:focus-visible { outline-offset: -2px; }
     .theme-opt b { font-size: .9rem; } .theme-opt small { font-size: .7rem; font-weight: 400; opacity: .75; line-height: 1.2; }
     .theme-dlg .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
     @media (max-width: 520px) { .theme-btn { width: 30px; height: 30px; font-size: .9rem; } }
@@ -288,8 +305,8 @@
     dm.type = "button"; dm.className = "theme-btn";
     const drawMode = () => {
       dm.textContent = mode === "dark" ? "☀" : "☾";
-      dm.setAttribute("aria-label", mode === "dark" ? "Switch to light mode" : "Switch to dark mode");
-      dm.title = mode === "dark" ? "Light mode" : "Dark mode";
+      dm.setAttribute("aria-label", mode === "dark" ? "Switch to full colour" : "Dim the colours");
+      dm.title = mode === "dark" ? "Full colour" : "Dim the colours (easier on the eyes at night)";
     };
     dm.onclick = () => { mode = mode === "dark" ? "light" : "dark"; save(); apply(); drawMode(); drawGrid(); };
     drawMode();
@@ -332,7 +349,7 @@
     dlg.setAttribute("aria-label", "Themes");
     dlg.innerHTML = `<form method="dialog"><div class="row"><h2>Themes</h2><span class="note"></span></div><div class="theme-grid"></div>
       <div class="music-row"><b>Music</b><button type="button" class="ghost music-toggle"></button><label class="note" for="crMusicVol">Volume</label><input type="range" id="crMusicVol" min="0" max="100" step="1"></div>
-      <div class="row"><small class="note">Each theme has its own tune. Dark mode works with every theme: use the ☾ button.</small><button class="primary" value="close">Done</button></div></form>`;
+      <div class="row"><small class="note">Each theme has its own tune. The ☾ button dims any theme for playing at night.</small><button class="primary" value="close">Done</button></div></form>`;
     document.body.appendChild(dlg);
     dlg.querySelector(".music-toggle").onclick = () => mu.click();
     const volIn = dlg.querySelector("#crMusicVol");
@@ -347,19 +364,37 @@
     const grid = dlg.querySelector(".theme-grid");
     function drawGrid() {
       grid.innerHTML = "";
+      const thumbs = [];
       for (const t of THEMES) {
         const c = mode === "dark" ? (t.dark || darkOf(t.c)) : t.c;
         const b = document.createElement("button");
         b.type = "button"; b.className = "theme-opt"; b.setAttribute("aria-pressed", t.id === themeId);
-        b.innerHTML = `<span class="sw"></span><b></b><small></small>`;
-        b.querySelector(".sw").style.background = `radial-gradient(circle at 50% 40%, ${c.hi} 0 35%, ${c.felt} 36% 62%, ${c.rail} 63% 78%, ${c.accent} 79% 86%, ${c.rail} 87%)`;
+        b.innerHTML = `<span class="theme-thumb"><span class="scene"></span><span class="top"></span><span class="felt-dot"></span></span><b></b><small></small>`;
+        const th = b.querySelector(".theme-thumb"), scene = th.querySelector(".scene");
+        th.style.background = t.page || c.deep; th.style.backgroundSize = "cover";
+        th.querySelector(".top").style.background = c.rail;
+        const dot = th.querySelector(".felt-dot");
+        dot.style.background = `radial-gradient(ellipse at 50% 30%, ${c.hi}, ${c.felt} 70%)`;
+        dot.style.boxShadow = `0 0 0 2px ${c.rail}, 0 0 0 3px ${c.accent}`;
+        b.querySelector("b").style.color = c.accent;
+        const draw = window.CR_DECO && window.CR_DECO[t.id];
+        if (draw) { scene.innerHTML = draw(); thumbs.push([th, scene]); }
         b.querySelector("b").textContent = t.name;
         b.querySelector("small").textContent = t.tag;
         if (t.font) { loadFont(t); b.querySelector("b").style.fontFamily = t.font[1]; }
         b.onclick = () => { themeId = t.id; save(); apply(); drawGrid(); if (musicOn) syncMusic(); };
         grid.appendChild(b);
       }
+      // the scenery is laid out for the whole window: shrink it to cover each preview
+      const fit = () => thumbs.forEach(([th, scene]) => {
+        const k = Math.max(th.clientWidth / innerWidth, th.clientHeight / innerHeight);
+        scene.style.transform = `translate(${(th.clientWidth - innerWidth * k) / 2}px, ${(th.clientHeight - innerHeight * k) / 2}px) scale(${k})`;
+      });
+      fitThumbs = fit;
+      if (dlg.open) fit();
     }
-    pick.onclick = () => { drawGrid(); dlg.showModal(); };
+    let fitThumbs = () => {};
+    addEventListener("resize", () => { if (dlg.open) fitThumbs(); });
+    pick.onclick = () => { drawGrid(); dlg.showModal(); fitThumbs(); const cur = grid.querySelector('[aria-pressed="true"]'); if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: "nearest" }); } };
   });
 })();

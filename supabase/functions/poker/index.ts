@@ -1,4 +1,4 @@
-// Table server for every online game (poker tables; Capsa, Mahjong, Ludo, Werewolf, Undercover, Checkers and Heist rooms). Every request: load the room,
+// Table server for every online game (poker tables; Capsa, Mahjong, Ludo, Werewolf, Undercover, Checkers, Heist, Gaple and Cangkul rooms). Every request: load the room,
 // check who's asking, apply the move with the shared rules, save both the secret and the public copy in one
 // transaction (retrying if someone else saved first).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -11,6 +11,8 @@ import * as LR from "../_shared/ludo-room.js";
 import * as UR from "../_shared/undercover-room.js";
 import * as KR from "../_shared/checkers-room.js";
 import * as HR from "../_shared/heist-room.js";
+import * as GR from "../_shared/gaple-room.js";
+import * as NR from "../_shared/cangkul-room.js";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -31,10 +33,10 @@ async function sha256(s: string) {
   return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, "0")).join("");
 }
 // Which game's rules a room follows.
-const ROOMS: any = { capsa: CR, mahjong: MR, werewolf: WR, ludo: LR, undercover: UR, checkers: KR, heist: HR };
+const ROOMS: any = { capsa: CR, mahjong: MR, werewolf: WR, ludo: LR, undercover: UR, checkers: KR, heist: HR, gaple: GR, cangkul: NR };
 const rulesFor = (state: any): any => (state && ROOMS[state.game]) || R;
-const GAME_NAMES: any = { heist: "a Heist room", checkers: "a Checkers room", undercover: "an Undercover room", werewolf: "a Werewolf room", ludo: "a Ludo room", capsa: "a Capsa room", mahjong: "a Mahjong room", poker: "a poker table" };
-const PAGES: any = { heist: "the Heist page", checkers: "the Checkers page", undercover: "the Undercover page", werewolf: "the Werewolf page", ludo: "the Ludo page", capsa: "the Capsa page", mahjong: "the Mahjong page", poker: "the poker page" };
+const GAME_NAMES: any = { gaple: "a Gaple room", cangkul: "a Cangkul room", heist: "a Heist room", checkers: "a Checkers room", undercover: "an Undercover room", werewolf: "a Werewolf room", ludo: "a Ludo room", capsa: "a Capsa room", mahjong: "a Mahjong room", poker: "a poker table" };
+const PAGES: any = { gaple: "the Gaple page", cangkul: "the Cangkul page", heist: "the Heist page", checkers: "the Checkers page", undercover: "the Undercover page", werewolf: "the Werewolf page", ludo: "the Ludo page", capsa: "the Capsa page", mahjong: "the Mahjong page", poker: "the poker page" };
 
 async function load(by: { id?: string; code?: string }) {
   let q = db.from("poker_rooms").select("id, code, version, status");
@@ -107,6 +109,7 @@ Deno.serve(async req => {
       if (!loaded || loaded.state.closed) return json({ table: null, serverNow: now });
       const s = loaded.state;
       if (s.game === "capsa") return json({ table: { game: "capsa", mode: s.settings.mode || "winner", doublePair: s.settings.doublePair || "off", pointValue: s.settings.pointValue, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
+      if (s.game === "gaple" || s.game === "cangkul") return json({ table: { game: s.game, settings: s.settings, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       if (s.game === "ludo") return json({ table: { game: "ludo", settings: s.settings, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       if (s.game === "werewolf") return json({ table: { game: "werewolf", settings: s.settings, humans: s.seats.filter((x: any) => x && !x.bot).length }, serverNow: now });
       if (s.game === "undercover") return json({ table: { game: "undercover", settings: s.settings, humans: s.seats.length }, serverNow: now });
