@@ -429,6 +429,143 @@
     ${svg("0 0 200 150", "right:2vw;bottom:2vh;width:clamp(110px,14vw,210px);opacity:.45", fanCard(-28, "♠") + fanCard(-9, "♥", true) + fanCard(10, "♣") + fanCard(29, "♦", true))}
     ${svg("0 0 300 60", "!right:5vw;top:calc(var(--bar-h, 64px) + 3vh);width:clamp(140px,18vw,270px);opacity:.4", `<g fill="none" stroke="#d4ad55" stroke-width="2.5" stroke-linecap="round"><path d="M10 30 H110 M190 30 H290"/><path d="M110 30 C120 12 136 12 150 30 C164 48 180 48 190 30 C180 12 164 12 150 30 C136 48 120 48 110 30Z"/></g><circle cx="150" cy="30" r="4" fill="#d4ad55"/>`)}`;
 
+  // ---------- second pass on ten themes ----------
+  // Each entry takes the scene drawn above and returns it with pieces resized, moved or added (a sunset for the ocean,
+  // mesas for the west, a ship for the pirates and so on). If a piece it expects is missing, the scene is left as it was.
+  const swap = (html, a, b) => { if (!html.includes(a)) throw new Error("not found: " + a); return html.split(a).join(b); };
+  const pieceAt = (html, styleStart) => {
+    const m = html.match(new RegExp(`<svg[^>]*style="${styleStart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^"]*"[^>]*>[\\s\\S]*?</svg>`));
+    if (!m) throw new Error("piece not found: " + styleStart);
+    return m[0];
+  };
+  const BAR = "var(--bar-h, 64px)";
+
+  const V2 = {};
+
+  V2.ocean = cur => {
+    const sea = "clamp(88px,17.6vh,184px)";
+    let h = cur.replace(pieceAt(cur, "right:6vw;top:9vh"), "");
+    const sky = band("0 0 100 100", "left:0;bottom:0;width:100%;height:62vh", `<defs><linearGradient id="oSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a5a" stop-opacity="0"/><stop offset=".7" stop-color="#ff9a5a" stop-opacity=".32"/><stop offset="1" stop-color="#ffcf7a" stop-opacity=".5"/></linearGradient></defs><rect width="100" height="100" fill="url(#oSky)"/>`);
+    const sun = svg("0 0 300 300", `right:19vw;bottom:calc(${sea} * .5);width:clamp(130px,19vw,280px)`, `<defs><radialGradient id="oSun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff3b8"/><stop offset=".55" stop-color="#ffbe55"/><stop offset="1" stop-color="#ff7a3d"/></radialGradient></defs><circle cx="150" cy="150" r="150" fill="#ffb347" opacity=".12"/><circle cx="150" cy="150" r="118" fill="#ffb347" opacity=".18"/><circle cx="150" cy="150" r="84" fill="url(#oSun)"/>`, "sway-slow");
+    const glint = band("0 0 200 60", `right:19vw;bottom:calc(${sea} * .42);width:clamp(130px,19vw,280px);height:calc(${sea} * .27)`, `<g stroke="#ffe2a0" stroke-linecap="round" opacity=".8"><path d="M40 8 H160" stroke-width="5"/><path d="M58 22 H142" stroke-width="4.5"/><path d="M72 36 H128" stroke-width="4"/><path d="M84 50 H116" stroke-width="3.5"/></g>`, "wave");
+    const boat = svg("0 0 80 80", `left:33vw;bottom:calc(${sea} * .64);width:clamp(34px,4.6vw,72px)`, `<path d="M8 58 H72 L62 72 H18Z" fill="#5c3f22"/><path d="M40 8 V58" stroke="#3e2a16" stroke-width="3"/><path d="M43 12 L68 52 H43Z" fill="#fff8ea"/><path d="M37 20 L16 52 H37Z" fill="#ffe1c2"/>`, "float");
+    return { html: sky + sun + h + glint + boat, note: "A setting sun on the horizon with its glow on the water, and a sailboat. The plain yellow disc is gone." };
+  };
+
+  V2.west = cur => {
+    const ground = "clamp(88px,19.2vh,200px)";
+    let h = swap(cur, "height:clamp(120px,30.4vh,304px)", "height:clamp(160px,40vh,400px)");
+    h = swap(h, "height:clamp(88px,22.4vh,224px)", "height:clamp(120px,30vh,300px)");
+    const mesas = band("0 0 1440 300", `left:0;bottom:calc(${ground} * .5);width:100%;height:clamp(90px,23vh,240px)`, `
+      <path d="M0 300 L0 236 Q200 196 400 238 T800 228 T1200 242 T1440 218 L1440 300Z" fill="#8a4a26" opacity=".5"/>
+      <g fill="#6b3418" opacity=".8"><path d="M70 300 L104 156 L128 156 L138 112 L268 112 L278 156 L304 156 L340 300Z"/><path d="M556 300 L584 176 L600 176 L606 92 L642 92 L650 176 L666 176 L694 300Z"/><path d="M890 300 L936 184 L978 184 L990 142 L1244 142 L1256 184 L1302 184 L1346 300Z"/></g>
+      <g fill="#8f4a22" opacity=".8"><path d="M138 112 L268 112 L262 124 L146 124Z"/><path d="M606 92 L642 92 L640 104 L608 104Z"/><path d="M990 142 L1244 142 L1238 154 L996 154Z"/></g>`);
+    const weed = svg("0 0 60 60", "left:38vw;bottom:4vh;width:clamp(30px,4vw,60px)", `<g fill="none" stroke="#c9a36a" stroke-width="2" opacity=".9"><circle cx="30" cy="30" r="24"/><path d="M8 30 Q30 8 52 30 Q30 52 8 30Z"/><path d="M30 6 Q10 30 30 54 Q50 30 30 6Z"/><path d="M13 14 Q34 26 47 46 M47 14 Q26 26 13 46"/></g>`, "roll");
+    const sign = svg("0 0 220 150", `!right:17vw;top:calc(${BAR} - 4px);width:clamp(110px,14vw,210px)`, `<path d="M40 0 V46 M180 0 V46" stroke="#3b2414" stroke-width="5"/><rect x="10" y="44" width="200" height="66" rx="6" fill="#6b3f1f" stroke="#3b2414" stroke-width="5"/><path d="M18 62 H202 M18 92 H202" stroke="#56311a" stroke-width="2"/><text x="110" y="90" text-anchor="middle" font-family="Rye, serif" font-size="36" fill="#f3c456">SALOON</text>`, "sway-1");
+    return { html: mesas + h + weed + sign, note: "Mesas and buttes on the horizon, taller cacti, a rolling tumbleweed and a hanging saloon sign." };
+  };
+
+  V2.vegas = cur => {
+    const r = rnd(11), blocks = [];
+    let x = 0;
+    while (x < 1440) {
+      const w = 46 + Math.floor(r() * 70), hgt = 90 + Math.floor(r() * 250);
+      const kind = r();
+      if (kind > 0.86) blocks.push(`<path d="M${x} 400 L${x + w / 2} ${400 - hgt} L${x + w} 400Z"/>`);                       // pyramid
+      else if (kind > 0.74) blocks.push(`<rect x="${x + w / 2 - 6}" y="${400 - hgt}" width="12" height="${hgt}"/><circle cx="${x + w / 2}" cy="${400 - hgt}" r="16"/>`); // needle
+      else blocks.push(`<rect x="${x}" y="${400 - hgt}" width="${w}" height="${hgt}"/>`);
+      x += w + 6;
+    }
+    const sky = band("0 0 1440 400", "left:0;bottom:0;width:100%;height:clamp(140px,38vh,400px)", `<g fill="#170726" stroke="#ff4fb4" stroke-opacity=".4" stroke-width="2">${blocks.join("")}</g>`);
+    const sign = svg("0 0 240 110", `!right:27vw;top:10vh;width:clamp(120px,15vw,230px)`, `<rect x="6" y="6" width="228" height="98" rx="18" fill="none" stroke="#ffcc33" stroke-width="5"/><text x="120" y="74" text-anchor="middle" font-family="Limelight, serif" font-size="50" fill="none" stroke="#ff4fb4" stroke-width="2.5">JACKPOT</text>`, "neon flicker");
+    return { html: sky + cur + sign, note: "A dark city skyline behind the lights, and a neon JACKPOT sign." };
+  };
+
+  V2.aurora = cur => {
+    let h = swap(cur, "height:clamp(96px,24vh,240px)", "height:clamp(130px,31vh,310px)");
+    const peaks = band("0 0 1440 300", "left:0;bottom:0;width:100%;height:clamp(150px,38vh,380px)", `
+      <path d="M0 300 L0 210 L120 120 L210 190 L330 70 L450 200 L560 130 L690 220 L820 60 L960 210 L1070 140 L1190 230 L1310 110 L1440 200 L1440 300Z" fill="#0f2036" opacity=".92"/>
+      <g fill="#cfe8ff" opacity=".55"><path d="M330 70 L362 106 L340 100 L326 116 L312 98 L300 104Z"/><path d="M820 60 L856 100 L832 94 L818 112 L802 92 L788 98Z"/><path d="M1310 110 L1338 142 L1318 136 L1306 150 L1294 134 L1284 140Z"/><path d="M120 120 L144 146 L126 142 L116 154 L104 140Z"/></g>`);
+    const ribbons = band("0 0 1440 420", "left:-5vw;top:3vh;width:110vw;height:62vh", `<defs>
+        <linearGradient id="auA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dffb2" stop-opacity="0"/><stop offset=".45" stop-color="#7dffb2" stop-opacity=".75"/><stop offset="1" stop-color="#3ecf8e" stop-opacity="0"/></linearGradient>
+        <linearGradient id="auB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b98cff" stop-opacity="0"/><stop offset=".5" stop-color="#b98cff" stop-opacity=".6"/><stop offset="1" stop-color="#6a5cff" stop-opacity="0"/></linearGradient>
+        <filter id="auBlur" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="16"/></filter></defs>
+      <g filter="url(#auBlur)"><path d="M-40 150 C200 40 420 230 700 120 S1180 60 1480 170 L1480 300 C1180 190 960 250 700 250 S200 170 -40 290Z" fill="url(#auA)"/><path d="M-40 90 C260 190 520 20 820 110 S1260 190 1480 70 L1480 190 C1260 310 1040 230 820 230 S260 310 -40 210Z" fill="url(#auB)"/></g>`, "drift");
+    return { html: ribbons + peaks + h, note: "Much stronger green and violet ribbons of light, snow-capped mountains behind taller pines." };
+  };
+
+  V2.pretty = cur => {
+    const cupcake = svg("0 0 160 190", "left:2vw;bottom:2vh;width:clamp(100px,13vw,190px)", `
+      <path d="M30 104 H130 L118 182 H42Z" fill="#ff8fc4"/><g stroke="#ffd0e6" stroke-width="6"><path d="M52 106 L58 180 M80 106 V182 M108 106 L102 180"/></g>
+      <path d="M22 106 C10 84 34 70 46 76 C40 52 70 42 84 54 C96 36 128 46 122 72 C142 70 152 96 138 106Z" fill="#fff0f7"/>
+      <path d="M40 92 C60 80 100 80 124 92 M54 72 C70 64 96 64 110 72" stroke="#ffc2de" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle cx="84" cy="36" r="13" fill="#e8215f"/><path d="M84 24 C88 12 98 8 106 10" stroke="#7a3b1e" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="80" cy="32" r="3.5" fill="#fff" opacity=".7"/>
+      <g fill="#9be7ff"><rect x="50" y="84" width="9" height="3.5" rx="1.7" transform="rotate(30 54 86)"/><rect x="98" y="62" width="9" height="3.5" rx="1.7" transform="rotate(-20 102 64)"/></g><g fill="#ffd166"><rect x="72" y="74" width="9" height="3.5" rx="1.7" transform="rotate(-40 76 76)"/><rect x="112" y="88" width="9" height="3.5" rx="1.7" transform="rotate(15 116 90)"/></g>`, "float");
+    const cone = svg("0 0 130 230", "right:3vw;bottom:2vh;height:clamp(140px,34vh,300px)", `
+      <path d="M30 110 H100 L65 226Z" fill="#f2c27a"/><g stroke="#d99a4e" stroke-width="2.5"><path d="M40 122 L84 170 M56 114 L94 150 M90 122 L48 168 M74 114 L40 148 M70 178 L58 192 M62 178 L72 192"/></g>
+      <circle cx="65" cy="84" r="40" fill="#ff8fc4"/><circle cx="65" cy="44" r="31" fill="#fff0f7"/><path d="M34 100 C40 116 52 104 58 118 C66 104 78 118 86 106 C92 116 98 104 98 98Z" fill="#ff8fc4"/>
+      <circle cx="65" cy="12" r="10" fill="#e8215f"/><circle cx="52" cy="72" r="6" fill="#fff" opacity=".35"/>`, "float-2");
+    return { html: cur + cupcake + cone, note: "Two large pieces to anchor the corners: a frosted cupcake and an ice-cream cone." };
+  };
+
+  V2.emperor = cur => {
+    let h = swap(cur, "left:3vw;bottom:0;width:clamp(150px,20vw,300px)", "left:1vw;bottom:0;width:clamp(210px,30vw,450px)");
+    const torii = svg("0 0 220 200", "right:5vw;bottom:0;width:clamp(120px,16vw,240px)", `
+      <g fill="#c8102e"><path d="M48 46 L60 46 L64 200 L44 200Z"/><path d="M160 46 L172 46 L176 200 L156 200Z"/><rect x="26" y="74" width="168" height="13" rx="2"/><rect x="100" y="46" width="20" height="30"/></g>
+      <path d="M6 26 Q110 44 214 26 L208 44 Q110 60 12 44Z" fill="#c8102e"/><path d="M0 14 Q110 34 220 14 L214 28 Q110 46 6 28Z" fill="#1a0a0c"/>
+      <rect x="40" y="192" width="28" height="8" fill="#1a0a0c"/><rect x="152" y="192" width="28" height="8" fill="#1a0a0c"/>`);
+    return { html: h + torii, note: "The castle is half again as large, and a red torii gate stands in the other corner." };
+  };
+
+  V2.pirate = cur => {
+    const sea = "clamp(60px,12vh,130px)";
+    let h = swap(cur, "width:clamp(60px,7vw,110px)", "width:clamp(84px,10vw,150px)");
+    h = swap(h, "right:16vw;top:calc(var(--bar-h, 64px) + 2vh);height:clamp(140px,30vh,300px)", "right:25vw;top:calc(var(--bar-h, 64px) + 2vh);height:clamp(140px,30vh,300px)");
+    const ship = svg("0 0 320 270", `right:30vw;bottom:calc(${sea} * .5);width:clamp(170px,26vw,390px)`, `
+      <g fill="#101c2c" stroke="#3a5070" stroke-width="1.5"><path d="M20 196 C60 214 250 214 304 186 L286 246 C230 262 90 262 44 246Z"/><rect x="92" y="34" width="6" height="170"/><rect x="164" y="14" width="6" height="190"/><rect x="230" y="50" width="6" height="150"/><path d="M304 186 L318 160 L300 172Z"/><path d="M20 196 L2 170 L30 184Z"/></g>
+      <g fill="#31486a"><path d="M52 62 Q96 52 140 62 Q130 100 140 138 Q96 126 52 138 Q62 100 52 62Z"/><path d="M122 36 Q168 24 214 36 Q202 86 214 136 Q168 122 122 136 Q134 86 122 36Z"/><path d="M196 74 Q234 66 272 74 Q264 106 272 140 Q234 130 196 140 Q204 106 196 74Z"/><path d="M122 146 Q168 136 214 146 Q208 166 214 188 Q168 180 122 188 Q128 166 122 146Z"/></g>
+      <path d="M170 14 L196 20 L170 28Z" fill="#0b1420"/><g stroke="#0b1420" stroke-width="1.5" fill="none"><path d="M95 40 L24 196 M167 20 L300 184 M233 56 L296 186"/></g>
+      <g fill="#f3c456" opacity=".85"><rect x="70" y="214" width="9" height="7"/><rect x="110" y="218" width="9" height="7"/><rect x="150" y="220" width="9" height="7"/><rect x="190" y="218" width="9" height="7"/><rect x="230" y="213" width="9" height="7"/></g>`, "float");
+    return { html: ship + h, note: "A three-masted ship in silhouette riding the waves, with lit portholes, and a larger moon." };
+  };
+
+  V2.space = cur => {
+    let h = swap(cur, "width:clamp(90px,13vw,190px)", "width:clamp(130px,19vw,280px)");
+    h = swap(h, "width:clamp(80px,11vw,170px)", "width:clamp(115px,16vw,240px)");
+    h = swap(h, "width:clamp(50px,6vw,90px);opacity:.75", "width:clamp(70px,9vw,130px);opacity:.85");
+    const lead = pieceAt(h, "left:6vw;top:34vh");
+    const wing = lead.replace(/style="[^"]*"/, 'style="left:17vw;top:51vh;width:clamp(70px,9.5vw,140px);opacity:.9"').replace('class="d float"', 'class="d float-2"');
+    const boom = svg("0 0 120 120", "right:31vw;top:37vh;width:clamp(50px,7vw,110px)", `<path d="M60 4 L70 40 L104 22 L84 54 L118 64 L82 72 L96 108 L64 84 L44 116 L44 78 L8 86 L36 60 L6 36 L44 44Z" fill="#ff8a2e"/><path d="M60 26 L66 48 L86 38 L74 58 L94 64 L72 68 L80 90 L62 76 L50 94 L50 72 L30 76 L46 62 L28 46 L50 50Z" fill="#ffe27a"/><circle cx="60" cy="60" r="9" fill="#fff"/>`, "blink");
+    return { html: h + wing + boom, note: "The starfighters are about 45% larger with a wingman added, and one raider goes up in an explosion." };
+  };
+
+  V2.garage = cur => {
+    let h = swap(cur, "width:clamp(230px,36vw,520px)", "width:clamp(300px,47vw,690px)");
+    const lamp = svg("0 0 240 320", `!right:34vw;top:calc(${BAR} - 4px);height:clamp(150px,40vh,340px)`, `<defs><linearGradient id="gLamp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".5"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></linearGradient></defs>
+      <path d="M120 0 V52" stroke="#2a2c31" stroke-width="4"/><path d="M96 86 L20 320 H220 L144 86Z" fill="url(#gLamp)"/><path d="M84 88 Q120 40 156 88Z" fill="#c9ccd2" stroke="#6d7178" stroke-width="3"/><ellipse cx="120" cy="88" rx="36" ry="6" fill="#fff3c4"/>`);
+    const cone = svg("0 0 80 110", "left:clamp(126px,17vw,236px);bottom:clamp(18px,4vh,40px);width:clamp(34px,4.6vw,66px)", `<path d="M30 8 H50 L68 92 H12Z" fill="#ff6a1a"/><path d="M25 34 H55 L59 52 H21Z M19 66 H61 L64 80 H16Z" fill="#fff"/><rect x="2" y="92" width="76" height="12" rx="3" fill="#d9540f"/>`);
+    return { html: h + lamp + cone, note: "The muscle car is about a third larger, under a hanging work lamp, with a traffic cone by the tyres." };
+  };
+
+  V2.forest = cur => {
+    let h = swap(cur, "height:clamp(260px,78vh,640px)", "height:clamp(260px,78vh,640px);filter:brightness(1.9) saturate(1.25)");
+    h = swap(h, "height:clamp(240px,70vh,580px)", "height:clamp(240px,70vh,580px);filter:brightness(1.9) saturate(1.25)");
+    const shroom = (cap, spot) => `<defs><radialGradient id="fg${cap.slice(1)}" cx=".5" cy=".9" r=".9"><stop offset="0" stop-color="${spot}"/><stop offset="1" stop-color="${cap}"/></radialGradient></defs>
+      <ellipse cx="100" cy="196" rx="86" ry="8" fill="#000" opacity=".35"/>
+      <path d="M84 110 C80 150 76 176 70 196 H130 C124 176 120 150 116 110Z" fill="#f4ecd2"/><path d="M82 128 Q100 138 118 128" stroke="#d9cda6" stroke-width="3" fill="none"/>
+      <path d="M14 112 C14 50 60 14 100 14 C140 14 186 50 186 112 C150 124 50 124 14 112Z" fill="url(#fg${cap.slice(1)})"/>
+      <g fill="#fffbe0" opacity=".92"><circle cx="62" cy="66" r="11"/><circle cx="110" cy="44" r="9"/><circle cx="146" cy="78" r="12"/><circle cx="96" cy="88" r="7"/><circle cx="38" cy="96" r="6"/></g>
+      <g transform="translate(148 136) scale(.42)"><path d="M84 110 C80 150 76 176 70 196 H130 C124 176 120 150 116 110Z" fill="#f4ecd2"/><path d="M14 112 C14 50 60 14 100 14 C140 14 186 50 186 112 C150 124 50 124 14 112Z" fill="${cap}"/><circle cx="70" cy="64" r="12" fill="#fffbe0"/><circle cx="126" cy="80" r="10" fill="#fffbe0"/></g>`;
+    const left = svg("0 0 240 210", "left:9vw;bottom:0;width:clamp(120px,16vw,250px)", shroom("#b0306a", "#ff9ad0"), "glow-green");
+    const right = svg("0 0 240 210", "right:10vw;bottom:0;width:clamp(100px,13vw,200px)", shroom("#1f8f86", "#9dfff0"), "glow-green");
+    const shafts = band("0 0 1440 700", "left:0;top:0;width:100%;height:100vh", `<defs><linearGradient id="fShaft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8ffb0" stop-opacity=".22"/><stop offset="1" stop-color="#d8ffb0" stop-opacity="0"/></linearGradient></defs><g fill="url(#fShaft)"><path d="M300 0 L420 0 L260 700 L60 700Z"/><path d="M760 0 L840 0 L900 700 L740 700Z"/><path d="M1120 0 L1220 0 L1420 700 L1240 700Z"/></g>`);
+    return { html: shafts + h + left + right, note: "A more readable heading font, trees you can actually see, shafts of light, and two large glowing mushrooms.", font: ["Almendra", "'Almendra', serif"] };
+  };
+
   window.CR_DECO = { classic, ocean, pretty, west, vegas, future, aurora, lantern: lanternNight, emperor, pirate, jazz, forest, garage, space, deezy };
+  for (const id of Object.keys(V2)) {
+    const base = window.CR_DECO[id];
+    window.CR_DECO[id] = () => { const cur = base(); try { return V2[id](cur).html; } catch { return cur; } };
+  }
   if (window.CR_DECO_READY) window.CR_DECO_READY();
 })();

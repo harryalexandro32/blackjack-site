@@ -47,7 +47,7 @@
     { id: "jazz", name: "Midnight Jazz Club", tag: "Smoky blue, brass and piano keys", font: ["Poiret One", "'Poiret One', sans-serif"],
       c: { felt: "#1c2a4a", deep: "#090d1a", hi: "#2e4170", rail: "#120d0a", railHi: "#2e2018", text: "#f3ead8", accent: "#d9a441", muted: "#a9b3c9", back: "#6b1d2c", btn: "#f1e3c2" },
       page: "radial-gradient(70% 50% at 50% 0%, rgba(120,140,200,.18), transparent 70%), linear-gradient(#141c33, #070a14 75%)" },
-    { id: "forest", name: "Enchanted Forest", tag: "Moss, glowing mushrooms and fireflies", font: ["Uncial Antiqua", "'Uncial Antiqua', serif"],
+    { id: "forest", name: "Enchanted Forest", tag: "Moss, glowing mushrooms and fireflies", font: ["Almendra", "'Almendra', serif"],
       c: { felt: "#2f5a2e", deep: "#0c160d", hi: "#4a7d3e", rail: "#1e140c", railHi: "#3a2a18", text: "#f0f7e6", accent: "#f5e07a", muted: "#b8cfa8", back: "#4a6b2a", btn: "#eef6d8" },
       page: "radial-gradient(50% 40% at 30% 70%, rgba(150,220,120,.12), transparent 70%), radial-gradient(40% 30% at 75% 30%, rgba(245,224,122,.1), transparent 70%), linear-gradient(#142414, #070d08 75%)" },
     { id: "garage", name: "Garage", tag: "Muscle cars, chrome and a checkered flag", font: ["Racing Sans One", "'Racing Sans One', sans-serif"],
