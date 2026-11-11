@@ -113,7 +113,7 @@ function showScreen(id) {
 const compact = matchMedia("(max-width: 720px)");
 const sizeVar = (el, name) => new ResizeObserver(() => document.documentElement.style.setProperty(name, el.offsetHeight + "px")).observe(el);
 sizeVar(document.querySelector(".bar"), "--bar-h");
-sizeVar(document.querySelector(".rail"), "--rail-h");
+(window.CR_STEADY || sizeVar)(document.querySelector(".rail"), "--rail-h"); // keeps its tallest height, so the table stops resizing each turn
 
 let ctrl = null, unsub = null, view = null;
 function attach(controller) {

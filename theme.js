@@ -217,6 +217,8 @@
     @media (max-width: 520px) { .theme-opt small { display: none; } .theme-opt b { font-size: .72rem !important; } }
     .hero h1, .hero p, .shelf h2, .foot { text-shadow: 0 1px 2px var(--felt-deep), 0 0 12px var(--felt-deep), 0 0 22px var(--felt-deep); }
     .tabs a:not([aria-current="page"]) { background: color-mix(in srgb, var(--felt-deep) 82%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+    .steady { align-content: center; }
+    @media (max-width: 720px) { .steady { align-content: space-between; } }   /* cards stay at the top of the bar, buttons at the bottom */
     .theme-btn { position: relative; }
     .theme-btn::after { content: ""; position: absolute; inset: -6px -3px; }
     .theme-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold); background: rgba(255,255,255,.08); }
@@ -286,6 +288,36 @@
   const style = document.createElement("style");
   style.textContent = css;
   document.head.appendChild(style);
+
+  // ---------- a steady action bar ----------
+  // The bar under a table (your cards, the buttons) changes with what you can do this turn. Left alone, that
+  // resizes the table and moves the page on every action. So the bar keeps the tallest height it has needed
+  // since you sat down, and the table above it keeps its size. It starts again when you leave the table or
+  // the window changes width.
+  window.CR_STEADY = function (el, name) {
+    let max = 0, w = innerWidth, gone = 0;
+    // what this bar needed last time on this page at this width, so even the first turn doesn't move the table
+    const key = () => "cr-bar:" + location.pathname + ":" + innerWidth;
+    const recall = () => { try { return Math.min(+localStorage.getItem(key()) || 0, Math.round(innerHeight * 0.55)); } catch { return 0; } };
+    const hold = h => {
+      max = h; el.style.minHeight = h + "px";
+      document.documentElement.style.setProperty(name, h + "px");
+      try { localStorage.setItem(key(), String(h)); } catch {}
+    };
+    const reset = () => { max = 0; el.style.minHeight = ""; };
+    el.classList.add("steady");
+    new ResizeObserver(() => {
+      const h = el.offsetHeight;
+      if (!h) { gone = gone || setTimeout(() => { gone = 0; if (!el.offsetHeight) reset(); }, 1200); return; }   // left the table
+      if (!max) return hold(Math.max(h, recall()));
+      if (h > max) hold(h);
+    }).observe(el);
+    addEventListener("resize", () => {
+      if (Math.abs(innerWidth - w) <= 24) return;   // a real resize or a turned phone, not a scrollbar flicker
+      w = innerWidth; reset();
+      requestAnimationFrame(() => { const h = el.offsetHeight; if (h) hold(Math.max(h, recall())); });
+    });
+  };
 
   // ---------- header buttons and the picker ----------
   document.addEventListener("DOMContentLoaded", () => {

@@ -156,36 +156,68 @@
   const lanternDefs = `<defs><radialGradient id="lg" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".75"/><stop offset=".55" stop-color="#ff7a2e" stop-opacity=".15"/><stop offset="1" stop-color="#5a0508" stop-opacity=".35"/></radialGradient></defs>`;
   const blossom = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-7" rx="5" ry="7" fill="#ffc9d6" transform="rotate(${a})"/>`).join("")}<circle r="3" fill="#ffd36b"/></g>`;
   const cloud = `<g fill="none" stroke="#e0b040" stroke-width="4" stroke-linecap="round" opacity=".75"><path d="M10 60 Q10 30 40 30 Q50 10 75 15 Q100 0 120 25 Q150 22 150 50 Q150 70 125 70 L30 70 Q10 70 10 60Z"/><path d="M40 52 q0 -14 14 -14 q14 0 14 14 q0 9 -9 9"/><path d="M100 50 q0 -12 12 -12 q12 0 12 12"/></g>`;
-  // a paper-cut dragon (flat red and gold) chasing a glowing pearl over lucky clouds
+  // a smiling dragon with scales, a flame mane and claws, chasing a flaming pearl over lucky clouds
   const dragon = `
+    <defs>
+      <linearGradient id="dgRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ef3340"/><stop offset=".6" stop-color="#c8102e"/><stop offset="1" stop-color="#8f0b1e"/></linearGradient>
+      <linearGradient id="dgGold" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9d2e"/><stop offset="1" stop-color="#ffe08a"/></linearGradient>
+      <radialGradient id="dgPearl" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fffdf0"/><stop offset=".5" stop-color="#ffd36b"/><stop offset="1" stop-color="#ff8a1f"/></radialGradient>
+      <pattern id="dgScale" width="9" height="8" patternUnits="userSpaceOnUse"><path d="M0 0 Q4.5 7 9 0 M-4.5 4 Q0 11 4.5 4 M4.5 4 Q9 11 13.5 4" fill="none" stroke="#ffcf5e" stroke-width="1.1" opacity=".75"/></pattern>
+    </defs>
     <g fill="none" stroke="#e0b040" stroke-width="3.5" stroke-linecap="round" opacity=".7">
-      <path d="M20 214 Q20 196 40 196 Q48 182 66 186 Q82 176 96 192 Q114 190 114 206 Q114 216 98 216 L34 216 Q20 216 20 214Z"/>
-      <path d="M190 220 Q190 204 208 204 Q216 192 232 196 Q246 188 258 202 Q274 200 274 214"/>
+      <path d="M14 222 Q14 206 32 206 Q40 194 56 198 Q70 190 82 204 Q98 202 98 216 Q98 224 84 224 L28 224 Q14 224 14 222Z"/>
+      <path d="M196 224 Q196 210 212 210 Q220 200 234 204 Q246 196 256 208 Q270 206 270 218"/>
     </g>
-    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#f0b53c" stroke-width="40" stroke-dasharray="7 9"/>
-    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#c8102e" stroke-width="28" stroke-linecap="round"/>
-    <path d="M28 170 C60 110 104 196 146 150 S 208 70 236 66" fill="none" stroke="#2a0606" stroke-width="12" stroke-dasharray="3 9" stroke-linecap="round"/>
-    <path d="M30 168 C10 176 4 160 14 150 C10 162 20 162 24 156 C18 146 26 136 34 140 C28 148 34 156 40 158Z" fill="#f0b53c"/>
-    <path d="M84 162 l-8 22 l10 -6 l2 10 l6 -12 l8 4 l-6 -20Z" fill="#c8102e"/>
-    <path d="M180 106 l2 24 l7 -9 l5 9 l3 -13 l9 2 l-12 -16Z" fill="#c8102e"/>
-    <g transform="translate(236 64)">
-      <path d="M-8 -12 C-22 -34 -14 -48 2 -46 C-8 -38 -2 -30 6 -26Z M-18 -2 C-36 -14 -36 -30 -24 -34 C-28 -22 -20 -16 -10 -12Z" fill="#f0b53c"/>
-      <path d="M2 -24 C-4 -40 -16 -46 -26 -44 M10 -24 C10 -42 2 -52 -8 -56" fill="none" stroke="#f0b53c" stroke-width="5" stroke-linecap="round"/>
-      <path d="M-16 6 C-18 -16 -2 -26 16 -22 C28 -20 36 -12 48 -10 C60 -8 64 2 58 10 C52 18 40 16 32 18 C22 24 -2 28 -16 6Z" fill="#c8102e"/>
-      <path d="M30 18 C38 26 50 24 56 16" fill="#f0b53c"/>
-      <circle cx="14" cy="-10" r="7" fill="#fff5d8"/><circle cx="16" cy="-10" r="3.6" fill="#2a0606"/><circle cx="17.4" cy="-11.6" r="1.2" fill="#fff"/>
-      <path d="M6 -19 Q14 -24 24 -18" fill="none" stroke="#2a0606" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="52" cy="-2" r="2.2" fill="#2a0606"/>
-      <path d="M34 8 Q44 14 54 8" fill="none" stroke="#2a0606" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M56 4 C72 8 78 24 70 36 M54 12 C62 28 56 42 44 46" fill="none" stroke="#f0b53c" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- tail tuft -->
+    <path transform="translate(22 204) rotate(-150) scale(1.1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(20 198) rotate(-110) scale(0.9)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(28 208) rotate(170) scale(0.8)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/>
+    <!-- back fins, drawn under the body so only their tips show -->
+    <path transform="translate(52 160) rotate(-35) scale(0.8)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(74 160) rotate(20) scale(0.8)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(104 198) rotate(150) scale(0.9)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(134 202) rotate(200) scale(0.9)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(166 150) rotate(60) scale(1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(158 122) rotate(70) scale(1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(178 88) rotate(-20) scale(1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(206 78) rotate(0) scale(1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/>
+    <g transform="translate(118 196) rotate(20) scale(1 1)">
+      <path d="M-6 0 C-8 12 -2 18 6 22 L12 30 L2 30 C-8 26 -16 16 -14 2Z" fill="#b00d24" stroke="#5c060f" stroke-width="1.5"/>
+      <path d="M2 30 l-6 9 M7 30 l0 10 M12 30 l7 8" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round" fill="none"/></g><g transform="translate(170 128) rotate(-70) scale(-1 1)">
+      <path d="M-6 0 C-8 12 -2 18 6 22 L12 30 L2 30 C-8 26 -16 16 -14 2Z" fill="#b00d24" stroke="#5c060f" stroke-width="1.5"/>
+      <path d="M2 30 l-6 9 M7 30 l0 10 M12 30 l7 8" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round" fill="none"/></g>
+    <path d="M24 200 C34 158 70 150 88 178" fill="none" stroke-linecap="round" stroke-width="20" stroke="#5c060f"/><path d="M88 178 C104 204 142 208 158 176" fill="none" stroke-linecap="round" stroke-width="28" stroke="#5c060f"/><path d="M158 176 C174 142 150 116 176 94 C196 78 220 86 232 72" fill="none" stroke-linecap="round" stroke-width="34" stroke="#5c060f"/>
+    <path d="M24 200 C34 158 70 150 88 178" fill="none" stroke-linecap="round" stroke-width="15" stroke="url(#dgRed)"/><path d="M88 178 C104 204 142 208 158 176" fill="none" stroke-linecap="round" stroke-width="23" stroke="url(#dgRed)"/><path d="M158 176 C174 142 150 116 176 94 C196 78 220 86 232 72" fill="none" stroke-linecap="round" stroke-width="29" stroke="url(#dgRed)"/>
+    <path d="M24 200 C34 158 70 150 88 178" fill="none" stroke-linecap="round" stroke-width="13" stroke="url(#dgScale)"/><path d="M88 178 C104 204 142 208 158 176" fill="none" stroke-linecap="round" stroke-width="21" stroke="url(#dgScale)"/><path d="M158 176 C174 142 150 116 176 94 C196 78 220 86 232 72" fill="none" stroke-linecap="round" stroke-width="27" stroke="url(#dgScale)"/>
+    <!-- a pale belly line and a highlight along the back -->
+    <path d="M24 200 C34 158 70 150 88 178 C104 204 142 208 158 176 C174 142 150 116 176 94 C196 78 220 86 232 72" fill="none" stroke="#ffe7a8" stroke-width="2.2" stroke-dasharray="1 5" stroke-linecap="round" opacity=".7" transform="translate(3 5)"/>
+    <g transform="translate(92 184) rotate(60) scale(1 1)">
+      <path d="M-6 0 C-8 12 -2 18 6 22 L12 30 L2 30 C-8 26 -16 16 -14 2Z" fill="#b00d24" stroke="#5c060f" stroke-width="1.5"/>
+      <path d="M2 30 l-6 9 M7 30 l0 10 M12 30 l7 8" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round" fill="none"/></g><g transform="translate(184 100) rotate(-30) scale(1 1)">
+      <path d="M-6 0 C-8 12 -2 18 6 22 L12 30 L2 30 C-8 26 -16 16 -14 2Z" fill="#b00d24" stroke="#5c060f" stroke-width="1.5"/>
+      <path d="M2 30 l-6 9 M7 30 l0 10 M12 30 l7 8" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round" fill="none"/></g>
+    <!-- head -->
+    <g transform="translate(236 66) scale(1.2)">
+      <!-- mane -->
+      <path transform="translate(-14 -2) rotate(-100) scale(1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(-12 -12) rotate(-70) scale(1.1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(-4 -20) rotate(-40) scale(1.1)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(-16 8) rotate(-130) scale(0.9)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(-10 16) rotate(-160) scale(0.8)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/>
+      <!-- antlers -->
+      <path d="M4 -22 C0 -36 -8 -42 -18 -44 M-4 -34 C-4 -42 0 -46 4 -50 M12 -22 C14 -36 10 -46 2 -54 M12 -38 C18 -42 20 -48 20 -54" fill="none" stroke="#ffd36b" stroke-width="4" stroke-linecap="round"/>
+      <!-- skull and snout -->
+      <path d="M-16 4 C-20 -16 -4 -26 14 -23 C26 -21 34 -14 46 -12 C60 -10 66 0 60 9 C56 15 46 15 38 16 C30 17 26 22 16 24 C2 27 -12 20 -16 4Z" fill="url(#dgRed)" stroke="#5c060f" stroke-width="1.6"/>
+      <!-- jaw, with a happy open mouth -->
+      <path d="M22 15 C30 26 46 26 56 15 C48 19 34 19 22 15Z" fill="#5c060f"/>
+      <path d="M26 17 l3 5 l3 -4 l3 5 l3 -4 l3 5 l3 -5 l3 4 l3 -5" fill="none" stroke="#fff5d8" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M14 22 C24 34 44 36 58 20 C50 36 28 40 14 22Z" fill="#b00d24" stroke="#5c060f" stroke-width="1.4"/>
+      <!-- beard -->
+      <path d="M22 34 C20 44 26 50 24 58 M32 37 C32 46 38 50 38 58" fill="none" stroke="#ffd36b" stroke-width="3" stroke-linecap="round"/>
+      <!-- brow, eye, nostril -->
+      <path d="M2 -20 C10 -28 22 -26 28 -17 C20 -20 10 -19 2 -14Z" fill="url(#dgGold)"/>
+      <circle cx="15" cy="-9" r="7.5" fill="#fff8e0" stroke="#5c060f" stroke-width="1.2"/><circle cx="17" cy="-9" r="4" fill="#2a0606"/><circle cx="18.6" cy="-10.8" r="1.4" fill="#fff"/>
+      <ellipse cx="54" cy="-3" rx="3" ry="2.2" fill="#5c060f"/><path d="M40 -10 C46 -14 54 -12 58 -8" fill="none" stroke="#ef6a70" stroke-width="1.6" stroke-linecap="round"/>
+      <!-- whiskers -->
+      <path d="M58 2 C74 2 84 14 80 30 C78 38 70 40 68 34 M56 8 C66 20 64 38 50 46 C44 49 40 44 44 40" fill="none" stroke="#ffd36b" stroke-width="2.6" stroke-linecap="round"/>
     </g>
-    <circle cx="300" cy="44" r="12" fill="#ffd36b"/><circle cx="296" cy="40" r="4" fill="#fff8e0"/>
-    <path d="M300 26 C296 18 304 14 302 6 M312 34 C318 28 316 20 320 16" fill="none" stroke="#ffb347" stroke-width="2.5" stroke-linecap="round"/>`;
+    <!-- the flaming pearl it chases -->
+    <g transform="translate(4 -13)">
+    <circle cx="300" cy="40" r="20" fill="#ffb347" opacity=".18"/>
+    <path transform="translate(300 26) rotate(-10) scale(0.9)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(312 32) rotate(40) scale(0.7)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/><path transform="translate(288 32) rotate(-50) scale(0.7)" d="M0 0 C-7 -8 -6 -18 2 -26 C1 -18 8 -16 7 -8 C12 -12 12 -18 11 -22 C18 -12 14 -2 6 2Z" fill="url(#dgGold)"/>
+    <circle cx="300" cy="42" r="12" fill="url(#dgPearl)"/><circle cx="296" cy="38" r="3.4" fill="#fffdf0" opacity=".9"/></g>`;
 
   const lanternNight = () => {
     const spots = [["福", 3, 26], ["喜", 17, 8], ["發", 81, 14], ["春", 94, 30], ["樂", 44, 2], ["吉", 62, 4]];
     return `${spots.map(([ch, x, len], i) => `<svg class="d sway-${i % 2 ? "2" : "1"} glow" viewBox="0 0 100 ${len + 170}" style="left:${x}vw;top:calc(var(--bar-h, 64px) - 4px);height:clamp(88px,${12 + len / 5}vh,${150 + len * 1.5}px);transform-origin:50% 0" preserveAspectRatio="xMidYMin meet" aria-hidden="true">${lanternDefs}${lantern(ch, len)}</svg>`).join("")}
-      ${svg("0 0 322 230", "left:0;bottom:0;width:clamp(150px,22vw,330px)", dragon, "float")}
+      ${svg("0 -18 322 248", "left:0;bottom:0;width:clamp(170px,26vw,400px)", dragon, "float")}
       ${svg("0 0 160 80", "right:3vw;bottom:4vh;width:clamp(80px,10.4vw,160px)", cloud)}
       ${svg("0 0 160 80", "right:16vw;bottom:14vh;width:clamp(56px,6.4vw,104px)", cloud, "drift")}`;
   };

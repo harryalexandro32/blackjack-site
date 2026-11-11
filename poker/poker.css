@@ -274,6 +274,8 @@
   .rail .status { font-size: .84rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 0; }
   .rail .act-row { flex-wrap: nowrap; gap: 6px; }
   .rail .act-row button { flex: 1 1 0; min-width: 0; padding: 11px 6px; }
+  .rail .act-row.pre-row { flex-wrap: wrap; }   /* its label takes a line of its own */
+  .rail .pre-row .pre-label { font-size: .62rem; }
   .rail .act-row .money-input { flex: 0 1 auto; }
   .rail .act-row .money-input input { width: 6ch; }
   /* the raise slider opens above the bar, over the table, only after tapping Raise */

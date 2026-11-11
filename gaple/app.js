@@ -155,7 +155,7 @@ function showScreen(id) {
 }
 const sizeVar = (el, name) => new ResizeObserver(() => document.documentElement.style.setProperty(name, el.offsetHeight + "px")).observe(el);
 sizeVar(document.querySelector(".bar"), "--bar-h");
-sizeVar($("grail"), "--rail-h");
+(window.CR_STEADY || sizeVar)($("grail"), "--rail-h"); // keeps its tallest height, so the table stops resizing each turn
 new ResizeObserver(() => { if (view && !view.ended) render(); }).observe($("gboard"));
 
 let ctrl = null, unsub = null, view = null;

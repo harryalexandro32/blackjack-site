@@ -63,7 +63,7 @@ function showScreen(id) {
 }
 const sizeVar = (el, name) => new ResizeObserver(() => document.documentElement.style.setProperty(name, el.offsetHeight + "px")).observe(el);
 sizeVar(document.querySelector(".bar"), "--bar-h");
-sizeVar($("crail"), "--rail-h");
+(window.CR_STEADY || sizeVar)($("crail"), "--rail-h"); // keeps its tallest height, so the table stops resizing each turn
 
 let ctrl = null, unsub = null, view = null;
 function attach(controller) {
