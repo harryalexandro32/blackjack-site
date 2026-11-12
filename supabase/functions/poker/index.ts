@@ -13,6 +13,7 @@ import * as KR from "../_shared/checkers-room.js";
 import * as HR from "../_shared/heist-room.js";
 import * as GR from "../_shared/gaple-room.js";
 import * as NR from "../_shared/cangkul-room.js";
+import { sealCast } from "../_shared/cast.js";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -50,7 +51,7 @@ async function load(by: { id?: string; code?: string }) {
 async function commit(roomId: string, version: number, state: any) {
   const M = rulesFor(state);
   const { error } = await db.rpc("poker_commit", {
-    p_room: roomId, p_version: version, p_state: state, p_public: M.publicState(state), p_status: M.roomStatus(state)
+    p_room: roomId, p_version: version, p_state: state, p_public: M.publicState(state), p_status: M.roomStatus(state), p_cast: await sealCast(state, M)
   });
   if (error) {
     if (String(error.message).includes("version_conflict")) return false;

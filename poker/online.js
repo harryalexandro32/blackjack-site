@@ -146,18 +146,37 @@ export class OnlineTable {
 
   // Take a server answer, unless a newer one already arrived (answers can come back out of order).
   take(r) {
-    if (r.v != null) { if (r.v < this.v) return; this.v = r.v; }
+    if (r.v != null && r.v < this.v) return;
     this.offset = r.serverNow - Date.now();
+    if (r.v != null && r.v === this.v) return;     // the room's update message already brought this very table
+    if (r.v != null) this.v = r.v;
     this.accept(r.state);
   }
 
   // The room says something changed (v = the room's new version). Skip it when this browser already has that
   // version; while a move of our own is on its way, wait for its answer, which usually is that very change.
   onUpdate(msg) {
-    const v = msg && msg.payload && typeof msg.payload.v === "number" ? msg.payload.v : Infinity;
+    const p = (msg && msg.payload) || {}, v = typeof p.v === "number" ? p.v : Infinity;
     if (v <= this.v) return;
+    // the message usually carries the new table itself: our own part of it is encrypted for this browser
+    const mine = p.c && p.p && p.p[this.seat.playerId];
+    if (mine) { this.openCast(p.c, mine, v).catch(() => this.refresh()); return; }
     if (this.sending) { this.held = Math.max(this.held, v); return; }
     this.refresh();
+  }
+
+  async openCast(common, mine, v) {
+    const enc = new TextEncoder(), bytes = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+    this.castKey ||= (async () => {
+      const hash = await crypto.subtle.digest("SHA-256", enc.encode(this.seat.token));
+      const hex = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, "0")).join("");
+      return crypto.subtle.importKey("raw", await crypto.subtle.digest("SHA-256", enc.encode("cast:" + hex)), "AES-GCM", false, ["decrypt"]);
+    })();
+    const [iv, ct] = mine.split(".");
+    const own = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes(iv) }, await this.castKey, bytes(ct))));
+    if (v <= this.v) return;                       // something newer arrived while this was being opened
+    this.v = v;
+    this.accept({ code: this.state.code, ...common, ...own });
   }
 
   // Browsers take turns nudging the clock: the first person at the table goes at once, the next ones only if
