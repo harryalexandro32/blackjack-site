@@ -55,6 +55,7 @@
       </form>
       <div class="panel rules-panel">
         <h2>House rules</h2>
+        <p class="sheet-open"><button type="button" class="ghost" data-open-sheet="basics">Cheat sheet: the basics</button><button type="button" class="ghost" data-open-sheet="faan">Cheat sheet: faan and points</button></p>
         <ul class="rules-list">
           <li>Hong Kong rules with 144 tiles: three suits (dots, bamboo, characters), winds, dragons, and 4 flowers + 4 seasons.</li>
           <li>A winning hand is <b>4 sets and a pair</b>. Sets: a <b>chow</b> (three in a row, one suit), a <b>pung</b> (three the same) or a <b>kong</b> (four the same). Seven pairs and thirteen orphans also win.</li>
@@ -118,6 +119,7 @@
 
     <div class="crail" id="crail">
       <div class="status" id="status" aria-live="polite"></div>
+      <div class="coach-box" id="coachBox" hidden aria-live="polite"></div>
       <div class="claim-row" id="claimRow" hidden></div>
       <div class="hand-wrap"><div class="mymelds" id="myMelds"></div><div class="myhand mhand" id="myHand" role="group" aria-label="Your tiles"></div></div>
       <div class="timer" id="myTimer"></div>
@@ -130,6 +132,10 @@
       <div class="act-row" id="betweenRow" hidden>
         <button class="primary" id="btnNext">Next hand</button>
         <button class="primary" id="btnStart" hidden>Start the game</button>
+      </div>
+      <div class="aid-row">
+        <button type="button" class="ghost" id="btnCoach" aria-pressed="false" title="The coach explains the best move on every decision">Coach: off</button>
+        <button type="button" class="ghost" data-open-sheet>Cheat sheet</button>
       </div>
     </div>
 
@@ -182,6 +188,18 @@
 
 </main>
 </div>
+
+<dialog id="sheetDlg" class="look-dlg sheet-dlg" aria-labelledby="sheetTitle">
+  <form method="dialog" class="look-in">
+    <div class="look-head"><div class="look-head-text"><h2 id="sheetTitle">Cheat sheet</h2>
+      <div class="seg" role="group" aria-label="Which cheat sheet"><button type="button" data-sheet-tab="basics" aria-pressed="true">The basics</button><button type="button" data-sheet-tab="faan" aria-pressed="false">Faan and points</button></div></div></div>
+    <div class="look-body" id="sheetBody"></div>
+    <div class="look-foot">
+      <button type="button" class="ghost" id="sheetPdf" title="Opens the print window: choose Save as PDF there">Save as PDF</button>
+      <button value="close" class="primary">Close</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="ledgerDlg" class="look-dlg ledger-dlg" aria-labelledby="ldTitle">
   <form method="dialog" class="look-in">

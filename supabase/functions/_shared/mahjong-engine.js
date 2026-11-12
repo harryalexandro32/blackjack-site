@@ -120,7 +120,7 @@ export const FAAN = {
   allChows: ["All chows", 1], allPungs: ["All pungs", 3], mixed: ["Mixed one suit", 3], pure: ["Pure one suit", 7], small3: ["Small three dragons", 5], big3: ["Big three dragons", 8],
   sevenPairs: ["Seven pairs", 4], lastWall: ["Last tile from the wall", 1], lastDiscard: ["Won on the last discard", 1], kongWin: ["Won on a kong replacement", 1], robbing: ["Robbing a kong", 1]
 };
-const LIMITS = { thirteen: "Thirteen orphans", honors: "All honours", bigWinds: "Big four winds", smallWinds: "Small four winds", gates: "Nine gates",
+export const LIMITS = { thirteen: "Thirteen orphans", honors: "All honours", bigWinds: "Big four winds", smallWinds: "Small four winds", gates: "Nine gates",
   fourConcealed: "Four concealed pungs", terminals: "All terminals", allKongs: "All kongs", heavenly: "Heavenly hand", earthly: "Earthly hand" };
 
 export const seatWindOf = (g, seat) => (seat - g.dealer + SEATS) % SEATS;

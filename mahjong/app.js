@@ -1,7 +1,8 @@
 // Mahjong screens. Works with LocalMahjong (bots) or OnlineMahjong (friends).
 import * as M from "../supabase/functions/_shared/mahjong-engine.js";
-import { mahjongMove } from "../supabase/functions/_shared/mahjong-bot.js";
 import { tileSvg } from "./tiles.js";
+import { advise, review } from "./coach.js";
+import { initSheet } from "./sheet.js";
 import { settle } from "../supabase/functions/_shared/poker-engine.js";
 import { REACTIONS } from "../supabase/functions/_shared/poker-room.js";
 import { LocalMahjong, savedMahjongGame } from "./local.js";
@@ -231,6 +232,9 @@ const WIND_CH = ["東", "南", "西", "北"];
 const windOf = (g, seat) => (seat - g.dealer + 4) % 4;
 
 let selected = null, hintTile = null, lastLog = null, lastGame = null, lastTurn = null, bannerFor = null;
+// The coach. With coach mode on, every decision of yours comes with the advised move and the reasons for it;
+// with it off, the Hint button shows the advised move once. `advice` belongs to one decision (adviceKey).
+let coachOn = store.get("mj-coach", false), advice = null, adviceKey = "", hintOn = false, coachNote = "";
 
 function tileEl(code, cls = "") {
   const el = document.createElement("div");
@@ -316,6 +320,12 @@ function render() {
   let drawnAt = -1;
   if (myTurn && g.drawn && hand.includes(g.drawn)) { hand.splice(hand.lastIndexOf(g.drawn), 1); hand.push(g.drawn); drawnAt = hand.length - 1; }
   if (selected !== null && (selected >= hand.length || !myTurn)) selected = null;
+  // the coach's advice for this decision (worked out once per decision, and only when it is wanted)
+  const dKey = g && !g.finished ? `${g.no}:${g.logCount}:${o ? o.kind : "-"}` : "";
+  if (dKey !== adviceKey) { adviceKey = dKey; advice = null; hintOn = false; if (o) coachNote = ""; }
+  if (dKey && (coachOn || hintOn) && !advice) { try { advice = advise(view); } catch { advice = null; } }
+  const tip = advice && advice.move ? advice.move : null;
+  hintTile = tip && tip.type === "discard" ? tip.tile : null;
   const hb = $("myHand");
   fill(hb, hand.join() + ":" + drawnAt, box => hand.forEach((t, i) => box.appendChild(tileEl(t, i === drawnAt ? "drawn" : ""))));
   [...hb.children].forEach((el, i) => { el.classList.toggle("sel", i === selected); el.classList.toggle("hint", !!hintTile && el.dataset.t === hintTile && myTurn); });
@@ -333,12 +343,14 @@ function render() {
       b.append("Kong "); b.appendChild(tileEl(t));
       box.appendChild(b);
     }));
+    $("btnWin").classList.toggle("hint", !!tip && tip.type === "win");
+    [...$("kongBtns").children].forEach(b => b.classList.toggle("hint", !!tip && tip.type === "kong" && b.dataset.kong === tip.tile));
   } else $("kongBtns").innerHTML = "", $("kongBtns").dataset.key = "";
 
   // claiming a discard (or robbing a kong)
   const claiming = !!(o && (o.kind === "claim" || o.kind === "rob"));
   $("claimRow").hidden = !claiming;
-  fill($("claimRow"), claiming ? JSON.stringify(o) : "", box => {
+  fill($("claimRow"), claiming ? JSON.stringify(o) + JSON.stringify(tip) + coachOn : "", box => {
     if (!claiming) return;
     const what = document.createElement("div"); what.className = "what";
     const from = o.kind === "rob" ? g.kong.seat : g.last.by;
@@ -348,6 +360,7 @@ function render() {
       const b = document.createElement("button"); b.className = cls; b.append(label);
       tiles.forEach(t => b.appendChild(tileEl(t)));
       b.onclick = guard(() => sendMove(move));
+      if (tip && tip.type === "claim" && tip.claim === move.claim && (move.claim !== "chow" || String(move.tiles) === String(tip.tiles))) b.classList.add("hint");
       box.appendChild(b);
     };
     if (o.win) btn(`Mahjong! · ${o.win.faan} faan`, "win-btn", { type: "claim", claim: "win" });
@@ -355,6 +368,17 @@ function render() {
     if (o.pung) btn("Pung", "primary", { type: "claim", claim: "pung" });
     (o.chows || []).forEach(pair => btn("Chow", "primary", { type: "claim", claim: "chow", tiles: pair }, [...pair, o.tile].sort(M.byTile)));
     btn("Pass", "ghost", { type: "claim", claim: "pass" });
+    if (!coachOn) { const h = document.createElement("button"); h.className = "ghost hint-btn"; h.textContent = "Hint"; h.onclick = showHint; box.appendChild(h); }
+  });
+
+  // the coach's explanation
+  const coaching = coachOn && !!dKey && !!advice;
+  $("coachBox").hidden = !coaching;
+  fill($("coachBox"), coaching ? dKey + "|" + coachNote : "", box => {
+    if (!coaching) return;
+    const head = document.createElement("b"); head.textContent = "Coach"; box.appendChild(head);
+    if (coachNote) { const p = document.createElement("p"); p.className = "said"; p.textContent = coachNote; box.appendChild(p); }
+    advice.lines.forEach(line => { const p = document.createElement("p"); p.textContent = line; box.appendChild(p); });
   });
 
   const fin = g && g.finished;
@@ -364,7 +388,7 @@ function render() {
   $("btnStart").textContent = view.sessions && view.sessions.length ? `Start session ${view.sessionNo}` : "Start the game";
   $("btnHint").disabled = !myTurn;
 
-  $("status").textContent = statusText(g);
+  $("status").textContent = hintOn && advice && advice.short ? advice.short : statusText(g);
   renderLog(g);
   renderScores();
   renderTools();
@@ -658,7 +682,16 @@ setInterval(tickClock, 250);
 
 // ---------- input ----------
 function guard(fn) { return async (...a) => { try { await fn(...a); } catch (err) { $("status").textContent = err.message; } }; }
-async function sendMove(m) { selected = null; hintTile = null; await ctrl.move(m); }
+async function sendMove(m) {
+  // with the coach on, a throw that isn't the advised one gets a word about what it cost
+  if (coachOn && m.type === "discard") { try { coachNote = review(view, m.tile) || ""; } catch { coachNote = ""; } }
+  selected = null; hintTile = null;
+  await ctrl.move(m);
+}
+// Hint: the coach's move for this decision, shown once (the tile or button lights up, the status line says it).
+function showHint() { if (!view || !view.game || !view.game.options) return; hintOn = true; advice = null; selected = null; render(); }
+function drawCoachBtn() { const b = $("btnCoach"); b.setAttribute("aria-pressed", String(coachOn)); b.textContent = coachOn ? "Coach: on" : "Coach: off"; }
+$("btnCoach").onclick = () => { coachOn = !coachOn; store.set("mj-coach", coachOn); advice = null; drawCoachBtn(); if (view) render(); };
 $("myHand").addEventListener("click", guard(async e => {
   const el = e.target.closest(".tile"); if (!el || !view || !view.game || !view.game.options || view.game.options.kind !== "turn") return;
   const i = [...$("myHand").children].indexOf(el);
@@ -668,20 +701,7 @@ $("myHand").addEventListener("click", guard(async e => {
 $("btnDiscard").onclick = guard(async () => { const el = $("myHand").children[selected]; if (el) { lastDiscardRect = el.getBoundingClientRect(); await sendMove({ type: "discard", tile: el.dataset.t }); } });
 $("btnWin").onclick = guard(() => sendMove({ type: "win" }));
 $("kongBtns").addEventListener("click", guard(async e => { const b = e.target.closest("[data-kong]"); if (b) await sendMove({ type: "kong", tile: b.dataset.kong }); }));
-$("btnHint").onclick = () => {
-  const g = view.game; if (!g || !g.options) return;
-  // the bots' own judgement, from what you can see
-  const pseudo = {
-    hands: g.counts.map((n, i) => i === view.me ? g.hand.slice() : []), melds: g.melds, flowers: g.flowers, discards: g.discards, wall: { length: g.wallLeft },
-    turn: g.turn, phase: g.phase, drawn: g.drawn, dealer: g.dealer, round: g.round, minFaan: g.minFaan, last: g.last, kong: g.kong, claims: null,
-    fresh: [false, false, false, false], anyClaim: true, afterKong: false, lastTile: g.wallLeft === 0, finished: null
-  };
-  const m = mahjongMove(pseudo, view.me, "expert");
-  if (!m) return;
-  if (m.type === "discard") { hintTile = m.tile; selected = null; render(); $("status").textContent = `Hint: throw ${M.tileName(m.tile)}.`; }
-  else if (m.type === "win") $("status").textContent = "Hint: declare Mahjong!";
-  else if (m.type === "kong") $("status").textContent = `Hint: declare a kong of ${M.tileName(m.tile)}.`;
-};
+$("btnHint").onclick = showHint;
 $("btnNext").onclick = guard(() => ctrl.nextGame());
 $("btnStart").onclick = guard(() => ctrl.start());
 $("btnLook").onclick = guard(async () => {
@@ -819,4 +839,6 @@ $("btnSumCopy").onclick = async () => {
 
 compact.addEventListener("change", () => view && render());
 window.addEventListener("resize", () => view && !view.ended && render());
+drawCoachBtn();
+initSheet();
 initSetup();

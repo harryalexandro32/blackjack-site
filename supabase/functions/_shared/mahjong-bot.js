@@ -17,8 +17,12 @@ const MEMORY = {
   easy: { fresh: 3, keep: 0.45, wobble: 12, slip: 0.35 },
   normal: { fresh: 4, keep: 0.6, wobble: 8, slip: 0.1 },
   hard: { fresh: 6, keep: 0.82, wobble: 3, slip: 0 },
-  expert: { fresh: Infinity, keep: 1, wobble: 0, slip: 0 }
+  expert: { fresh: Infinity, keep: 1, wobble: 0, slip: 0 },
+  // not a bot level: the advice behind the Hint button and the coach. Expert's judgement with no dice in it,
+  // so the same position always gets the same advice.
+  coach: { fresh: Infinity, keep: 1, wobble: 0, slip: 0 }
 };
+const sharp = skill => skill === "hard" || skill === "expert" || skill === "coach";
 const memoryOf = skill => MEMORY[skill] || MEMORY.normal;
 // The same discard is remembered or forgotten for the whole game (a steady 0..1 number per game, seat and tile thrown).
 function recall(g, seat, player, k) {
@@ -28,7 +32,7 @@ function recall(g, seat, player, k) {
 }
 
 // Tiles this seat believes nobody has shown yet.
-function unseen(g, seat, skill = "expert") {
+export function unseen(g, seat, skill = "expert") {
   const mem = memoryOf(skill);
   const seen = new Array(34).fill(0);
   const add = t => { if (t[1] !== "f") seen[indexOf(t)]++; };
@@ -43,7 +47,7 @@ function unseen(g, seat, skill = "expert") {
 }
 
 // The plan: which hand to aim for.
-function plan(g, seat) {
+export function plan(g, seat) {
   const all = [...g.hands[seat], ...g.melds[seat].flatMap(m => m.tiles)];
   const bySuit = { m: 0, p: 0, s: 0 };
   let honors = 0;
@@ -97,7 +101,7 @@ function chooseDiscard(g, seat, skill) {
     if (isHonor(t) && hand.filter(x => x === t).length === 1) s -= p.valueHonor(i) ? 1 : 3;
     else if (!isHonor(t) && (t[0] === "1" || t[0] === "9")) s -= 1;
     // late in the hand, careful players avoid tiles nobody has thrown (hard bots only)
-    if ((skill === "hard" || skill === "expert") && g.wall.length < 30 && !g.discards.some(d => d.some(x => x.t === t))) s += 4;
+    if (sharp(skill) && g.wall.length < 30 && !g.discards.some(d => d.some(x => x.t === t))) s += 4;
     return { t, s };
   }).sort((a, b) => a.s - b.s);
   if (rnd() < memoryOf(skill).slip) return scored[Math.min(scored.length - 1, 1 + Math.floor(rnd() * 2))].t;
@@ -123,7 +127,7 @@ function claimWorth(g, seat, o, skill) {
     if (worth && (skill !== "easy" || rnd() < 0.7)) return { claim: "pung" };
   }
   if (o.chows && (p.kind === "fast" || (p.kind === "flush" && t[1] === p.suit))) {
-    for (const pair of o.chows) if (after(pair) < before && rnd() < (skill === "expert" ? 0.9 : skill === "hard" ? 0.85 : 0.75)) return { claim: "chow", tiles: pair };
+    for (const pair of o.chows) if (after(pair) < before && (skill === "coach" || rnd() < (skill === "expert" ? 0.9 : skill === "hard" ? 0.85 : 0.75))) return { claim: "chow", tiles: pair };
   }
   return { claim: "pass" };
 }

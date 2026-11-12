@@ -181,3 +181,34 @@ test("bot levels: the room accepts expert, and only expert keeps a perfect tile 
   assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "expert", minFaan: 0 }).skill, "expert");
   assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "wizard", minFaan: 0 }).skill, "normal");
 });
+
+test("the coach: every decision gets a legal move and its reasons, claims included, and the same answer each time", async () => {
+  const { advise, review } = await import("./mahjong/coach.js");
+  const kinds = {};
+  for (let n = 1; n <= 30; n++) {
+    const g = M.startGame(n, shuffled, { dealer: n % 4, minFaan: n % 2 ? 3 : 0 });
+    for (let step = 0; step < 3000 && !g.finished; step++) {
+      const seats = g.phase === "discard" ? [g.turn] : Object.keys(g.claims || {}).map(Number).filter(s => !g.claims[s].decision);
+      for (const s of seats) {
+        if (g.finished) break;
+        const view = { me: s, game: JSON.parse(JSON.stringify(M.viewFor(g, s))) };
+        const a = advise(view);
+        assert.ok(a && a.move && a.short && a.lines.length >= 1, "advice with reasons");
+        assert.deepStrictEqual(advise(view).move, a.move, "the same position gets the same advice");
+        a.lines.forEach(l => assert.ok(!/undefined|NaN|null/.test(l), l));
+        const kind = a.move.type === "claim" ? a.move.claim : a.move.type;
+        kinds[kind] = (kinds[kind] || 0) + 1;
+        if (a.move.type === "discard") {
+          const other = view.game.hand.find(t => t !== a.move.tile);
+          if (other) { const r = review(view, other); assert.ok(typeof r === "string" && !/undefined|NaN/.test(r)); }
+          assert.strictEqual(review(view, a.move.tile), null);
+        }
+        // a watcher (not their decision) gets the plan and where the hand stands
+        const idle = (s + 1) % 4, iv = { me: idle, game: JSON.parse(JSON.stringify(M.viewFor(g, idle))) };
+        if (!iv.game.options) { const b = advise(iv); assert.ok(b && b.move === null && b.lines.length === 2); }
+        M.act(g, s, a.move);                                   // throws if the advised move isn't legal
+      }
+    }
+  }
+  for (const k of ["discard", "pass", "pung", "chow", "win"]) assert.ok(kinds[k] > 0, `saw ${k}: ${JSON.stringify(kinds)}`);
+});
