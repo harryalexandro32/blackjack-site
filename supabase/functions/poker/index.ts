@@ -39,14 +39,12 @@ const GAME_NAMES: any = { gaple: "a Gaple room", cangkul: "a Cangkul room", heis
 const PAGES: any = { gaple: "the Gaple page", cangkul: "the Cangkul page", heist: "the Heist page", checkers: "the Checkers page", undercover: "the Undercover page", werewolf: "the Werewolf page", ludo: "the Ludo page", capsa: "the Capsa page", mahjong: "the Mahjong page", poker: "the poker page" };
 
 async function load(by: { id?: string; code?: string }) {
-  let q = db.from("poker_rooms").select("id, code, version, status");
-  q = by.id ? q.eq("id", by.id) : q.eq("code", String(by.code || "").toUpperCase());
-  const { data: room, error } = await q.maybeSingle();
+  // one round trip for the room and its secret state
+  const { data, error } = await db.rpc("poker_load", { p_id: by.id || null, p_code: by.id ? null : String(by.code || "") });
   if (error) throw error;
-  if (!room) return null;
-  const { data: sec, error: e2 } = await db.from("poker_secrets").select("state").eq("room_id", room.id).single();
-  if (e2) throw e2;
-  return { room, state: sec.state };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return { room: { id: row.id, code: row.code, version: row.version, status: row.status }, state: row.state };
 }
 
 async function commit(roomId: string, version: number, state: any) {
@@ -80,15 +78,16 @@ async function createRoom(body: any) {
   throw new R.RoomError("Couldn't open a room right now. Try again.");
 }
 
-// Load, apply, save; retry on a write conflict.
+// Load, apply, save; retry on a write conflict. Returns what fn returned, the room's id and its version after
+// this request (browsers compare that with the version in the room's "update" message to skip needless re-reads).
 async function mutate(by: { id?: string; code?: string }, fn: (state: any, room: any) => any) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const loaded = await load(by);
     if (!loaded) throw new R.RoomError("No table or room with that code.");
     const { room, state } = loaded;
     const out = await fn(state, room);
-    if (out && out.readOnly) return out.result;
-    if (await commit(room.id, room.version, state)) return out.result;
+    if (out && out.readOnly) return { result: out.result, roomId: room.id, v: room.version };
+    if (await commit(room.id, room.version, state)) return { result: out.result, roomId: room.id, v: room.version + 1 };
     await new Promise(r => setTimeout(r, 40 + Math.random() * 120));
   }
   throw new R.RoomError("The room is busy. Try again.");
@@ -126,34 +125,32 @@ Deno.serve(async req => {
     if (type === "claim") {
       const token = newToken(), tokenHash = await sha256(token), hostKeyHash = await sha256(String(body.hostKey || ""));
       let playerId = "";
-      const result = await mutate({ code: body.code }, state => {
+      const done = await mutate({ code: body.code }, state => {
         const M = rulesFor(state);
         playerId = M.claimHost(state, { hostKeyHash, id: crypto.randomUUID(), tokenHash, now: Date.now() });
         return { result: M.personalState(state, playerId) };
       });
-      const loaded = await load({ code: body.code });
-      return json({ roomId: loaded!.room.id, playerId, token, state: result, serverNow: Date.now() });
+      return json({ roomId: done.roomId, playerId, token, state: done.result, v: done.v, serverNow: Date.now() });
     }
 
     // Joining takes a seat; watching (poker) takes a seat-less spot. Both get a private token for later requests.
     if (type === "join" || type === "watch") {
       const token = newToken(), id = crypto.randomUUID(), tokenHash = await sha256(token);
-      const result = await mutate({ code: body.code }, state => {
+      const done = await mutate({ code: body.code }, state => {
         const M = rulesFor(state);
         const kind = ROOMS[state.game] ? state.game : "poker";
         if (body.game && body.game !== kind) throw new R.RoomError(`That code is ${GAME_NAMES[kind]}. Join it from ${PAGES[kind]}.`);
         M.applyAction(state, { type, name: body.name, buyIn: body.buyIn, avatar: body.avatar, show: body.show }, { now: Date.now(), playerId: id, tokenHash, shuffledDeck });
         return { result: { roomId: null, playerId: id, token, state: M.personalState(state, id) } };
       });
-      const loaded = await load({ code: body.code });
-      return json({ ...result, roomId: loaded!.room.id, serverNow: Date.now() });
+      return json({ ...done.result, roomId: done.roomId, v: done.v, serverNow: Date.now() });
     }
 
     // Everything else is a seated (or departed) player acting in their room.
     const roomId = String(body.roomId || ""), token = String(body.token || "");
     if (!roomId || !token) return json({ error: "Missing room or player." }, 400);
     const tokenHash = await sha256(token);
-    const result = await mutate({ id: roomId }, state => {
+    const done = await mutate({ id: roomId }, state => {
       const M = rulesFor(state);
       const playerId = M.findPlayerByTokenHash(state, tokenHash);
       if (!playerId) throw new R.RoomError("You're not in this room.");
@@ -164,7 +161,7 @@ Deno.serve(async req => {
       const unchanged = JSON.stringify(state) === before;
       return { readOnly: unchanged, result: M.personalState(state, playerId) };
     });
-    return json({ state: result, serverNow: Date.now() });
+    return json({ state: done.result, v: done.v, serverNow: Date.now() });
   } catch (err) {
     if (err instanceof R.RoomError) return json({ error: err.message }, 409);
     console.error(err);

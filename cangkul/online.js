@@ -70,11 +70,12 @@ export class OnlineCangkul {
     this.listeners = new Set();
     this.offset = serverNow - Date.now();
     this.lastTick = 0;
+    this.v = 0; this.sending = 0; this.held = 0; this.leadUntil = 0;
     this.accept(state);
     this.live = false;
     this.lastRefresh = Date.now();
     this.poll = setInterval(() => { if (Date.now() - this.lastRefresh > (this.live ? 15000 : 2000)) this.refresh(); }, 1000);
-    this.clock = setInterval(() => this.checkClock(), 400);
+    this.clock = setInterval(() => this.checkClock(), 100);
     this.listen();
   }
 
@@ -83,7 +84,7 @@ export class OnlineCangkul {
       const lib = await realtimeLib();
       this.client = lib.createClient(CONFIG.supabaseUrl, CONFIG.anonKey, { auth: { persistSession: false } });
       this.channel = this.client.channel("room-" + this.seat.roomId)
-        .on("broadcast", { event: "update" }, () => this.refresh())
+        .on("broadcast", { event: "update" }, msg => this.onUpdate(msg))
         .subscribe(status => { this.live = status === "SUBSCRIBED"; });
     } catch { /* polling keeps up */ }
   }
@@ -99,7 +100,7 @@ export class OnlineCangkul {
   async refresh() {
     if (this.refreshing) { this.again = true; return; }
     this.refreshing = true;
-    try { const r = await call({ type: "state", roomId: this.seat.roomId, token: this.seat.token }); this.offset = r.serverNow - Date.now(); this.accept(r.state); }
+    try { this.take(await call({ type: "state", roomId: this.seat.roomId, token: this.seat.token })); }
     catch { /* next time */ }
     finally { this.refreshing = false; if (this.again) { this.again = false; this.refresh(); } }
   }
@@ -107,18 +108,50 @@ export class OnlineCangkul {
   // The server only moves when asked: any open browser nudges it when a turn, a bot's pause or the next deal is due.
   checkClock() {
     const s = this.state, now = Date.now() + this.offset;
-    if (!s || s.closed || s.left) return;
-    const due = (s.deadline && now > s.deadline + 300) || (s.botAt && now > s.botAt + 100) || (s.nextGameAt && now > s.nextGameAt + 150);
+    if (!s || s.closed || s.left || this.refreshing || this.sending) return;
+    const wait = this.nudgeWait();
+    const due = (s.deadline && now > s.deadline + 300 + wait) || (s.botAt && now > s.botAt + 30 + wait) || (s.nextGameAt && now > s.nextGameAt + 100 + wait);
     if (due && Date.now() - this.lastTick > 900) {
       this.lastTick = Date.now() + Math.random() * 300;
+      if (wait) this.leadUntil = Date.now() + 15000;   // the first in line seems away: this browser leads for a while
       this.send("tick").catch(() => {});
     }
   }
 
   async send(type, action = {}) {
-    const r = await call({ type, action, roomId: this.seat.roomId, token: this.seat.token });
+    this.sending++;
+    try { this.take(await call({ type, action, roomId: this.seat.roomId, token: this.seat.token })); }
+    finally {
+      this.sending--;
+      if (!this.sending) { const held = this.held; this.held = 0; if (held > this.v) this.refresh(); }
+    }
+  }
+
+  // Take a server answer, unless a newer one already arrived (answers can come back out of order).
+  take(r) {
+    if (r.v != null) { if (r.v < this.v) return; this.v = r.v; }
     this.offset = r.serverNow - Date.now();
     this.accept(r.state);
+  }
+
+  // The room says something changed (v = the room's new version). Skip it when this browser already has that
+  // version; while a move of our own is on its way, wait for its answer, which usually is that very change.
+  onUpdate(msg) {
+    const v = msg && msg.payload && typeof msg.payload.v === "number" ? msg.payload.v : Infinity;
+    if (v <= this.v) return;
+    if (this.sending) { this.held = Math.max(this.held, v); return; }
+    this.refresh();
+  }
+
+  // Browsers take turns nudging the clock: the first person at the table goes at once, the next ones only if
+  // nothing has happened a moment later (so a table of four doesn't send four requests for every bot move).
+  nudgeWait() {
+    if (Date.now() < this.leadUntil) return 0;
+    const s = this.state, seats = s.seats || (s.table && s.table.seats) || [];
+    const people = [];
+    seats.forEach((x, i) => { if (x && !x.bot) people.push(i); });
+    const k = people.indexOf(s.me);
+    return Math.min(3, k < 0 ? people.length : k) * 700;
   }
 
   subscribe(fn) { this.listeners.add(fn); fn(this.view()); return () => this.listeners.delete(fn); }
