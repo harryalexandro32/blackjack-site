@@ -676,7 +676,7 @@ $("btnHint").onclick = () => {
     turn: g.turn, phase: g.phase, drawn: g.drawn, dealer: g.dealer, round: g.round, minFaan: g.minFaan, last: g.last, kong: g.kong, claims: null,
     fresh: [false, false, false, false], anyClaim: true, afterKong: false, lastTile: g.wallLeft === 0, finished: null
   };
-  const m = mahjongMove(pseudo, view.me, "hard");
+  const m = mahjongMove(pseudo, view.me, "expert");
   if (!m) return;
   if (m.type === "discard") { hintTile = m.tile; selected = null; render(); $("status").textContent = `Hint: throw ${M.tileName(m.tile)}.`; }
   else if (m.type === "win") $("status").textContent = "Hint: declare Mahjong!";

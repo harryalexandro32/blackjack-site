@@ -1,5 +1,8 @@
 // Mahjong bots, shared by the browser (bots mode) and the server (empty seats online).
 // They see only their own tiles and what's on the table (discards, melds, flowers).
+// Four levels. Expert counts every tile on the table exactly. The others keep track the way people do: they
+// always know the melds and the latest discards, but older discards slip their mind (more of them the lower the
+// level), and their judgement of close calls wobbles a little. Easy also throws a careless tile now and then.
 // Each turn they pick the discard that leaves the hand closest to ready (shanten) with the most useful tiles still
 // unseen (ukeire). When the table needs 3 faan they also steer towards a hand that can reach it: one suit,
 // all pungs, or dragon and wind pungs, and only claim discards that fit that plan.
@@ -7,12 +10,34 @@ import { counts, shanten, indexOf, tileAt, isHonor, isDragon, options, act, seat
 
 const rnd = Math.random;
 
-// Tiles nobody can see yet, from this seat's point of view.
-function unseen(g, seat) {
+// How well each level remembers the discards: the last `fresh` tiles of each player are always remembered,
+// older ones with probability `keep`. `wobble` is how far its judgement of a discard can be off (in useful tiles),
+// and `slip` is how often it throws one of its next-best tiles instead of the best.
+const MEMORY = {
+  easy: { fresh: 3, keep: 0.45, wobble: 12, slip: 0.35 },
+  normal: { fresh: 4, keep: 0.6, wobble: 8, slip: 0.1 },
+  hard: { fresh: 6, keep: 0.82, wobble: 3, slip: 0 },
+  expert: { fresh: Infinity, keep: 1, wobble: 0, slip: 0 }
+};
+const memoryOf = skill => MEMORY[skill] || MEMORY.normal;
+// The same discard is remembered or forgotten for the whole game (a steady 0..1 number per game, seat and tile thrown).
+function recall(g, seat, player, k) {
+  let h = ((g.no | 0) * 73856093) ^ ((seat + 1) * 19349663) ^ ((player + 1) * 83492791) ^ ((k + 1) * 2654435761);
+  h = Math.imul(h ^ (h >>> 15), 2246822519); h = Math.imul(h ^ (h >>> 13), 3266489917); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+// Tiles this seat believes nobody has shown yet.
+function unseen(g, seat, skill = "expert") {
+  const mem = memoryOf(skill);
   const seen = new Array(34).fill(0);
   const add = t => { if (t[1] !== "f") seen[indexOf(t)]++; };
   g.hands[seat].forEach(add);
-  g.discards.forEach(d => d.forEach(x => { if (!x.claimed) add(x.t); }));
+  g.discards.forEach((d, player) => d.forEach((x, k) => {
+    if (x.claimed) return;
+    // your own discards and everyone's recent ones are remembered; older ones may have slipped
+    if (player === seat || d.length - k <= mem.fresh || recall(g, seat, player, k) < mem.keep) add(x.t);
+  }));
   g.melds.forEach(ms => ms.forEach(m => m.tiles.forEach(add)));
   return seen.map(n => Math.max(0, 4 - n));
 }
@@ -62,20 +87,20 @@ function rate(g, seat, hand, p, left) {
 }
 
 function chooseDiscard(g, seat, skill) {
-  const hand = g.hands[seat], p = plan(g, seat), left = unseen(g, seat);
+  const hand = g.hands[seat], p = plan(g, seat), left = unseen(g, seat, skill), wobble = memoryOf(skill).wobble;
   const kinds = [...new Set(hand)];
   const scored = kinds.map(t => {
     const rest = hand.slice(); rest.splice(rest.indexOf(t), 1);
-    let s = rate(g, seat, rest, p, left);
+    let s = rate(g, seat, rest, p, left) + (wobble ? (rnd() - 0.5) * 2 * wobble : 0);
     // small preferences between equal choices: lonely honours and terminals go first, valuable honours stay
     const i = indexOf(t);
     if (isHonor(t) && hand.filter(x => x === t).length === 1) s -= p.valueHonor(i) ? 1 : 3;
     else if (!isHonor(t) && (t[0] === "1" || t[0] === "9")) s -= 1;
     // late in the hand, careful players avoid tiles nobody has thrown (hard bots only)
-    if (skill === "hard" && g.wall.length < 30 && !g.discards.some(d => d.some(x => x.t === t))) s += 4;
+    if ((skill === "hard" || skill === "expert") && g.wall.length < 30 && !g.discards.some(d => d.some(x => x.t === t))) s += 4;
     return { t, s };
   }).sort((a, b) => a.s - b.s);
-  if (skill === "easy" && rnd() < 0.35) return scored[Math.min(scored.length - 1, Math.floor(rnd() * 3))].t;
+  if (rnd() < memoryOf(skill).slip) return scored[Math.min(scored.length - 1, 1 + Math.floor(rnd() * 2))].t;
   return scored[0].t;
 }
 
@@ -98,7 +123,7 @@ function claimWorth(g, seat, o, skill) {
     if (worth && (skill !== "easy" || rnd() < 0.7)) return { claim: "pung" };
   }
   if (o.chows && (p.kind === "fast" || (p.kind === "flush" && t[1] === p.suit))) {
-    for (const pair of o.chows) if (after(pair) < before && rnd() < (skill === "hard" ? 0.9 : 0.75)) return { claim: "chow", tiles: pair };
+    for (const pair of o.chows) if (after(pair) < before && rnd() < (skill === "expert" ? 0.9 : skill === "hard" ? 0.85 : 0.75)) return { claim: "chow", tiles: pair };
   }
   return { claim: "pass" };
 }

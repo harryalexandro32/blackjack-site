@@ -19,7 +19,7 @@ export function validateSettings(s) {
   const pointValue = int(s.pointValue), actSeconds = int(s.actSeconds);
   if (!(pointValue >= 1 && pointValue <= 1e9)) fail("Pick how many dollars a point is worth.");
   if (![20, 30, 60].includes(actSeconds)) fail("Pick a time to play from the list.");
-  const skill = ["easy", "normal", "hard"].includes(s.skill) ? s.skill : "normal";
+  const skill = ["easy", "normal", "hard", "expert"].includes(s.skill) ? s.skill : "normal";
   const minFaan = int(s.minFaan) === 3 ? 3 : 0;
   return { pointValue, actSeconds, skill, minFaan };
 }

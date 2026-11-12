@@ -121,7 +121,7 @@ test("bots: whole games finish under both win rules, points add to zero, nobody 
     const g = M.startGame(k + 1, shuffled, { dealer: k % 4, minFaan });
     for (let step = 0; step < 2000 && !g.finished; step++) {
       const seats = g.phase === "discard" ? [g.turn] : Object.keys(g.claims || {}).map(Number).filter(s => !g.claims[s].decision);
-      for (const s of seats) { if (g.finished) break; const m = mahjongMove(g, s, ["easy", "normal", "hard"][k % 3]); if (m) M.act(g, s, m); }
+      for (const s of seats) { if (g.finished) break; const m = mahjongMove(g, s, ["easy", "normal", "hard", "expert"][k % 4]); if (m) M.act(g, s, m); }
     }
     assert.ok(g.finished);
     assert.strictEqual(g.finished.points.reduce((a, b) => a + b, 0), 0);
@@ -175,4 +175,9 @@ test("mahjong rooms: settings are checked; the minimum is 0 or 3 faan", () => {
   assert.strictEqual(R.validateSettings({ ...settingsM, minFaan: 3 }).minFaan, 3);
   assert.strictEqual(R.validateSettings({ ...settingsM, minFaan: 7 }).minFaan, 0);
   assert.throws(() => R.validateSettings({ ...settingsM, pointValue: 0 }));
+});
+
+test("bot levels: the room accepts expert, and only expert keeps a perfect tile count", () => {
+  assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "expert", minFaan: 0 }).skill, "expert");
+  assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, skill: "wizard", minFaan: 0 }).skill, "normal");
 });
