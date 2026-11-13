@@ -334,6 +334,7 @@ function render() {
   seatEls = [1, 2, 3].map(pos => rowEls[seatAt(pos)]);
 
   if (g) placeTokens(g);
+  else tokenEls.flat().forEach(t => { t.hidden = true; });      // no game yet (an online room before the start): no pawns
   const myTurn = !!(g && !g.finished && g.turn === me);
   if (!rolling) drawDie(shownDie(g), g && g.dice == null && lastRoll(g) ? "spent" : "");
   $("die").style.setProperty("--tc", g && !g.finished && g.turn >= 0 ? TC[g.turn] : "transparent");
