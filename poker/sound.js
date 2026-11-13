@@ -59,7 +59,8 @@ const SOUNDS = {
   win: at => [523, 659, 784, 1047].forEach((f, k) => tone({ freq: f, type: "triangle", dur: 0.28, vol: 0.22, at: at + k * 0.1 })),
   pot: at => [392, 523].forEach((f, k) => tone({ freq: f, type: "triangle", dur: 0.2, vol: 0.14, at: at + k * 0.09 })),
   chat: at => tone({ freq: 1200, to: 1600, dur: 0.08, vol: 0.12, at }),
-  react: at => tone({ freq: 700, to: 1400, type: "triangle", dur: 0.12, vol: 0.14, at })
+  react: at => tone({ freq: 700, to: 1400, type: "triangle", dur: 0.12, vol: 0.14, at }),
+  home: at => { [784, 988, 1319].forEach((f, k) => tone({ freq: f, type: "triangle", dur: 0.18, vol: 0.18, at: at + k * 0.07 })); tone({ freq: 2093, type: "sine", dur: 0.35, vol: 0.08, at: at + 0.2 }); }
 };
 
 // play("chips"), or play("deal", 0.2) to start 0.2 s from now

@@ -29,11 +29,14 @@ export const TRACK = [
 export const HOME_COLUMN = [
   seg(1, 5, 7, "x"), seg(1, 5, 7, "y"), seg(13, 9, 7, "x"), seg(13, 9, 7, "y")
 ];
+// the four circles in each base, centred in its 6x6 corner (the corner's middle is 3 squares in)
 export const BASE_SPOTS = [
-  [[1.5, 1.5], [3.5, 1.5], [1.5, 3.5], [3.5, 3.5]], [[10.5, 1.5], [12.5, 1.5], [10.5, 3.5], [12.5, 3.5]],
-  [[10.5, 10.5], [12.5, 10.5], [10.5, 12.5], [12.5, 12.5]], [[1.5, 10.5], [3.5, 10.5], [1.5, 12.5], [3.5, 12.5]]
+  [[2, 2], [4, 2], [2, 4], [4, 4]], [[11, 2], [13, 2], [11, 4], [13, 4]],
+  [[11, 11], [13, 11], [11, 13], [13, 13]], [[2, 11], [4, 11], [2, 13], [4, 13]]
 ];
-export const FINISH_SPOTS = [[6.5, 7], [7, 6.5], [7.5, 7], [7, 7.5]];
+// where finished pieces stand: inside each colour's triangle in the middle, near its outer edge
+// (red's triangle points right from the left side, green's down from the top, and so on)
+export const FINISH_SPOTS = [[6.5, 7.5], [7.5, 6.55], [8.5, 7.5], [7.5, 8.62]];
 export const startOf = seat => seat * 13;
 // the track square a token stands on, or -1 off the track
 export const squareOf = (seat, p) => p >= 0 && p <= 50 ? (startOf(seat) + p) % 52 : -1;

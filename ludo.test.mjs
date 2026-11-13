@@ -204,3 +204,54 @@ test("online rooms for 2 and 3 players: seats, bots, turns and a full room", () 
   }
   assert.strictEqual(R.validateSettings({ pointValue: 100, actSeconds: 20, players: 7 }).players, 4);
 });
+
+test("online rooms: picking a colour before the start; two players always sit across the board", () => {
+  const ctx = (id, extra = {}) => ({ now: 1000, playerId: id, tokenHash: "t" + id, shuffledDeck: () => [], ...extra });
+  const two = R.newRoom({ code: "ABCDEF", settings: { pointValue: 100, actSeconds: 20, skill: "normal", rules: {}, players: 2 }, host: { id: "h", name: "Host", tokenHash: "th" }, now: 0 });
+  R.applyAction(two, { type: "join", name: "Ana" }, ctx("a"));
+  const seatOf = (s, id) => R.personalState(s, id).me;
+  assert.deepStrictEqual([seatOf(two, "h"), seatOf(two, "a")], [0, 2]);
+  // the host picks green: Ana is moved across to blue
+  R.applyAction(two, { type: "color", seat: 1 }, ctx("h"));
+  assert.deepStrictEqual([seatOf(two, "h"), seatOf(two, "a")], [1, 3]);
+  assert.deepStrictEqual(R.personalState(two, "h").table, [1, 3]);
+  // Ana can't pick now: the host chose first
+  assert.throws(() => R.applyAction(two, { type: "color", seat: 0 }, ctx("a")), /picked Green first/);
+  // the host may change their mind, and Ana follows
+  R.applyAction(two, { type: "color", seat: 2 }, ctx("h"));
+  assert.deepStrictEqual([seatOf(two, "h"), seatOf(two, "a")], [2, 0]);
+  // the game uses exactly those two colours
+  R.applyAction(two, { type: "start" }, ctx("h"));
+  assert.deepStrictEqual(R.personalState(two, "h").view.active, [0, 2]);
+  assert.throws(() => R.applyAction(two, { type: "color", seat: 1 }, ctx("h")), /before the game starts/);
+
+  // a 2-player room where the guest picks first, before anyone else joins
+  const solo = R.newRoom({ code: "BCDEFG", settings: { pointValue: 100, actSeconds: 20, skill: "normal", rules: {}, players: 2 }, host: { id: "h", name: "Host", tokenHash: "th" }, now: 0 });
+  R.applyAction(solo, { type: "color", seat: 3 }, ctx("h"));
+  R.applyAction(solo, { type: "join", name: "Ana" }, ctx("a"));
+  assert.deepStrictEqual([seatOf(solo, "h"), seatOf(solo, "a")], [3, 1]);
+
+  // 4 players: any free colour; a colour someone has is taken
+  const four = R.newRoom({ code: "CDEFGH", settings: { pointValue: 100, actSeconds: 20, skill: "normal", rules: {}, players: 4 }, host: { id: "h", name: "Host", tokenHash: "th" }, now: 0 });
+  R.applyAction(four, { type: "join", name: "Ana" }, ctx("a"));
+  assert.throws(() => R.applyAction(four, { type: "color", seat: 1 }, ctx("h")), /Ana is already playing Green/);
+  R.applyAction(four, { type: "color", seat: 3 }, ctx("h"));
+  assert.strictEqual(seatOf(four, "h"), 3);
+
+  // 3 players: picking the colour that's out of play swaps it in for the one you leave
+  const three = R.newRoom({ code: "DEFGHJ", settings: { pointValue: 100, actSeconds: 20, skill: "normal", rules: {}, players: 3 }, host: { id: "h", name: "Host", tokenHash: "th" }, now: 0 });
+  R.applyAction(three, { type: "color", seat: 3 }, ctx("h"));
+  assert.deepStrictEqual(R.personalState(three, "h").table, [1, 2, 3]);
+  R.applyAction(three, { type: "start" }, ctx("h"));
+  assert.deepStrictEqual(R.personalState(three, "h").view.active, [1, 2, 3]);
+});
+
+test("board: base circles are centred in their corners; finished pieces stand inside their own triangle", () => {
+  L.BASE_SPOTS.forEach((spots, s) => {
+    const cx = spots.reduce((a, [c]) => a + c, 0) / 4, cy = spots.reduce((a, [, r]) => a + r, 0) / 4;
+    assert.deepStrictEqual([cx, cy], [[3, 3], [12, 3], [12, 12], [3, 12]][s]);
+  });
+  // the triangles: red from the left side, green from the top, yellow from the right, blue from the bottom
+  const inside = (s, [x, y]) => [x - 6 < y - 6 && y - 6 < 9 - x, y - 6 < x - 6 && x - 6 < 9 - y, 9 - x < y - 6 && y - 6 < x - 6, 9 - y < x - 6 && x - 6 < y - 6][s];
+  L.FINISH_SPOTS.forEach((p, s) => { assert.ok(inside(s, p), `colour ${s}`); [0, 1, 2, 3].forEach(t => assert.ok(!(t !== s && inside(t, p)), `colour ${s} not in ${t}`)); });
+});

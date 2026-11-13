@@ -24,8 +24,43 @@ export function validateSettings(s) {
   const players = [2, 3, 4].includes(s.players) ? s.players : 4;      // how many play: people first, bots in what's left
   return { pointValue, actSeconds, skill, rules, players };
 }
-// the seats (colours) this room plays with
-const tableOf = state => C.TABLES[state.settings.players] || C.TABLES[4];
+// the seats (colours) this room plays with: chosen by the players (state.table), or the default for the size
+const tableOf = state => state.table || C.TABLES[state.settings.players] || C.TABLES[4];
+const COLOR = ["Red", "Green", "Yellow", "Blue"];
+
+// Someone moves to another colour before the game starts. Their points (between sessions) go with them.
+function moveSeat(state, from, to) {
+  const s = state.seats[from];
+  state.seats[from] = null; state.seats[to] = s;
+  state.points[to] = state.points[from]; state.points[from] = 0;
+  state.money[to] = state.money[from]; state.money[from] = 0;
+  if (s && !s.bot && state.players[s.id]) state.players[s.id].seat = to;
+}
+
+// Pick a colour (before the game starts). The colour must be free. In a 2-player room the two sit opposite each
+// other, so whoever picks first decides for both: the other player is moved across, and can't pick any more.
+// In a 3-player room picking a colour that isn't in play swaps it in for the one you leave.
+function pickColor(state, me, seat, to) {
+  if (state.started) fail("Colours are picked before the game starts.");
+  if (!(to >= 0 && to < 4)) fail("Pick one of the four colours.");
+  const mine = state.seats[seat], table = tableOf(state).slice();
+  const there = state.seats[to];
+  if (to !== seat && there && !there.bot) fail(`${there.name} is already playing ${COLOR[to]}.`);
+  if (table.length === 2) {
+    const other = table.find(i => i !== seat), them = state.seats[other];
+    if (them && !them.bot && them.chose) fail(`${them.name} picked ${COLOR[other]} first, so you play ${COLOR[(other + 2) % 4]}, across the board.`);
+    const across = (to + 2) % 4;
+    if (to !== seat) moveSeat(state, seat, to);
+    if (them && other !== across) moveSeat(state, other, across);
+    state.table = [to, across].sort((a, b) => a - b);
+  } else {
+    if (to !== seat) moveSeat(state, seat, to);
+    if (!table.includes(to)) state.table = table.map(i => (i === seat ? to : i)).sort((a, b) => a - b);
+  }
+  // only an empty colour may be left over: a bot (there's none before the start) never keeps a colour that's out of play
+  state.seats = state.seats.map((s, i) => (s && !tableOf(state).includes(i) ? null : s));
+  mine.chose = true;
+}
 
 export function newRoom({ code, settings, host, now }) {
   const s = validateSettings(settings);
@@ -201,6 +236,10 @@ export function applyAction(state, action, ctx) {
       needSeat();
       if (action.avatar !== undefined) state.seats[mySeat].avatar = cleanAvatar(action.avatar);
       break;
+    case "color":
+      needSeat();
+      pickColor(state, me, mySeat, int(action.seat));
+      break;
     case "leave": {
       needSeat();
       const p = state.players[me];
@@ -248,7 +287,7 @@ export const roomStatus = state => state.closed ? "closed" : state.started ? "pl
 function shared(state) {
   return {
     game: "ludo", code: state.code, status: roomStatus(state), settings: state.settings, table: tableOf(state),
-    seats: state.seats.map((s, i) => s && { name: s.name, avatar: s.avatar, bot: s.bot, points: state.points[i], money: state.money[i] }),
+    seats: state.seats.map((s, i) => s && { name: s.name, avatar: s.avatar, bot: s.bot, points: state.points[i], money: state.money[i], chose: !!s.chose }),
     hostSeat: seatOf(state, state.hostId), started: state.started, gameNo: state.gameNo, games: state.games,
     nextGameAt: state.nextGameAt, deadline: state.deadline, botAt: state.botAt, actMs: state.settings.actSeconds * 1000,
     chat: state.chat, sessions: state.sessions.slice(-20), ledger: ledgerList(state), ledgerResetAt: state.ledgerResetAt || null,

@@ -215,6 +215,7 @@ export class OnlineLudo {
   chat(text) { return this.send("chat", { text }); }
   react(emoji) { return this.send("react", { emoji }); }
   setPrefs(p) { return this.send("prefs", p); }
+  pickColor(seat) { return this.send("color", { seat }); }
   nextGame() { return Promise.resolve(); }
 
   destroy() {

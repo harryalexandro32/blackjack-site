@@ -88,3 +88,22 @@
 /* the colour picker on the bots form: a dot of the colour beside its name */
 .color-seg button { display: inline-flex; align-items: center; gap: 7px; }
 .color-seg i { width: 13px; height: 13px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 2px rgba(255,255,255,.75); flex: none; }
+
+/* picking a colour before an online game */
+.color-pick { display: grid; gap: 6px; justify-items: center; text-align: center; }
+.color-pick[hidden] { display: none; }
+.color-pick .seg { justify-content: center; }
+.color-pick .note { margin: 0; font-size: .82rem; }
+.color-pick button:disabled { opacity: .4; }
+
+/* a piece reaches home */
+.home-burst { position: absolute; width: 0; height: 0; z-index: 6; pointer-events: none; }
+.home-burst::before { content: ""; position: absolute; left: 50%; top: 50%; width: 42px; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--tc);
+  box-shadow: 0 0 10px var(--tc), inset 0 0 8px #fff; transform: translate(-50%, -50%); }
+.home-burst::before { animation: ld-home-ring .9s ease-out forwards; }
+.home-burst i { position: absolute; left: 0; top: 0; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 6px #fff, 0 0 10px var(--tc);
+  animation: ld-home-spark 1s ease-out forwards; }
+.home-burst i:nth-child(even) { background: #fff6cf; width: 5px; height: 5px; margin: -2.5px; }
+@keyframes ld-home-ring { from { opacity: 1; transform: translate(-50%, -50%) scale(.2); } to { opacity: 0; transform: translate(-50%, -50%) scale(2.4); } }
+@keyframes ld-home-spark { from { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } to { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scale(.4); } }
+@media (prefers-reduced-motion: reduce) { .home-burst { display: none; } }

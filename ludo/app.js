@@ -268,12 +268,23 @@ function placeTokens(g, skipAnim) {
   // how many pieces stand on the squares touching this one
   const around = (c, r) => Object.values(groups).reduce((sum, l) => { const dc = Math.abs(l[0][2] - c), dr = Math.abs(l[0][3] - r); return sum + (l[0][4] >= 0 && (dc || dr) && dc <= 1.01 && dr <= 1.01 ? l.length : 0); }, 0);
   for (const list of Object.values(groups)) list.forEach(([s, i, c, r, p], k) => {
-    const n = list.length, { cols, size } = crowd(n), rows = Math.ceil(n / cols);
+    const n = list.length, el = tokenEls[s][i];
+    if (p >= L.FINISH) {
+      // home: in a line inside the colour's own triangle (up and down for red and yellow, across for green and blue)
+      const along = (k - (n - 1) / 2) * 0.34, upright = s === 0 || s === 2;
+      el.hidden = !inPlay(s);
+      el.style.setProperty("--ts", "0.62");
+      el.style.zIndex = upright ? String(2 + k) : "";
+      el.style.left = ((c + (upright ? 0 : along)) / 15 * 100) + "%";
+      el.style.top = ((r + (upright ? along : 0) + 0.08) / 15 * 100) + "%";
+      el.classList.add("home"); el.classList.remove("can"); el.tabIndex = -1;
+      return;
+    }
+    const { cols, size } = crowd(n), rows = Math.ceil(n / cols);
     const near = p >= 0 ? around(c, r) : 0;
     const scale = Math.max(0.36, size * (near >= 4 ? 0.8 : near >= 2 ? 0.88 : near === 1 && n === 1 ? 0.94 : 1));
     const col = k % cols, row = Math.floor(k / cols), inRow = row === rows - 1 ? n - row * cols : cols;
     const dx = (col - (inRow - 1) / 2) * Math.min(0.34, 0.84 / cols), dy = rows > 1 ? (row - (rows - 1) / 2) * Math.min(0.34, 0.8 / rows) : 0;
-    const el = tokenEls[s][i];
     el.hidden = !inPlay(s);
     el.style.setProperty("--ts", scale.toFixed(3));
     el.style.zIndex = n > 1 ? String(2 + row) : "";              // nearer rows are drawn over the ones behind
@@ -335,6 +346,7 @@ function render() {
   $("btnStart").hidden = !(view.mode === "online" && view.isHost && !view.started);
   $("btnStart").textContent = view.sessions && view.sessions.length ? `Start session ${view.sessionNo}` : "Start the game";
 
+  renderColorPick();
   $("status").textContent = statusText(g);
   renderLog(g);
   renderScores();
@@ -350,6 +362,31 @@ function render() {
   clearTimeout(autoTimer);
   if (myTurn && g.phase === "move" && g.legal.length === 1) autoTimer = setTimeout(guard(() => sendMove({ type: "move", token: g.legal[0].token })), 550);
 }
+
+// Before an online game starts, each person picks a colour. Two players sit across the board from each other:
+// whoever picks first decides for both.
+function renderColorPick() {
+  const show = view.mode === "online" && !view.started && view.me >= 0 && !view.ended;
+  $("colorPick").hidden = !show;
+  if (!show) return;
+  const table = view.table || [0, 1, 2, 3], two = table.length === 2;
+  const other = two ? table.find(i => i !== view.me) : -1, them = other >= 0 ? view.seats[other] : null;
+  const locked = !!(them && !them.bot && them.chose);
+  $("pickColor").querySelectorAll("button").forEach(b => {
+    const s = +b.dataset.v, p = view.seats[s];
+    b.setAttribute("aria-pressed", String(s === view.me));
+    b.disabled = s !== view.me && (locked || !!(p && !p.bot));
+    b.title = p && !p.bot && s !== view.me ? `${p.name} is playing ${COLOR_NAMES[s]}` : "";
+  });
+  $("pickNote").textContent = locked ? `${them.name} picked ${COLOR_NAMES[other]} first, so you play ${COLOR_NAMES[view.me]}, across the board.`
+    : two ? (view.seats[view.me] && view.seats[view.me].chose ? `You picked ${COLOR_NAMES[view.me]}: the other player plays ${COLOR_NAMES[(view.me + 2) % 4]}, across the board.` : "Pick your colour. With two players you sit across the board from each other, so whoever picks first decides for both.")
+    : "Pick your colour. Colours other players have taken can't be picked.";
+}
+$("pickColor").addEventListener("click", e => {
+  const b = e.target.closest("button[data-v]");
+  if (!b || b.disabled || !ctrl || !ctrl.pickColor) return;
+  guard(() => ctrl.pickColor(+b.dataset.v))();
+});
 
 function statusText(g) {
   if (view.mode === "online" && !view.started) {
@@ -501,6 +538,7 @@ function motion(g) {
     const fresh = no === g.no ? Math.min(6, g.logCount - count) : 0;
     g.log.slice(g.log.length - Math.max(0, fresh)).forEach((e, k) => {
       if (e.type === "roll") { if (e.seat !== view.me || !rolling) rollDie(e.dice, e.seat === view.me ? 0 : 420); sound("deal", k * 0.05); }
+      else if (e.type === "move" && !animOk() && e.to >= L.FINISH && renderedOnce) sound("home", 0);
       else if (e.type === "move" && animOk()) {
         const el = tokenEls[e.seat][e.token], cells = pathCells(e.seat, e.from, e.to, e.token);
         // walking: between squares the pawn lifts and leans, landing upright on each one (left foot, right foot…)
@@ -517,6 +555,7 @@ function motion(g) {
         const walkMs = Math.min(2400, 170 * ((frames.length - 1) / 2) + 60);
         el.animate(frames, { duration: walkMs, easing: "linear" });
         sound(e.captures.length ? "allin" : "flip", 0);
+        if (e.to >= L.FINISH) homeBurst(e.seat, walkMs);
         if (e.captures.length && (e.seat === view.me || e.captures.some(([cs]) => cs === view.me))) cue.sting("big");
         e.captures.forEach(([s, i]) => {
           const t = tokenEls[s][i], [cl, ct] = pct(cells[cells.length - 1]);
@@ -532,6 +571,20 @@ function motion(g) {
   cue.level(g.finished ? 0 : Math.max(...g.tokens.map(ts => ts.filter(p => p >= L.FINISH).length)) >= 3 ? 2 : 1);
   lastLog = key; lastGame = g.no; lastTurn = myTurnNow;
   renderedOnce = true;
+}
+// A piece reaches home: a chime, a ring and sparks in its colour's triangle, and the pawn hops.
+function homeBurst(seat, delay = 0) {
+  setTimeout(() => {
+    sound("home", 0);
+    const [c, r] = L.FINISH_SPOTS[seat], b = document.createElement("div");
+    b.className = "home-burst"; b.style.setProperty("--tc", TC[seat]);
+    b.style.left = (c / 15 * 100) + "%"; b.style.top = (r / 15 * 100) + "%";
+    b.innerHTML = "<i></i>".repeat(10);
+    b.querySelectorAll("i").forEach((s, k) => s.style.setProperty("--a", (k * 36) + "deg"));
+    $("tokens").appendChild(b);
+    setTimeout(() => b.remove(), 1300);
+    tokenEls[seat].forEach(t => { if (t.classList.contains("home")) t.animate([{ transform: "translate(-50%, -78%) scale(.62)" }, { transform: "translate(-50%, -112%) scale(.78)" }, { transform: "translate(-50%, -78%) scale(.62)" }], { duration: 520, easing: "ease-out" }); });
+  }, Math.max(0, delay - 60));
 }
 // the die tumbles, then lands on the number
 let dieTimer = 0;
